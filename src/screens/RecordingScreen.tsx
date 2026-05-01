@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Accelerometer, Gyroscope } from "expo-sensors";
 import * as Location from "expo-location";
+import { useKeepAwake } from "expo-keep-awake";
 import { LineChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
@@ -29,6 +30,8 @@ type GyroData = {
 };
 
 export default function RecordingScreen() {
+  useKeepAwake();
+
   const navigation = useNavigation();
 
   const status = useMeasurementStore((state) => state.status);
@@ -102,8 +105,8 @@ export default function RecordingScreen() {
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 2000, //Updates gps loc. every 2 sec.
-          distanceInterval: 3, // or when moved around for 3 meters
+          timeInterval: 2000,
+          distanceInterval: 3,
         },
         (location) => {
           latestLocationRef.current = location;
@@ -157,6 +160,8 @@ export default function RecordingScreen() {
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
             Measuring vibration using the phone accelerometer and gyroscope.
+            Keep this screen open while recording. The screen will stay awake
+            automatically.
           </Text>
         </View>
 
@@ -210,11 +215,7 @@ export default function RecordingScreen() {
           <LineChart
             data={{
               labels: [],
-              datasets: [
-                {
-                  data: chartData,
-                },
-              ],
+              datasets: [{ data: chartData }],
             }}
             width={SCREEN_WIDTH - 56}
             height={220}

@@ -23,12 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.timmosquadros.skateroutemapper",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyBQQxIHaO7lNpRL_8aNoeatI0gZUMPvcdc"
-        }
-      }
+      "package": "com.timmosquadros.skateroutemapper"
     },
     "web": {
       "favicon": "./assets/favicon.png"
