@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.timmosquadros.skateroutemapper"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,13 +22,24 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.timmosquadros.skateroutemapper",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBQQxIHaO7lNpRL_8aNoeatI0gZUMPvcdc"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c768e1c4-de83-419d-9f53-8a3efe9521c3"
+      }
+    }
   }
 }
