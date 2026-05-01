@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Accelerometer, Gyroscope } from "expo-sensors";
+import * as Location from "expo-location";
 import { LineChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
@@ -37,11 +38,14 @@ export default function RecordingScreen() {
 
   const [accel, setAccel] = useState<AccelData>({ x: 0, y: 0, z: 0 });
   const [gyro, setGyro] = useState<GyroData>({ x: 0, y: 0, z: 0 });
+  const [latestLocation, setLatestLocation] =
+    useState<Location.LocationObject | null>(null);
 
   const latestGyro = useRef<GyroData>({ x: 0, y: 0, z: 0 });
+  const latestLocationRef = useRef<Location.LocationObject | null>(null);
 
   useEffect(() => {
-    Accelerometer.setUpdateInterval(200); //5 hz (5 samples per sec.)
+    Accelerometer.setUpdateInterval(200); // 5 hz
     Gyroscope.setUpdateInterval(200);
 
     const gyroSubscription = Gyroscope.addListener((data) => {
@@ -53,6 +57,7 @@ export default function RecordingScreen() {
       setAccel(data);
 
       const g = latestGyro.current;
+      const loc = latestLocationRef.current;
 
       const vibrationMagnitude = Math.sqrt(
         data.x * data.x + data.y * data.y + data.z * data.z
@@ -70,6 +75,10 @@ export default function RecordingScreen() {
         gz: g.z,
 
         vibrationMagnitude,
+
+        latitude: loc?.coords.latitude ?? null,
+        longitude: loc?.coords.longitude ?? null,
+        speed: loc?.coords.speed ?? null,
       });
     });
 
@@ -78,6 +87,37 @@ export default function RecordingScreen() {
       gyroSubscription.remove();
     };
   }, [addSample]);
+
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+
+    async function startLocation() {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        console.log("Location permission not granted");
+        return;
+      }
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 2000, //Updates gps loc. every 2 sec.
+          distanceInterval: 3, // or when moved around for 3 meters
+        },
+        (location) => {
+          latestLocationRef.current = location;
+          setLatestLocation(location);
+        }
+      );
+    }
+
+    startLocation();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   const latestSample = samples[samples.length - 1];
 
@@ -92,7 +132,10 @@ export default function RecordingScreen() {
     if (samples.length === 0) return 0;
 
     const latest = samples.slice(-40);
-    const total = latest.reduce((sum, sample) => sum + sample.vibrationMagnitude, 0);
+    const total = latest.reduce(
+      (sum, sample) => sum + sample.vibrationMagnitude,
+      0
+    );
 
     return total / latest.length;
   }, [samples]);
@@ -140,6 +183,24 @@ export default function RecordingScreen() {
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Avg vibration</Text>
             <Text style={styles.metricValue}>{averageVibration.toFixed(3)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.metricGrid}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>GPS</Text>
+            <Text style={styles.metricValue}>
+              {latestLocation ? "OK" : "Waiting"}
+            </Text>
+          </View>
+
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Speed</Text>
+            <Text style={styles.metricValue}>
+              {latestLocation?.coords.speed != null
+                ? `${latestLocation.coords.speed.toFixed(1)} m/s`
+                : "-"}
+            </Text>
           </View>
         </View>
 

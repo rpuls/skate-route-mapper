@@ -127,6 +127,13 @@ export default function HomeScreen() {
           <Text style={styles.startButtonText}>Start route scan</Text>
         </Pressable>
 
+        <Pressable
+          onPress={() => navigation.navigate("Rides")}
+          style={styles.secondaryButton}
+        >
+          <Text style={styles.secondaryButtonText}>View saved rides</Text>
+        </Pressable>
+
         <Text style={styles.statusText}>Status: {status}</Text>
       </View>
     </ScrollView>
@@ -285,5 +292,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 48,
     gap: 18,
+  },
+  secondaryButton: {
+    backgroundColor: "#18212b",
+    paddingVertical: 15,
+    borderRadius: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  secondaryButtonText: {
+    color: "#e2e8f0",
+    fontSize: 16,
+    fontWeight: "800",
   },
 });
