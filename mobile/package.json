@@ -9,10 +9,10 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@skate-route-mapper/shared": "*",
     "@react-native-community/slider": "5.0.1",
     "@react-navigation/native": "^7.2.2",
     "@react-navigation/native-stack": "^7.14.12",
+    "@skate-route-mapper/shared": "*",
     "dayjs": "^1.11.20",
     "expo": "~54.0.33",
     "expo-camera": "~17.0.10",
@@ -37,6 +37,7 @@
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "^15.15.4",
+    "react-native-worklets": "^0.8.1",
     "uuid": "^14.0.0",
     "zustand": "^5.0.12"
   },
