@@ -27,7 +27,14 @@ What each part does:
 - `api` is the Node.js backend that receives ride sessions and sample batches.
 - `admin` is the internal dashboard app.
 - `db` holds the Prisma datamodel and migrations.
-- `shared` holds the shared ride and sample contract used by both apps.
+- `shared` holds the shared ride/sample contract and design tokens used by the apps.
+
+Project docs:
+
+- `docs/api.md` defines the backend contract.
+- `docs/data-model.md` explains the Prisma datamodel.
+- `docs/design-guide.md` defines the visual language, design tokens, and button variants.
+- `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
 
 ## How The System Works
 
@@ -87,7 +94,31 @@ Recommendation:
 
 If you want the backend stack running quickly and consistently, use Docker.
 
-Start everything:
+Start the local backend/admin stack:
+
+```bash
+npm run admin-app
+```
+
+This rebuilds and starts the PostgreSQL, API, and admin containers. The shorter alias also works:
+
+```bash
+npm run app
+```
+
+Stop everything:
+
+```bash
+npm run stop
+```
+
+Follow logs:
+
+```bash
+npm run logs
+```
+
+The lower-level Docker script is still available:
 
 ```bash
 npm run docker:up
@@ -103,7 +134,7 @@ When the stack is ready, the command prints the local access URLs.
 
 This starts:
 
-- `db` on `localhost:5432`
+- `db` on `localhost:5433`
 - `api` on `http://localhost:3001`
 - `admin` on `http://localhost:3000`
 
@@ -132,15 +163,41 @@ npm install
 
 ### Environment Variables
 
-Create an `.env` file in `api` based on `api/.env.example`.
+Local default `.env` files are included for quick backend/admin testing:
 
-Example:
+- `.env` is used by Docker Compose.
+- `api/.env` is used by the API when running outside Docker.
+- `admin/.env` is used by Vite when running the admin app outside Docker.
+
+The local defaults include this development admin account:
+
+```env
+INIT_ADMIN_EMAIL=admin@example.com
+INIT_ADMIN_PASSWORD=local-dev-admin-password
+```
+
+The API local default uses the Docker-exposed PostgreSQL port:
 
 ```env
 PORT=3001
 HOST=0.0.0.0
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/skate_route_mapper
-CORS_ORIGIN=*
+DATABASE_URL=postgres://postgres:postgres@localhost:5433/skate_route_mapper
+CORS_ORIGIN=http://localhost:3000
+MOBILE_INGESTION_API_KEY=local-dev-mobile-ingestion-key
+ADMIN_API_KEY=local-dev-admin-dashboard-key
+INIT_ADMIN_EMAIL=admin@example.com
+INIT_ADMIN_PASSWORD=local-dev-admin-password
+ADMIN_SESSION_TTL_HOURS=24
+```
+
+For Railway, set long random values for `MOBILE_INGESTION_API_KEY`, `ADMIN_API_KEY`, and `INIT_ADMIN_PASSWORD` on the API service. Keep the API keys different. The mobile app should only receive the ingestion key; internal tooling can use the admin key.
+
+`INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` seed the first owner account only when no admin users exist yet. After the first successful deploy, you can remove those two variables or leave them in place; startup will not overwrite existing admin users.
+
+For the admin web service, set this build-time variable so the browser knows where to send login requests:
+
+```env
+VITE_API_BASE_URL=https://your-api-service.up.railway.app
 ```
 
 ### Run The API
@@ -167,6 +224,7 @@ What happens on startup:
 - the API loads environment variables
 - connects to PostgreSQL
 - applies committed Prisma migrations
+- seeds the first admin user if `INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` are set and no admins exist
 - starts the Fastify server
 
 Default local API URL:
@@ -189,11 +247,32 @@ From the repo root:
 npm run mobile:start
 ```
 
-To run on a physical iPhone with Expo Go over a tunnel:
+To run on a physical iPhone or Android phone with Expo Go on the same Wi-Fi network:
 
 ```bash
 npm run mobile:expogo
 ```
+
+If LAN discovery is not available, you can try Expo's ngrok tunnel mode:
+
+```bash
+npm run mobile:tunnel
+```
+
+For a physical iPhone without a Mac/Xcode, start with Expo Go:
+
+1. Install Expo Go from the App Store.
+2. Sign in with the same Expo account used by the CLI.
+3. Run `npm run mobile:tunnel`.
+4. Scan the QR code on the iPhone.
+
+If your phone and computer are on the same Wi-Fi network, LAN mode is usually faster:
+
+```bash
+npm run mobile:expogo
+```
+
+Use an EAS development build only when Expo Go is not enough, for example when testing custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account.
 
 Platform-specific commands:
 
@@ -206,10 +285,33 @@ npm run mobile:web
 Notes:
 
 - a physical device is strongly recommended because the app depends on motion sensors and GPS
-- `mobile:expogo` is the easiest option from Windows when using Expo Go on an iPhone
+- `mobile:expogo` is the easiest LAN option from Windows when using Expo Go on a physical device
+- `mobile:tunnel` depends on Expo's ngrok tunnel service and can fail when ngrok is blocked or unavailable
 - `mobile:ios` launches the local iOS simulator and requires macOS with Xcode
 - the web target is mainly useful for UI checks, not full ride recording
+- the web target uses fallbacks for native-only pieces such as SQLite storage and maps
 - the mobile app is not containerized; Docker is meant for backend services and the admin app
+
+### Design System
+
+The design system is intentionally lightweight. There is no UI framework dependency such as Tamagui yet.
+
+Source of truth:
+
+- `shared/src/design.ts` exports colors, spacing, radius, shadows, layout tokens, and button variants.
+- `docs/design-guide.md` documents how those tokens should be used.
+
+Current direction:
+
+- sporty orange app background
+- white primary tiles
+- faint fills without borders for informational containers
+- borders reserved for interactive controls and selected states
+- large rounded corners with nested-radius logic
+- Open Sans typography
+- predefined button variants only
+
+When adding UI, import tokens from `@skate-route-mapper/shared` instead of hardcoding new colors or one-off button styles.
 
 ## Developer Workflow
 
@@ -242,17 +344,20 @@ What already works:
 
 - mobile ride recording
 - local SQLite persistence on device
+- mobile web layout preview with native fallbacks
 - ride replay on a map
 - backend API scaffolding for ride ingestion
 - Prisma-backed backend schema and migrations
 - shared TypeScript contracts for mobile and backend
+- shared design tokens and design guide
 - Docker-based local stack for API, Postgres, and admin
 
 What is not wired up yet:
 
 - mobile-to-backend upload flow
-- auth or ingestion keys
-- admin dashboard
+- admin dashboard data views
+- admin user management screens
+- end-user accounts
 - advanced analytics or calibrated surface scoring
 
 ## Deployment Shape
@@ -272,6 +377,6 @@ That keeps responsibilities clean:
 ## Next Development Priorities
 
 1. Add mobile upload to the API with batched sample syncing.
-2. Add a simple auth layer for trusted ingestion.
-3. Add an admin web app for ride inspection and QA.
+2. Add a protected dashboard ride list and ride detail view.
+3. Add admin user management.
 4. Add better route scoring and later geospatial features.

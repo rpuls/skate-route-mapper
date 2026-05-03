@@ -34,3 +34,8 @@ export const rideSamplesSchema = z.object({
 export const rideFinishSchema = z.object({
   endedAt: z.number().int().nonnegative(),
 });
+
+export const adminLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});

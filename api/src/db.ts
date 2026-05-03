@@ -1,5 +1,8 @@
 import { Prisma, PrismaClient } from "../generated/prisma/index.js";
 import type { MeasurementSample, RideStartPayload } from "@skate-route-mapper/shared";
+import { env } from "./config.js";
+import { hashPassword, verifyPassword } from "./passwords.js";
+import { createSessionToken, hashSessionToken } from "./tokens.js";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: PrismaClient;
@@ -17,6 +20,81 @@ if (process.env.NODE_ENV !== "production") {
 
 export async function connectDatabase() {
   await prisma.$connect();
+}
+
+export async function seedInitialAdminUser() {
+  if (!env.INIT_ADMIN_EMAIL || !env.INIT_ADMIN_PASSWORD) {
+    return null;
+  }
+
+  const adminCount = await prisma.adminUser.count();
+
+  if (adminCount > 0) {
+    return null;
+  }
+
+  return prisma.adminUser.create({
+    data: {
+      email: env.INIT_ADMIN_EMAIL.toLowerCase(),
+      passwordHash: hashPassword(env.INIT_ADMIN_PASSWORD),
+      role: "owner",
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+    },
+  });
+}
+
+export async function loginAdminUser(email: string, password: string) {
+  const adminUser = await prisma.adminUser.findUnique({
+    where: {
+      email: email.toLowerCase(),
+    },
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+      active: true,
+    },
+  });
+
+  if (!adminUser || !adminUser.active || !verifyPassword(password, adminUser.passwordHash)) {
+    throw new Error("Invalid admin credentials");
+  }
+
+  const token = createSessionToken();
+  const expiresAt = new Date(Date.now() + env.ADMIN_SESSION_TTL_HOURS * 60 * 60 * 1000);
+
+  await prisma.$transaction([
+    prisma.adminSession.create({
+      data: {
+        adminUserId: adminUser.id,
+        tokenHash: hashSessionToken(token),
+        expiresAt,
+      },
+    }),
+    prisma.adminUser.update({
+      where: {
+        id: adminUser.id,
+      },
+      data: {
+        lastLoginAt: new Date(),
+      },
+    }),
+  ]);
+
+  return {
+    token,
+    expiresAt: expiresAt.toISOString(),
+    adminUser: {
+      id: adminUser.id,
+      email: adminUser.email,
+      role: adminUser.role,
+    },
+  };
 }
 
 export async function disconnectDatabase() {

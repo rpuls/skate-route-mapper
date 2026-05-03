@@ -42,3 +42,17 @@ export type RideSamplesPayload = {
 export type RideFinishPayload = {
   endedAt: number;
 };
+
+export {
+  brandColors,
+  buttonVariants,
+  colors,
+  componentStyles,
+  layout,
+  nestedRadius,
+  radius,
+  shadows,
+  skateDesign,
+  space,
+  typography,
+} from "./design";

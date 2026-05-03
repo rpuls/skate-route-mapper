@@ -14,6 +14,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { LineChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -225,13 +226,13 @@ export default function RecordingScreen() {
             withVerticalLabels={false}
             withHorizontalLabels
             chartConfig={{
-              backgroundGradientFrom: "#18212b",
-              backgroundGradientTo: "#18212b",
+              backgroundGradientFrom: colors.surfaceMuted,
+              backgroundGradientTo: colors.surfaceMuted,
               decimalPlaces: 2,
-              color: () => "#38bdf8",
-              labelColor: () => "#94a3b8",
+              color: () => colors.accent,
+              labelColor: () => colors.textMuted,
               propsForBackgroundLines: {
-                stroke: "#334155",
+                stroke: "#c8def5",
               },
             }}
             bezier
@@ -288,7 +289,7 @@ export default function RecordingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#101418",
+    backgroundColor: colors.page,
   },
   scroll: {
     flex: 1,
@@ -302,41 +303,41 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   appName: {
-    color: "#7dd3fc",
+    color: colors.textOnOrange,
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "800",
     marginBottom: 12,
-    letterSpacing: 0.5,
+    opacity: 0.82,
   },
   title: {
-    color: "#f8fafc",
+    color: colors.textOnOrange,
     fontSize: 34,
     fontWeight: "800",
     lineHeight: 39,
     marginBottom: 10,
   },
   subtitle: {
-    color: "#94a3b8",
+    color: colors.textOnOrange,
     fontSize: 16,
     lineHeight: 23,
+    opacity: 0.82,
   },
   statusCard: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
     flexDirection: "row",
     justifyContent: "space-between",
+    ...shadows.tile,
   },
   statusLabel: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 6,
   },
   statusValue: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 20,
     fontWeight: "800",
   },
@@ -346,46 +347,43 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    ...shadows.tile,
   },
   metricLabel: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 8,
   },
   metricValue: {
-    color: "#7dd3fc",
+    color: colors.accent,
     fontSize: 24,
     fontWeight: "900",
   },
   card: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    ...shadows.tile,
   },
   chartCard: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
     overflow: "hidden",
+    ...shadows.tile,
   },
   sectionTitle: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 12,
   },
   chart: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     marginLeft: -12,
   },
   axisRow: {
@@ -393,22 +391,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#263241",
+    borderBottomColor: colors.surfaceMuted,
   },
   axisLabel: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 15,
     fontWeight: "700",
   },
   axisValue: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 15,
     fontWeight: "800",
   },
   stopButton: {
-    backgroundColor: "#ef4444",
+    backgroundColor: colors.danger,
     paddingVertical: 17,
-    borderRadius: 20,
+    borderRadius: radius.lg,
     alignItems: "center",
   },
   stopButtonText: {

@@ -8,11 +8,12 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import MapView, { Polyline, Marker } from "react-native-maps";
 import Slider from "@react-native-community/slider";
 import dayjs from "dayjs";
 
 import { getRide, getSamplesForRide } from "../database/db";
+import RideRouteMap from "../components/RideRouteMap";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
 
 type RouteParams = {
   rideId: string;
@@ -96,7 +97,7 @@ export default function RideDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>Back</Text>
           </Pressable>
           <Text style={styles.title}>Ride not found</Text>
         </View>
@@ -113,33 +114,26 @@ export default function RideDetailScreen() {
       >
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>Back</Text>
           </Pressable>
 
           <Text style={styles.title}>Ride details</Text>
           <Text style={styles.subtitle}>
-            {dayjs(ride.startedAt).format("DD MMM YYYY · HH:mm")}
+            {dayjs(ride.startedAt).format("DD MMM YYYY - HH:mm")}
           </Text>
         </View>
 
         <View style={styles.mapCard}>
-          <MapView style={styles.map} initialRegion={initialRegion}>
-            {visibleCoordinates.length > 1 && (
-              <Polyline coordinates={visibleCoordinates} strokeWidth={5} />
-            )}
-
-            {coordinates[0] && <Marker coordinate={coordinates[0]} title="Start" />}
-
-            {currentCoordinate && (
-              <Marker
-                coordinate={currentCoordinate}
-                title={`${Math.round(progress)}%`}
-                description={`Vibration: ${
-                  currentSample?.vibrationMagnitude.toFixed(3) ?? "-"
-                }`}
-              />
-            )}
-          </MapView>
+          <RideRouteMap
+            currentCoordinate={currentCoordinate}
+            currentMarkerDescription={`Vibration: ${
+              currentSample?.vibrationMagnitude.toFixed(3) ?? "-"
+            }`}
+            currentMarkerTitle={`${Math.round(progress)}%`}
+            initialRegion={initialRegion}
+            startCoordinate={coordinates[0]}
+            visibleCoordinates={visibleCoordinates}
+          />
 
           <View style={styles.sliderPanel}>
             <View style={styles.sliderHeader}>
@@ -153,9 +147,9 @@ export default function RideDetailScreen() {
               step={1}
               value={progress}
               onValueChange={setProgress}
-              minimumTrackTintColor="#38bdf8"
-              maximumTrackTintColor="#334155"
-              thumbTintColor="#7dd3fc"
+              minimumTrackTintColor={colors.accent}
+              maximumTrackTintColor="#c8def5"
+              thumbTintColor={colors.accent}
             />
 
             <View style={styles.replayStats}>
@@ -223,7 +217,7 @@ export default function RideDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#101418",
+    backgroundColor: colors.page,
   },
   scroll: {
     flex: 1,
@@ -241,35 +235,31 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   backText: {
-    color: "#7dd3fc",
+    color: colors.textOnOrange,
     fontSize: 15,
     fontWeight: "800",
     marginBottom: 18,
   },
   title: {
-    color: "#f8fafc",
+    color: colors.textOnOrange,
     fontSize: 34,
     fontWeight: "900",
     marginBottom: 8,
   },
   subtitle: {
-    color: "#94a3b8",
+    color: colors.textOnOrange,
     fontSize: 16,
+    opacity: 0.82,
   },
   mapCard: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#263241",
-  },
-  map: {
-    height: 320,
-    width: "100%",
+    ...shadows.tile,
   },
   sliderPanel: {
-    padding: 16,
-    backgroundColor: "#18212b",
+    padding: space.lg,
+    backgroundColor: colors.surface,
   },
   sliderHeader: {
     flexDirection: "row",
@@ -277,12 +267,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sliderTitle: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "900",
   },
   sliderPercent: {
-    color: "#7dd3fc",
+    color: colors.accent,
     fontSize: 16,
     fontWeight: "900",
   },
@@ -291,12 +281,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   replayText: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: "700",
   },
   replayValue: {
-    color: "#f8fafc",
+    color: colors.text,
   },
   metricGrid: {
     flexDirection: "row",
@@ -304,38 +294,36 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    ...shadows.tile,
   },
   metricLabel: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 8,
   },
   metricValue: {
-    color: "#7dd3fc",
+    color: colors.accent,
     fontSize: 24,
     fontWeight: "900",
   },
   card: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    ...shadows.tile,
   },
   sectionTitle: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 17,
     fontWeight: "900",
     marginBottom: 12,
   },
   infoText: {
-    color: "#cbd5e1",
+    color: colors.textMuted,
     fontSize: 15,
     fontWeight: "600",
     marginBottom: 8,

@@ -13,6 +13,7 @@ import { getRides } from "../database/db";
 import type { Ride } from "../types/measurement";
 //For debugging
 import { getLatestRideWithSamples } from "../database/db";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
 
 export default function RidesScreen() {
   const navigation = useNavigation<any>();
@@ -33,7 +34,7 @@ export default function RidesScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>Back</Text>
           </Pressable>
 
           <Text style={styles.title}>Saved rides</Text>
@@ -65,10 +66,10 @@ export default function RidesScreen() {
             >
               <View>
                 <Text style={styles.rideTitle}>
-                  {dayjs(item.startedAt).format("DD MMM YYYY · HH:mm")}
+                  {dayjs(item.startedAt).format("DD MMM YYYY - HH:mm")}
                 </Text>
                 <Text style={styles.rideMeta}>
-                  {item.vehicleType} · {item.sensorSource}
+                  {item.vehicleType} - {item.sensorSource}
                 </Text>
               </View>
 
@@ -87,7 +88,7 @@ export default function RidesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#101418",
+    backgroundColor: colors.page,
   },
   container: {
     flex: 1,
@@ -98,43 +99,43 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   backText: {
-    color: "#7dd3fc",
+    color: colors.textOnOrange,
     fontSize: 15,
     fontWeight: "800",
     marginBottom: 18,
   },
   title: {
-    color: "#f8fafc",
+    color: colors.textOnOrange,
     fontSize: 34,
     fontWeight: "900",
     marginBottom: 8,
   },
   subtitle: {
-    color: "#94a3b8",
+    color: colors.textOnOrange,
     fontSize: 16,
+    opacity: 0.82,
   },
   listContent: {
     gap: 12,
     paddingBottom: 48,
   },
   rideCard: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#263241",
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    ...shadows.tile,
   },
   rideTitle: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 6,
   },
   rideMeta: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -142,30 +143,29 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   sampleCount: {
-    color: "#7dd3fc",
+    color: colors.accent,
     fontSize: 22,
     fontWeight: "900",
   },
   sampleLabel: {
-    color: "#64748b",
+    color: colors.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
   emptyCard: {
-    backgroundColor: "#18212b",
-    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     padding: 20,
-    borderWidth: 1,
-    borderColor: "#263241",
+    ...shadows.tile,
   },
   emptyTitle: {
-    color: "#f8fafc",
+    color: colors.text,
     fontSize: 20,
     fontWeight: "900",
     marginBottom: 8,
   },
   emptyText: {
-    color: "#94a3b8",
+    color: colors.textMuted,
     fontSize: 15,
     lineHeight: 21,
   },

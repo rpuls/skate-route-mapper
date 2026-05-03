@@ -121,6 +121,27 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.AdminUserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  name: 'name',
+  role: 'role',
+  active: 'active',
+  lastLoginAt: 'lastLoginAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AdminSessionScalarFieldEnum = {
+  id: 'id',
+  adminUserId: 'adminUserId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.RideScalarFieldEnum = {
   id: 'id',
   startedAt: 'startedAt',
@@ -169,6 +190,11 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
+exports.AdminRole = exports.$Enums.AdminRole = {
+  owner: 'owner',
+  admin: 'admin'
+};
+
 exports.VehicleType = exports.$Enums.VehicleType = {
   skates: 'skates',
   skateboard: 'skateboard',
@@ -181,6 +207,8 @@ exports.SensorSource = exports.$Enums.SensorSource = {
 };
 
 exports.Prisma.ModelName = {
+  AdminUser: 'AdminUser',
+  AdminSession: 'AdminSession',
   Ride: 'Ride',
   Sample: 'Sample'
 };

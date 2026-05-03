@@ -32,7 +32,55 @@ Set by deployment environment
 - The mobile app should create one `rideId` per ride session.
 - Sample uploads must be sent after the ride has been started.
 - Samples cannot be uploaded after the ride has been finished.
-- The backend currently has no auth yet.
+- `/health` is public for uptime checks.
+- Ride ingestion endpoints require the mobile ingestion API key.
+- Admin read endpoints require the admin API key.
+
+## Authentication
+
+The first production auth boundary is shared-key authentication. This is intentionally smaller than a full user/login system because the current mobile write flow only needs to prove that requests came from a trusted client build or trusted backend process.
+
+Set these environment variables on Railway for the API service:
+
+```env
+MOBILE_INGESTION_API_KEY=generate-a-long-random-secret
+ADMIN_API_KEY=generate-a-different-long-random-secret
+INIT_ADMIN_EMAIL=admin@example.com
+INIT_ADMIN_PASSWORD=generate-a-long-random-password
+ADMIN_SESSION_TTL_HOURS=24
+```
+
+Send either header form:
+
+```http
+Authorization: Bearer <key>
+```
+
+or:
+
+```http
+X-API-Key: <key>
+```
+
+Use `MOBILE_INGESTION_API_KEY` for:
+
+- `POST /v1/rides/start`
+- `POST /v1/rides/:rideId/samples`
+- `POST /v1/rides/:rideId/finish`
+
+Use `ADMIN_API_KEY` for:
+
+- `GET /v1/rides`
+- `GET /v1/rides/:rideId`
+
+Dashboard users sign in with `POST /v1/admin/login`. The returned session token can also authorize admin endpoints with the same bearer header format.
+
+Important:
+
+- Keep the two keys different.
+- Do not ship `ADMIN_API_KEY` in the mobile app.
+- `INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` only create the first owner account when the admin user table is empty.
+- User accounts for the mobile app are intentionally out of scope for the current admin-dashboard work.
 
 ## Recommended Mobile Flow
 
@@ -105,9 +153,57 @@ Response:
 
 The RN app does not need this endpoint for normal ride uploads.
 
+### `POST /v1/admin/login`
+
+Create an admin dashboard session.
+
+Request body:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "long-admin-password"
+}
+```
+
+Success response:
+
+Status:
+
+```text
+200 OK
+```
+
+Body:
+
+```json
+{
+  "ok": true,
+  "token": "session-token-returned-once",
+  "expiresAt": "2026-05-04T20:00:00.000Z",
+  "adminUser": {
+    "id": "cm...",
+    "email": "admin@example.com",
+    "role": "owner"
+  }
+}
+```
+
+Use the returned token for admin requests:
+
+```http
+Authorization: Bearer <session-token>
+```
+
 ### `POST /v1/rides/start`
 
 Create or register a ride session before sending samples.
+
+Auth:
+
+```http
+Authorization: Bearer <MOBILE_INGESTION_API_KEY>
+```
 
 Request body:
 
@@ -161,6 +257,12 @@ Behavior notes:
 ### `POST /v1/rides/:rideId/samples`
 
 Upload a batch of measurement samples for an existing ride.
+
+Auth:
+
+```http
+Authorization: Bearer <MOBILE_INGESTION_API_KEY>
+```
 
 Path params:
 
@@ -235,6 +337,12 @@ Behavior notes:
 
 Mark a ride as finished.
 
+Auth:
+
+```http
+Authorization: Bearer <MOBILE_INGESTION_API_KEY>
+```
+
 Path params:
 
 - `rideId`: the same client-generated ride ID used in the start call
@@ -274,6 +382,12 @@ List rides from the backend.
 
 This is mainly for admin tools, not required for the mobile write flow.
 
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
 Query params:
 
 - `limit`: optional, max `100`, default `25`
@@ -289,6 +403,12 @@ GET /v1/rides?limit=20
 Fetch one ride and all of its stored samples.
 
 This is mainly for admin tools, debugging, or later sync features.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
 
 ## Error Responses
 
@@ -308,6 +428,19 @@ Example:
       "message": "Too small: expected number to be >=-90"
     }
   ]
+}
+```
+
+### `401 Unauthorized`
+
+Used when a protected endpoint is missing a valid API key.
+
+Example:
+
+```json
+{
+  "ok": false,
+  "message": "Unauthorized"
 }
 ```
 
@@ -363,7 +496,7 @@ The RN developer only needs to build this first:
 
 Good first simplifications:
 
-- no auth yet
+- shared-key ingestion auth only
 - no pause/resume API yet
 - no delete ride API yet
 - no server-side sample deduplication yet

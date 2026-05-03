@@ -1,9 +1,10 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { z } from "zod";
+import { requireAdminAuth, requireApiKey } from "./auth.js";
 import { env } from "./config.js";
-import { appendSamples, connectDatabase, createRide, disconnectDatabase, finishRide, getRide, listRides } from "./db.js";
-import { rideFinishSchema, rideSamplesSchema, rideStartSchema } from "./contracts.js";
+import { appendSamples, connectDatabase, createRide, disconnectDatabase, finishRide, getRide, listRides, loginAdminUser, seedInitialAdminUser } from "./db.js";
+import { adminLoginSchema, rideFinishSchema, rideSamplesSchema, rideStartSchema } from "./contracts.js";
 
 const rideParamsSchema = z.object({
   rideId: z.string().min(1),
@@ -26,7 +27,23 @@ app.get("/health", async () => ({
   service: "skate-route-mapper-api",
 }));
 
-app.post("/v1/rides/start", async (request, reply) => {
+app.post("/v1/admin/login", async (request, reply) => {
+  const payload = adminLoginSchema.parse(request.body);
+  const session = await loginAdminUser(payload.email, payload.password);
+
+  return reply.code(200).send({
+    ok: true,
+    ...session,
+  });
+});
+
+app.post("/v1/rides/start", {
+  preHandler: (request, reply, done) => {
+    if (requireApiKey(request, reply, env.MOBILE_INGESTION_API_KEY, "ingestion")) {
+      done();
+    }
+  },
+}, async (request, reply) => {
   const payload = rideStartSchema.parse(request.body);
   await createRide(payload);
   return reply.code(201).send({
@@ -35,7 +52,13 @@ app.post("/v1/rides/start", async (request, reply) => {
   });
 });
 
-app.post("/v1/rides/:rideId/samples", async (request, reply) => {
+app.post("/v1/rides/:rideId/samples", {
+  preHandler: (request, reply, done) => {
+    if (requireApiKey(request, reply, env.MOBILE_INGESTION_API_KEY, "ingestion")) {
+      done();
+    }
+  },
+}, async (request, reply) => {
   const { rideId } = rideParamsSchema.parse(request.params);
   const payload = rideSamplesSchema.parse(request.body);
   await appendSamples(rideId, payload.samples);
@@ -46,7 +69,13 @@ app.post("/v1/rides/:rideId/samples", async (request, reply) => {
   });
 });
 
-app.post("/v1/rides/:rideId/finish", async (request, reply) => {
+app.post("/v1/rides/:rideId/finish", {
+  preHandler: (request, reply, done) => {
+    if (requireApiKey(request, reply, env.MOBILE_INGESTION_API_KEY, "ingestion")) {
+      done();
+    }
+  },
+}, async (request, reply) => {
   const { rideId } = rideParamsSchema.parse(request.params);
   const payload = rideFinishSchema.parse(request.body);
   await finishRide(rideId, payload.endedAt);
@@ -56,14 +85,22 @@ app.post("/v1/rides/:rideId/finish", async (request, reply) => {
   });
 });
 
-app.get("/v1/rides", async (request) => {
+app.get("/v1/rides", {
+  preHandler: async (request, reply) => {
+    await requireAdminAuth(request, reply, env.ADMIN_API_KEY);
+  },
+}, async (request) => {
   const { limit } = ridesQuerySchema.parse(request.query);
   return {
     rides: await listRides(limit),
   };
 });
 
-app.get("/v1/rides/:rideId", async (request, reply) => {
+app.get("/v1/rides/:rideId", {
+  preHandler: async (request, reply) => {
+    await requireAdminAuth(request, reply, env.ADMIN_API_KEY);
+  },
+}, async (request, reply) => {
   const { rideId } = rideParamsSchema.parse(request.params);
   const ride = await getRide(rideId);
 
@@ -102,6 +139,13 @@ app.setErrorHandler((error, _request, reply) => {
     });
   }
 
+  if (error instanceof Error && error.message === "Invalid admin credentials") {
+    return reply.code(401).send({
+      ok: false,
+      message: error.message,
+    });
+  }
+
   return reply.code(500).send({
     ok: false,
     message: "Internal server error",
@@ -111,6 +155,12 @@ app.setErrorHandler((error, _request, reply) => {
 async function start() {
   try {
     await connectDatabase();
+    const seededAdmin = await seedInitialAdminUser();
+
+    if (seededAdmin) {
+      app.log.info({ adminUserId: seededAdmin.id, email: seededAdmin.email }, "Seeded initial admin user");
+    }
+
     await app.listen({
       port: env.PORT,
       host: env.HOST,

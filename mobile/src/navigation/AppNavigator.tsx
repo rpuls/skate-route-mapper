@@ -6,6 +6,7 @@ import HomeScreen from "../screens/HomeScreen";
 import RecordingScreen from "../screens/RecordingScreen";
 import RidesScreen from "../screens/RidesScreen";
 import RideDetailScreen from "../screens/RideDetailScreen";
+import { colors } from "@skate-route-mapper/shared";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -25,7 +26,7 @@ export default function AppNavigator() {
         screenOptions={{
           headerShown: false,
           contentStyle: {
-            backgroundColor: "#101418",
+            backgroundColor: colors.page,
           },
         }}
       >

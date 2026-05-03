@@ -8,8 +8,13 @@
     "shared"
   ],
   "scripts": {
-    "mobile:start": "npm run start --workspace @skate-route-mapper/mobile",
-    "mobile:expogo": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel",
+    "admin-app": "npm run docker:up",
+    "app": "npm run admin-app",
+    "stop": "npm run docker:down",
+    "logs": "npm run docker:logs",
+    "mobile:start": "npm run start --workspace @skate-route-mapper/mobile --",
+    "mobile:expogo": "npm run start --workspace @skate-route-mapper/mobile -- --lan",
+    "mobile:tunnel": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel",
     "mobile:android": "npm run android --workspace @skate-route-mapper/mobile",
     "mobile:ios": "npm run ios --workspace @skate-route-mapper/mobile",
     "mobile:web": "npm run web --workspace @skate-route-mapper/mobile",
@@ -32,5 +37,8 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"
+  },
+  "overrides": {
+    "react-dom": "19.1.0"
   }
 }
