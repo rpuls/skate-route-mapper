@@ -168,6 +168,9 @@ Local default `.env` files are included for quick backend/admin testing:
 - `.env` is used by Docker Compose.
 - `api/.env` is used by the API when running outside Docker.
 - `admin/.env` is used by Vite when running the admin app outside Docker.
+- `mobile/.env` can be created from `mobile/.env.example` for Expo public mobile config.
+
+Tracked examples are available at `.env.example`, `api/.env.example`, `admin/.env.example`, and `mobile/.env.example`.
 
 The local defaults include this development admin account:
 
