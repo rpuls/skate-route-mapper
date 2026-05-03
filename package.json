@@ -1,52 +1,36 @@
 {
-  "name": "skate-route-mapper",
-  "version": "1.0.0",
-  "main": "index.ts",
+  "name": "skate-route-mapper-monorepo",
+  "private": true,
+  "workspaces": [
+    "api",
+    "admin",
+    "mobile",
+    "shared"
+  ],
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
-  },
-  "dependencies": {
-    "@react-native-community/slider": "5.0.1",
-    "@react-navigation/native": "^7.2.2",
-    "@react-navigation/native-stack": "^7.14.12",
-    "dayjs": "^1.11.20",
-    "expo": "~54.0.33",
-    "expo-camera": "~17.0.10",
-    "expo-crypto": "~15.0.9",
-    "expo-device": "~8.0.10",
-    "expo-file-system": "~19.0.22",
-    "expo-keep-awake": "~15.0.8",
-    "expo-location": "~19.0.8",
-    "expo-screen-orientation": "~9.0.9",
-    "expo-sensors": "~15.0.8",
-    "expo-sharing": "~14.0.8",
-    "expo-sqlite": "~16.0.10",
-    "expo-status-bar": "~3.0.9",
-    "lodash": "^4.18.1",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-ble-plx": "^3.5.1",
-    "react-native-chart-kit": "^6.12.2",
-    "react-native-gesture-handler": "~2.28.0",
-    "react-native-maps": "1.20.1",
-    "react-native-reanimated": "~4.1.1",
-    "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0",
-    "react-native-svg": "^15.15.4",
-    "uuid": "^14.0.0",
-    "zustand": "^5.0.12"
+    "mobile:start": "npm run start --workspace @skate-route-mapper/mobile",
+    "mobile:expogo": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel",
+    "mobile:android": "npm run android --workspace @skate-route-mapper/mobile",
+    "mobile:ios": "npm run ios --workspace @skate-route-mapper/mobile",
+    "mobile:web": "npm run web --workspace @skate-route-mapper/mobile",
+    "admin:dev": "npm run dev --workspace @skate-route-mapper/admin",
+    "admin:build": "npm run build --workspace @skate-route-mapper/admin",
+    "admin:preview": "npm run preview --workspace @skate-route-mapper/admin",
+    "api:dev": "npm run dev --workspace @skate-route-mapper/api",
+    "api:build": "npm run build --workspace @skate-route-mapper/api",
+    "api:start": "npm run start --workspace @skate-route-mapper/api",
+    "api:check": "npm run check --workspace @skate-route-mapper/api",
+    "db:generate": "npm run prisma:generate --workspace @skate-route-mapper/api",
+    "db:migrate:dev": "npm run prisma:migrate:dev --workspace @skate-route-mapper/api",
+    "db:migrate:deploy": "npm run prisma:migrate:deploy --workspace @skate-route-mapper/api",
+    "docker:up": "docker compose up --build --detach --wait && node scripts/docker-ready.mjs",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
-    "@types/lodash": "^4.17.24",
-    "@types/react": "~19.1.0",
-    "@types/uuid": "^10.0.0",
-    "eslint": "^10.2.1",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.3",
-    "typescript": "~5.9.2"
+    "prisma": "^6.19.3"
   },
-  "private": true
+  "dependencies": {
+    "@prisma/client": "^6.19.3"
+  }
 }

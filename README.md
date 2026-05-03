@@ -1,135 +1,277 @@
 # Skate Route Mapper
 
-Skate Route Mapper is an Expo React Native app for recording skating routes and measuring how smooth or rough the surface feels while riding. It uses the phone's accelerometer, gyroscope, and GPS to collect vibration and location samples, stores each ride locally in SQLite, and lets you replay saved routes on a map.
+Skate Route Mapper helps skaters find better routes, avoid rough pavement, and build a clearer picture of surface quality over time. The mobile app records vibration, motion, and GPS data while you ride, and the backend is designed to ingest that data immediately so it can be processed, ranked, and used in future route intelligence.
 
-The project is aimed at mapping route quality for inline skates, skateboards, and longboards, where small changes in pavement can matter a lot.
+For end users, the promise is simple:
 
-## Features
+- record a ride with your phone
+- capture how smooth or rough the road feels
+- replay the route on a map
+- turn raw ride data into useful route-quality insight
 
-- Record rides using phone sensors.
-- Capture accelerometer and gyroscope readings at roughly 5 Hz.
-- Track GPS position and speed while recording.
-- Calculate a simple vibration magnitude from accelerometer data.
-- Store rides and sensor samples locally with Expo SQLite.
-- View saved rides ordered by newest first.
-- Replay a route on a map with a progress slider.
-- Show ride statistics including sample count, GPS point count, average vibration, and max vibration.
-- Choose the ride type: inline skates, skateboard, or longboard.
+This project is built for inline skates, skateboards, and longboards, where small changes in pavement quality make a real difference.
 
-External sensor support is represented in the UI, but it is currently disabled and marked as a future feature.
-
-## Tech Stack
-
-- Expo SDK 54
-- React Native 0.81
-- React 19
-- TypeScript
-- React Navigation native stack
-- Zustand for recording state
-- Expo SQLite for local persistence
-- Expo Sensors for accelerometer and gyroscope data
-- Expo Location for GPS tracking
-- React Native Maps for route display
-- React Native Chart Kit for the live vibration chart
-
-## How It Works
-
-1. The app starts in `App.tsx` and calls `initDatabase()` to create the local SQLite tables if they do not exist.
-2. On the home screen, the user selects a vehicle type and starts a route scan.
-3. Starting a scan creates a new ride row in SQLite and moves the app to the recording screen.
-4. The recording screen listens to accelerometer and gyroscope updates, watches the user's GPS position, and inserts each sample into SQLite.
-5. Stopping the recording updates the ride with an end time and final sample count.
-6. Saved rides can be opened from the ride list and replayed on a map.
-
-## Data Model
-
-The local database has two main tables:
-
-- `rides`: one row per recorded route, including start/end time, vehicle type, sensor source, and sample count.
-- `samples`: time-series measurements for a ride, including accelerometer axes, gyroscope axes, vibration magnitude, latitude, longitude, and speed.
-
-The current vibration value is calculated as:
+## Repo Structure
 
 ```text
-sqrt(ax^2 + ay^2 + az^2)
+api/         Backend ingestion API
+admin/       Admin dashboard app
+db/          Prisma schema and migrations
+mobile/      Expo React Native app
+shared/      Shared TypeScript types and contracts
 ```
 
-This is a simple magnitude score rather than a calibrated road-quality index.
+What each part does:
 
-## Getting Started
+- `mobile` is the client that records rides with accelerometer, gyroscope, and GPS.
+- `api` is the Node.js backend that receives ride sessions and sample batches.
+- `admin` is the internal dashboard app.
+- `db` holds the Prisma datamodel and migrations.
+- `shared` holds the shared ride and sample contract used by both apps.
+
+## How The System Works
+
+The current system follows a very direct flow:
+
+1. A user starts a ride in the mobile app.
+2. The app collects motion and GPS samples.
+3. Samples are stored locally on-device.
+4. The backend is ready to accept ride start events, sample batches, and ride completion events.
+5. Later, an admin dashboard can inspect rides and derived metrics from the database.
+
+Core backend endpoints:
+
+- `POST /v1/rides/start`
+- `POST /v1/rides/:rideId/samples`
+- `POST /v1/rides/:rideId/finish`
+- `GET /v1/rides`
+- `GET /v1/rides/:rideId`
+- `GET /health`
+
+## Recommended Stack
+
+Recommended stack for this project:
+
+- `Node.js`
+- `Fastify`
+- `PostgreSQL`
+- `Prisma`
+- `Railway`
+
+Why this stack fits:
+
+- `Node.js` keeps backend and future admin dashboard in the same language.
+- `Fastify` is lightweight and well suited for ingestion-heavy APIs.
+- `PostgreSQL` is a strong fit for structured ride data, aggregation, and future geospatial work.
+- `Prisma` makes the datamodel explicit in one schema file and keeps migrations versioned.
+- `Railway` is a clean deployment fit for separate API, admin, and database services.
+
+Recommendation:
+
+- use plain PostgreSQL as the source of truth
+- keep the API as the only write entrypoint
+- consider Supabase later only if you specifically want managed auth, storage, or realtime features
+- use Prisma as the canonical schema and migration layer
+
+## Developer Setup
 
 ### Prerequisites
 
-- Node.js
-- npm
-- Expo-compatible Android or iOS environment
-- A physical device is recommended because the app depends on motion sensors and GPS
+- Node.js 20+
+- npm 10+
+- Docker Desktop or another local Docker engine
+- PostgreSQL 15+ locally, or a remote Postgres instance
+- Expo-compatible Android or iOS environment for mobile development
+
+### Fastest Local Setup With Docker
+
+If you want the backend stack running quickly and consistently, use Docker.
+
+Start everything:
+
+```bash
+npm run docker:up
+```
+
+Direct Docker command:
+
+```bash
+docker compose up --build --detach --wait
+```
+
+When the stack is ready, the command prints the local access URLs.
+
+This starts:
+
+- `db` on `localhost:5432`
+- `api` on `http://localhost:3001`
+- `admin` on `http://localhost:3000`
+
+Useful commands:
+
+```bash
+npm run docker:down
+npm run docker:logs
+```
+
+What Docker covers:
+
+- PostgreSQL database
+- backend API container
+- admin web app container
+
+This is the easiest way to mirror the eventual Railway shape locally.
 
 ### Install Dependencies
+
+From the repo root:
 
 ```bash
 npm install
 ```
 
-### Run the App
+### Environment Variables
 
-Start the Expo development server:
+Create an `.env` file in `api` based on `api/.env.example`.
 
-```bash
-npm start
+Example:
+
+```env
+PORT=3001
+HOST=0.0.0.0
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/skate_route_mapper
+CORS_ORIGIN=*
 ```
 
-Run on Android:
+### Run The API
+
+From the repo root:
 
 ```bash
-npm run android
+npm run api:dev
 ```
 
-Run on iOS:
+Other useful API commands:
 
 ```bash
-npm run ios
+npm run api:check
+npm run api:build
+npm run api:start
+npm run db:generate
+npm run db:migrate:dev
+npm run db:migrate:deploy
 ```
 
-Run on web:
+What happens on startup:
+
+- the API loads environment variables
+- connects to PostgreSQL
+- applies committed Prisma migrations
+- starts the Fastify server
+
+Default local API URL:
+
+```text
+http://localhost:3001
+```
+
+Health check:
+
+```text
+GET http://localhost:3001/health
+```
+
+### Run The Mobile App
+
+From the repo root:
 
 ```bash
-npm run web
+npm run mobile:start
 ```
 
-The web target may be useful for basic UI checks, but the main recording workflow is designed for a mobile device with accelerometer, gyroscope, and location support.
-
-## Permissions
-
-The app requests foreground location permission when the recording screen opens. If permission is denied, sensor recording can still continue, but samples will not include GPS coordinates or speed.
-
-Motion sensor access is provided through Expo Sensors.
-
-## Available Scripts
+To run on a physical iPhone with Expo Go over a tunnel:
 
 ```bash
-npm start       # Start Expo
-npm run android # Start Expo for Android
-npm run ios     # Start Expo for iOS
-npm run web     # Start Expo for web
+npm run mobile:expogo
 ```
 
-There are currently no configured lint, test, or build scripts in `package.json`.
+Platform-specific commands:
 
-## Current Limitations
+```bash
+npm run mobile:android
+npm run mobile:ios
+npm run mobile:web
+```
 
-- External BLE sensor recording is not implemented yet.
-- Ride data is stored only on the local device.
-- There is no export, sync, or sharing flow yet.
-- There is no ride deletion or editing UI.
-- The vibration metric is raw and not calibrated against a known surface-quality scale.
-- The recording screen keeps only the latest 300 samples in UI state, while all samples are still written to SQLite.
+Notes:
 
-## Development Notes
+- a physical device is strongly recommended because the app depends on motion sensors and GPS
+- `mobile:expogo` is the easiest option from Windows when using Expo Go on an iPhone
+- `mobile:ios` launches the local iOS simulator and requires macOS with Xcode
+- the web target is mainly useful for UI checks, not full ride recording
+- the mobile app is not containerized; Docker is meant for backend services and the admin app
 
-- `src/database/db.ts` contains the SQLite schema and query helpers.
-- `src/store/measurementStore.ts` owns the active ride state and writes samples through the database helpers.
-- `src/screens/RecordingScreen.tsx` is where live sensor and location subscriptions are started.
-- `src/screens/RideDetailScreen.tsx` filters samples with GPS coordinates and draws the replay polyline.
+## Developer Workflow
 
-If you add support for external sensors, the natural integration point is the `SensorSource` type and the recording flow in `RecordingScreen.tsx`.
+When working in this repo, this is the important mental model:
+
+- `mobile` owns ride capture
+- `api` owns ingestion and server-side processing
+- `db` owns the Prisma schema and migrations
+- `shared` must stay in sync with both
+
+If you change the ride or sample payload shape:
+
+1. Update `shared`.
+2. Update the API validation and persistence layer.
+3. Update the mobile app to send or consume the new contract.
+
+Key files:
+
+- `mobile/src/store/measurementStore.ts` manages the ride lifecycle in the app.
+- `mobile/src/database/db.ts` stores local rides and samples in SQLite.
+- `mobile/src/screens/RecordingScreen.tsx` handles live sensor and GPS collection.
+- `api/src/server.ts` defines the HTTP routes.
+- `api/src/db.ts` defines Prisma-backed persistence logic.
+- `db/schema.prisma` is the canonical backend datamodel.
+- `api/src/contracts.ts` validates incoming payloads.
+
+## Current Status
+
+What already works:
+
+- mobile ride recording
+- local SQLite persistence on device
+- ride replay on a map
+- backend API scaffolding for ride ingestion
+- Prisma-backed backend schema and migrations
+- shared TypeScript contracts for mobile and backend
+- Docker-based local stack for API, Postgres, and admin
+
+What is not wired up yet:
+
+- mobile-to-backend upload flow
+- auth or ingestion keys
+- admin dashboard
+- advanced analytics or calibrated surface scoring
+
+## Deployment Shape
+
+Recommended Railway setup:
+
+- one service for `api`
+- one service for `admin`
+- one PostgreSQL service for persistence
+
+That keeps responsibilities clean:
+
+- API handles ingestion and processing
+- admin app handles internal tooling
+- PostgreSQL stores ride and sample data
+
+## Next Development Priorities
+
+1. Add mobile upload to the API with batched sample syncing.
+2. Add a simple auth layer for trusted ingestion.
+3. Add an admin web app for ride inspection and QA.
+4. Add better route scoring and later geospatial features.

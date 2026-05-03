@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+.expo
+.expo-shared
+coverage
+dist
+api/node_modules
+api/dist
+admin/.vite
+mobile/.expo
+**/*.log
+**/.DS_Store
+**/*.tsbuildinfo
