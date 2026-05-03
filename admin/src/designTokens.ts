@@ -13,6 +13,10 @@ function px(value: number) {
   return `${value}px`;
 }
 
+function kebabCase(value: string) {
+  return value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
+}
+
 export function applyDesignTokens() {
   const root = document.documentElement;
 
@@ -32,7 +36,7 @@ export function applyDesignTokens() {
   root.style.setProperty("--font-weight-heavy", typography.weights.heavy);
 
   for (const [name, value] of Object.entries(colors)) {
-    root.style.setProperty(`--color-${name}`, value);
+    root.style.setProperty(`--color-${kebabCase(name)}`, value);
   }
 
   for (const [name, value] of Object.entries(space)) {
