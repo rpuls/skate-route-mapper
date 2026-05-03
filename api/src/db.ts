@@ -1,5 +1,5 @@
 import { Prisma, PrismaClient } from "../generated/prisma/index.js";
-import type { MeasurementSample, RideStartPayload } from "@skate-route-mapper/shared";
+import type { MeasurementSample, RideStartPayload } from "@skate-route-mapper/shared/contracts";
 import { env } from "./config.js";
 import { hashPassword, verifyPassword } from "./passwords.js";
 import { createSessionToken, hashSessionToken } from "./tokens.js";
