@@ -6,10 +6,12 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY admin/package.json admin/package.json
+COPY shared/package.json shared/package.json
 
 RUN npm ci
 
 COPY admin admin
+COPY shared shared
 
 RUN npm run admin:build
 
