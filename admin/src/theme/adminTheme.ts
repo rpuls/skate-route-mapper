@@ -272,12 +272,20 @@ export const adminTheme = createTheme({
           borderRadius: controlRadiusPx(),
           minHeight: componentStyles.primaryButton.minHeight,
           backgroundColor: colors.surface,
+          overflow: "hidden",
           "& .MuiOutlinedInput-notchedOutline": {
             borderWidth: borderWidth.thin,
+          },
+          "& .MuiOutlinedInput-notchedOutline legend": {
+            fontSize: "0.85em",
+            maxWidth: "100%",
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderWidth: borderWidth.thick,
           },
+        },
+        input: {
+          borderRadius: "inherit",
         },
       },
     },
