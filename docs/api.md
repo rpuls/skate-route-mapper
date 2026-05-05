@@ -1,6 +1,6 @@
 # API Contract
 
-This document defines the backend API that the React Native app should integrate with.
+This document defines the backend API surfaces for the React Native app and the internal admin dashboard.
 
 The goal is to keep the first version very simple:
 
@@ -8,7 +8,7 @@ The goal is to keep the first version very simple:
 2. Upload ride samples in batches
 3. Finish the ride
 
-That is the entire write flow the mobile app needs.
+That is the entire write flow the mobile app needs first.
 
 ## Base URL
 
@@ -33,10 +33,52 @@ Set by deployment environment
 - Sample uploads must be sent after the ride has been started.
 - Samples cannot be uploaded after the ride has been finished.
 - `/health` is public for uptime checks.
-- Ride ingestion endpoints require the mobile ingestion API key.
-- Admin read endpoints require the admin API key.
+- User-facing mobile endpoints live under `/v1/mobile/*`.
+- Admin endpoints live under `/v1/admin/*`.
+- Admin-only wrappers around mobile-shaped actions live under `/v1/admin/mobile/*`.
+- Mobile requests can never authorize admin endpoints.
+- Admin requests can authorize mobile endpoints and admin-mobile wrapper endpoints.
+- Future user-facing read endpoints must only return data the signed-in mobile user is allowed to access.
 
 Admin frontend data-fetching conventions are documented in `docs/admin-frontend.md`. The API contract describes endpoints; frontend caching, query keys, and mutation invalidation rules belong there.
+
+## API Surfaces
+
+The backend is one deployable API service, but it exposes distinct logical surfaces:
+
+```text
+/v1/mobile/*        End-user/mobile API
+/v1/admin/*         Internal admin API
+/v1/admin/mobile/*  Admin-only mobile-compatible API
+/health             Public operational endpoint
+```
+
+The admin-mobile surface exists for internal tooling that should perform the same type of operation as a mobile client, such as creating a ride or uploading samples from an admin workflow. It is not a proxy to the mobile API. It uses admin authorization, validates the same payload shapes where appropriate, and calls the same backend ride-ingestion logic.
+
+Do not add user-facing mobile routes under `/v1/admin/*`. Do not add admin routes under `/v1/mobile/*`.
+
+## API Source Layout
+
+The API source is organized by app bootstrap, shared infrastructure, central endpoint files, and reusable feature logic:
+
+```text
+backend/src/
+  server.ts                  Process startup and shutdown
+  app.ts                     Fastify app creation, plugins, route registration, error handling
+  config/env.ts              Environment parsing
+  db/prisma.ts               Shared Prisma client
+  auth/                      Admin/mobile auth helpers, passwords, session tokens
+  endpoints/
+    adminRoutes.ts           All `/v1/admin/*` endpoints
+    mobileRoutes.ts          All `/v1/mobile/*` endpoints
+    healthRoute.ts           Public health check
+  features/
+    rides/                   Ride contracts, index export, and reusable ride logic
+    adminUsers/              Admin user contracts, index export, and reusable admin user logic
+    adminResources/          Generated admin metadata, index export, and reusable entity logic
+```
+
+Endpoint modules own HTTP paths, auth guards, request parsing, and response codes. They should import feature modules through each feature's `index.ts`, usually as a namespace such as `import * as Rides from "../features/rides/index.js"`, so endpoint files stay readable. Feature modules own reusable contracts and Prisma-backed business logic so the same behavior can later be used by other endpoints, scheduled jobs, or background processing. Shared code should only live outside `features/` when it is genuinely cross-cutting, such as auth, config, or the Prisma client.
 
 ## Authentication
 
@@ -64,21 +106,26 @@ or:
 X-API-Key: <key>
 ```
 
-Use `MOBILE_INGESTION_API_KEY` for:
+Use `MOBILE_INGESTION_API_KEY` for mobile ingestion endpoints:
 
-- `POST /v1/rides/start`
-- `POST /v1/rides/:rideId/samples`
-- `POST /v1/rides/:rideId/finish`
+- `POST /v1/mobile/rides/start`
+- `POST /v1/mobile/rides/:rideId/samples`
+- `POST /v1/mobile/rides/:rideId/finish`
 
-Use `ADMIN_API_KEY` for:
+Admin credentials can also authorize those same mobile ingestion endpoints for internal tools.
+
+Use `ADMIN_API_KEY` or an admin session token for:
 
 - `GET /v1/admin/resources`
 - `GET /v1/admin/entities/:resourceName`
 - `POST /v1/admin/entities/:resourceName`
 - `PATCH /v1/admin/entities/:resourceName/:entityId`
 - `DELETE /v1/admin/entities/:resourceName/:entityId`
-- `GET /v1/rides`
-- `GET /v1/rides/:rideId`
+- `GET /v1/admin/rides`
+- `GET /v1/admin/rides/:rideId`
+- `POST /v1/admin/mobile/rides/start`
+- `POST /v1/admin/mobile/rides/:rideId/samples`
+- `POST /v1/admin/mobile/rides/:rideId/finish`
 - `GET /v1/admin/users`
 - `POST /v1/admin/users`
 - `PATCH /v1/admin/users/:adminUserId`
@@ -89,19 +136,21 @@ Important:
 
 - Keep the two keys different.
 - Do not ship `ADMIN_API_KEY` in the mobile app.
+- Do not make mobile clients depend on any `/v1/admin/*` endpoint.
+- Admin tools may call `/v1/mobile/*` with admin credentials, but custom admin workflows should prefer `/v1/admin/mobile/*` when the route is meant to be visibly admin-owned.
 - `INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` only create the first admin account when the admin user table is empty.
 - Signed-in admin users can create and edit other admin users.
-- User accounts for the mobile app are intentionally out of scope for the current admin-dashboard work.
+- User accounts for the mobile app are intentionally out of scope for the current admin-dashboard work, but future mobile auth must enforce per-user data access.
 
 ## Recommended Mobile Flow
 
 For each ride session, the app should do this:
 
 1. Generate a `rideId`.
-2. Call `POST /v1/rides/start`.
+2. Call `POST /v1/mobile/rides/start`.
 3. Start collecting samples locally.
 4. Upload samples in batches while recording.
-5. Call `POST /v1/rides/:rideId/finish` when the user stops recording.
+5. Call `POST /v1/mobile/rides/:rideId/finish` when the user stops recording.
 
 Recommended batching:
 
@@ -299,7 +348,9 @@ Request body fields are optional:
 }
 ```
 
-### `POST /v1/rides/start`
+## Mobile API
+
+### `POST /v1/mobile/rides/start`
 
 Create or register a ride session before sending samples.
 
@@ -308,6 +359,8 @@ Auth:
 ```http
 Authorization: Bearer <MOBILE_INGESTION_API_KEY>
 ```
+
+Admin credentials may also authorize this endpoint for internal tools.
 
 Request body:
 
@@ -358,7 +411,7 @@ Behavior notes:
 - If the same `rideId` is sent again, the server currently ignores the duplicate insert and still responds successfully.
 - The RN app should still treat `rideId` as unique per ride.
 
-### `POST /v1/rides/:rideId/samples`
+### `POST /v1/mobile/rides/:rideId/samples`
 
 Upload a batch of measurement samples for an existing ride.
 
@@ -367,6 +420,8 @@ Auth:
 ```http
 Authorization: Bearer <MOBILE_INGESTION_API_KEY>
 ```
+
+Admin credentials may also authorize this endpoint for internal tools.
 
 Path params:
 
@@ -437,7 +492,7 @@ Behavior notes:
 - If the same batch is uploaded twice, it will be stored twice.
 - The mobile app should therefore avoid retrying blindly without tracking what was already sent.
 
-### `POST /v1/rides/:rideId/finish`
+### `POST /v1/mobile/rides/:rideId/finish`
 
 Mark a ride as finished.
 
@@ -446,6 +501,8 @@ Auth:
 ```http
 Authorization: Bearer <MOBILE_INGESTION_API_KEY>
 ```
+
+Admin credentials may also authorize this endpoint for internal tools.
 
 Path params:
 
@@ -480,7 +537,9 @@ Important:
 
 - After a ride is finished, later sample uploads for that ride will be rejected.
 
-### `GET /v1/rides`
+## Admin API
+
+### `GET /v1/admin/rides`
 
 List rides from the backend.
 
@@ -499,10 +558,10 @@ Query params:
 Example:
 
 ```text
-GET /v1/rides?limit=20
+GET /v1/admin/rides?limit=20
 ```
 
-### `GET /v1/rides/:rideId`
+### `GET /v1/admin/rides/:rideId`
 
 Fetch one ride and all of its stored samples.
 
@@ -513,6 +572,46 @@ Auth:
 ```http
 Authorization: Bearer <ADMIN_API_KEY>
 ```
+
+## Admin Mobile-Compatible API
+
+These endpoints are admin-owned routes for performing mobile-shaped write actions. They use the same payloads and behavior as the mobile ride ingestion endpoints, but they require admin authorization and live under `/v1/admin/*` so internal tooling remains visibly separated from the user-facing mobile API.
+
+### `POST /v1/admin/mobile/rides/start`
+
+Same payload and response as `POST /v1/mobile/rides/start`.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+An admin session token can also be used.
+
+### `POST /v1/admin/mobile/rides/:rideId/samples`
+
+Same payload and response as `POST /v1/mobile/rides/:rideId/samples`.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+An admin session token can also be used.
+
+### `POST /v1/admin/mobile/rides/:rideId/finish`
+
+Same payload and response as `POST /v1/mobile/rides/:rideId/finish`.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+An admin session token can also be used.
 
 ## Error Responses
 
@@ -592,11 +691,11 @@ Example:
 The RN developer only needs to build this first:
 
 1. Generate `rideId` on ride start
-2. Call `POST /v1/rides/start`
+2. Call `POST /v1/mobile/rides/start`
 3. Buffer samples locally while recording
-4. Send sample batches to `POST /v1/rides/:rideId/samples`
+4. Send sample batches to `POST /v1/mobile/rides/:rideId/samples`
 5. Retry carefully if a batch upload fails
-6. Call `POST /v1/rides/:rideId/finish` when recording ends
+6. Call `POST /v1/mobile/rides/:rideId/finish` when recording ends
 
 Good first simplifications:
 
@@ -614,4 +713,4 @@ The write contract is intentionally small:
 - one sample batch endpoint
 - one finish endpoint
 
-That is the contract the RN app should target unless we agree to change it.
+The RN app should target the `/v1/mobile/*` endpoints. Admin tools should target `/v1/admin/*` endpoints, including `/v1/admin/mobile/*` when they intentionally perform mobile-compatible write actions from an admin context.

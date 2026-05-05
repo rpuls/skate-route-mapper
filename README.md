@@ -14,7 +14,7 @@ This project is built for inline skates, skateboards, and longboards, where smal
 ## Repo Structure
 
 ```text
-api/         Backend ingestion API
+backend/         Backend API service
 admin/       Admin dashboard app
 db/          Prisma schema and migrations
 mobile/      Expo React Native app
@@ -24,7 +24,7 @@ shared/      Shared TypeScript types and contracts
 What each part does:
 
 - `mobile` is the client that records rides with accelerometer, gyroscope, and GPS.
-- `api` is the Node.js backend that receives ride sessions and sample batches.
+- `backend` is the Node.js backend that receives ride data, serves admin endpoints, and owns server-side processing.
 - `admin` is the internal dashboard app.
 - `db` holds the Prisma datamodel and migrations.
 - `shared` holds the shared ride/sample contract and design tokens used by the apps.
@@ -49,12 +49,22 @@ The current system follows a very direct flow:
 
 Core backend endpoints:
 
-- `POST /v1/rides/start`
-- `POST /v1/rides/:rideId/samples`
-- `POST /v1/rides/:rideId/finish`
-- `GET /v1/rides`
-- `GET /v1/rides/:rideId`
+- `POST /v1/mobile/rides/start`
+- `POST /v1/mobile/rides/:rideId/samples`
+- `POST /v1/mobile/rides/:rideId/finish`
+- `GET /v1/admin/rides`
+- `GET /v1/admin/rides/:rideId`
+- `POST /v1/admin/mobile/rides/start`
+- `POST /v1/admin/mobile/rides/:rideId/samples`
+- `POST /v1/admin/mobile/rides/:rideId/finish`
 - `GET /health`
+
+API boundaries:
+
+- `/v1/mobile/*` is the end-user/mobile API.
+- `/v1/admin/*` is the internal admin API.
+- `/v1/admin/mobile/*` is for admin-only workflows that perform mobile-compatible actions.
+- Admin credentials may authorize mobile endpoints; mobile credentials must never authorize admin endpoints.
 
 ## Recommended Stack
 
@@ -136,7 +146,7 @@ When the stack is ready, the command prints the local access URLs.
 This starts:
 
 - `db` on `localhost:5433`
-- `api` on `http://localhost:3001`
+- `backend` on `http://localhost:3001`
 - `admin` on `http://localhost:3000`
 
 Useful commands:
@@ -145,6 +155,34 @@ Useful commands:
 npm run docker:down
 npm run docker:logs
 ```
+
+### End-to-End Tests
+
+Playwright E2E tests live under `test/`. The root command starts an isolated Docker Compose stack for PostgreSQL, the API, and the admin app, runs the browser test, then tears the stack down with its test database volume:
+
+```bash
+npm run e2e
+```
+
+Run the same suite headed when you want to watch the browser:
+
+```bash
+npm run e2e:headed
+```
+
+Install the Chromium browser once before the first local run if Playwright has not installed it yet:
+
+```bash
+npm run e2e:install
+```
+
+The E2E stack uses these local ports:
+
+- admin on `http://localhost:3100`
+- backend on `http://localhost:3101`
+- PostgreSQL on `localhost:55433`
+
+The first test signs in with the local development admin account, creates a ride entity record through the generic admin entity UI, then deletes it again.
 
 What Docker covers:
 
@@ -167,11 +205,11 @@ npm install
 Local default `.env` files are included for quick backend/admin testing:
 
 - `.env` is used by Docker Compose.
-- `api/.env` is used by the API when running outside Docker.
+- `backend/.env` is used by the API when running outside Docker.
 - `admin/.env` is used by Vite when running the admin app outside Docker.
 - `mobile/.env` can be created from `mobile/.env.example` for Expo public mobile config.
 
-Tracked examples are available at `.env.example`, `api/.env.example`, `admin/.env.example`, and `mobile/.env.example`.
+Tracked examples are available at `.env.example`, `backend/.env.example`, `admin/.env.example`, and `mobile/.env.example`.
 
 The local defaults include this development admin account:
 
@@ -340,7 +378,7 @@ When adding UI, import tokens from `@skate-route-mapper/shared` instead of hardc
 When working in this repo, this is the important mental model:
 
 - `mobile` owns ride capture
-- `api` owns ingestion and server-side processing
+- `backend` owns ingestion and server-side processing
 - `db` owns the Prisma schema and migrations
 - `shared` must stay in sync with both
 
@@ -355,10 +393,15 @@ Key files:
 - `mobile/src/store/measurementStore.ts` manages the ride lifecycle in the app.
 - `mobile/src/database/db.ts` stores local rides and samples in SQLite.
 - `mobile/src/screens/RecordingScreen.tsx` handles live sensor and GPS collection.
-- `api/src/server.ts` defines the HTTP routes.
-- `api/src/db.ts` defines Prisma-backed persistence logic.
+- `backend/src/server.ts` starts the API process.
+- `backend/src/app.ts` creates the Fastify app and registers route modules.
+- `backend/src/endpoints/` owns HTTP paths, auth guards, and response shaping.
+- `backend/src/features/<feature>/index.ts` is the public import surface for feature logic.
+- `backend/src/features/rides/` owns ride contracts and reusable ride logic.
+- `backend/src/features/adminUsers/` owns admin user contracts and reusable admin user logic.
+- `backend/src/features/adminResources/` owns generated admin entity metadata and reusable generic entity logic.
+- `backend/src/db/prisma.ts` owns the shared Prisma client.
 - `db/schema.prisma` is the canonical backend datamodel.
-- `api/src/contracts.ts` validates incoming payloads.
 
 ## Current Status
 
@@ -386,7 +429,7 @@ What is not wired up yet:
 
 Recommended Railway setup:
 
-- one service for `api`
+- one service for `backend`
 - one service for `admin`
 - one PostgreSQL service for persistence
 

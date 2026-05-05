@@ -1,4 +1,4 @@
-import { Prisma } from "../generated/prisma/index.js";
+import { Prisma } from "../../../generated/prisma/index.js";
 import type { AdminResource, AdminResourceField } from "@skate-route-mapper/shared/adminResources";
 
 type RuntimeField = {
