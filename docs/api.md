@@ -36,6 +36,8 @@ Set by deployment environment
 - Ride ingestion endpoints require the mobile ingestion API key.
 - Admin read endpoints require the admin API key.
 
+Admin frontend data-fetching conventions are documented in `docs/admin-frontend.md`. The API contract describes endpoints; frontend caching, query keys, and mutation invalidation rules belong there.
+
 ## Authentication
 
 The first production auth boundary is shared-key authentication. This is intentionally smaller than a full user/login system because the current mobile write flow only needs to prove that requests came from a trusted client build or trusted backend process.
@@ -70,8 +72,16 @@ Use `MOBILE_INGESTION_API_KEY` for:
 
 Use `ADMIN_API_KEY` for:
 
+- `GET /v1/admin/resources`
+- `GET /v1/admin/entities/:resourceName`
+- `POST /v1/admin/entities/:resourceName`
+- `PATCH /v1/admin/entities/:resourceName/:entityId`
+- `DELETE /v1/admin/entities/:resourceName/:entityId`
 - `GET /v1/rides`
 - `GET /v1/rides/:rideId`
+- `GET /v1/admin/users`
+- `POST /v1/admin/users`
+- `PATCH /v1/admin/users/:adminUserId`
 
 Dashboard users sign in with `POST /v1/admin/login`. The returned session token can also authorize admin endpoints with the same bearer header format.
 
@@ -79,7 +89,8 @@ Important:
 
 - Keep the two keys different.
 - Do not ship `ADMIN_API_KEY` in the mobile app.
-- `INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` only create the first owner account when the admin user table is empty.
+- `INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` only create the first admin account when the admin user table is empty.
+- Signed-in admin users can create and edit other admin users.
 - User accounts for the mobile app are intentionally out of scope for the current admin-dashboard work.
 
 ## Recommended Mobile Flow
@@ -183,8 +194,7 @@ Body:
   "expiresAt": "2026-05-04T20:00:00.000Z",
   "adminUser": {
     "id": "cm...",
-    "email": "admin@example.com",
-    "role": "owner"
+    "email": "admin@example.com"
   }
 }
 ```
@@ -193,6 +203,100 @@ Use the returned token for admin requests:
 
 ```http
 Authorization: Bearer <session-token>
+```
+
+### `GET /v1/admin/resources`
+
+Return generic admin entity metadata generated from the Prisma datamodel. The admin app uses this to render entity tabs, tables, and forms without manually adding every model.
+
+Sensitive fields are filtered by the API policy layer. For example, `passwordHash` and session token hashes are not exposed.
+
+### `GET /v1/admin/entities/:resourceName`
+
+List records for a generated admin resource.
+
+Examples:
+
+```text
+GET /v1/admin/entities/adminUsers
+GET /v1/admin/entities/rides
+GET /v1/admin/entities/samples
+```
+
+### `POST /v1/admin/entities/:resourceName`
+
+Create a record for resources that allow generic creation. The accepted fields come from `GET /v1/admin/resources`.
+
+### `PATCH /v1/admin/entities/:resourceName/:entityId`
+
+Update a record for resources that allow generic edits. The accepted fields come from `GET /v1/admin/resources`.
+
+### `DELETE /v1/admin/entities/:resourceName/:entityId`
+
+Delete a record for resources that allow generic deletion. Delete support is advertised by `canDelete` in `GET /v1/admin/resources`.
+
+### `GET /v1/admin/users`
+
+List dashboard users for the admin app. This explicit endpoint remains available, but the entity viewer uses the generic entity endpoints.
+
+Auth:
+
+```http
+Authorization: Bearer <session-token>
+```
+
+Success response:
+
+```json
+{
+  "items": [
+    {
+      "id": "cm...",
+      "email": "admin@example.com",
+      "name": null,
+      "active": true,
+      "lastLoginAt": "2026-05-05T12:00:00.000Z",
+      "createdAt": "2026-05-05T10:00:00.000Z",
+      "updatedAt": "2026-05-05T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+### `POST /v1/admin/users`
+
+Create a dashboard user. Requires an admin session or the server-side admin API key.
+
+Request body:
+
+```json
+{
+  "email": "next-admin@example.com",
+  "password": "use-a-long-random-password",
+  "name": "Next Admin",
+  "active": true
+}
+```
+
+Rules:
+
+- `password` must be at least `12` characters.
+- `email` is stored lowercase and must be unique.
+- The API hashes the password and never returns `passwordHash`.
+
+### `PATCH /v1/admin/users/:adminUserId`
+
+Update a dashboard user. Requires an admin session or the server-side admin API key.
+
+Request body fields are optional:
+
+```json
+{
+  "email": "renamed-admin@example.com",
+  "password": "another-long-random-password",
+  "name": null,
+  "active": false
+}
 ```
 
 ### `POST /v1/rides/start`

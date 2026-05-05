@@ -3,6 +3,18 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "./db.js";
 import { hashSessionToken } from "./tokens.js";
 
+export type AdminAuthContext =
+  | {
+      kind: "apiKey";
+    }
+  | {
+      kind: "session";
+      adminUser: {
+        id: string;
+        email: string;
+      };
+    };
+
 export function readBearerToken(request: FastifyRequest) {
   const authorization = request.headers.authorization;
 
@@ -66,7 +78,9 @@ export async function requireAdminAuth(
   const providedKey = readApiKey(request);
 
   if (providedKey && keysMatch(providedKey, adminApiKey)) {
-    return true;
+    return {
+      kind: "apiKey",
+    } satisfies AdminAuthContext;
   }
 
   const bearerToken = readBearerToken(request);
@@ -81,6 +95,8 @@ export async function requireAdminAuth(
         revokedAt: true,
         adminUser: {
           select: {
+            id: true,
+            email: true,
             active: true,
           },
         },
@@ -93,7 +109,13 @@ export async function requireAdminAuth(
       !session.revokedAt &&
       session.expiresAt > new Date()
     ) {
-      return true;
+      return {
+        kind: "session",
+        adminUser: {
+          id: session.adminUser.id,
+          email: session.adminUser.email,
+        },
+      } satisfies AdminAuthContext;
     }
   }
 

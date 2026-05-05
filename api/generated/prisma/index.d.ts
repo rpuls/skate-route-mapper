@@ -54,14 +54,6 @@ export const SensorSource: {
 
 export type SensorSource = (typeof SensorSource)[keyof typeof SensorSource]
 
-
-export const AdminRole: {
-  owner: 'owner',
-  admin: 'admin'
-};
-
-export type AdminRole = (typeof AdminRole)[keyof typeof AdminRole]
-
 }
 
 export type VehicleType = $Enums.VehicleType
@@ -71,10 +63,6 @@ export const VehicleType: typeof $Enums.VehicleType
 export type SensorSource = $Enums.SensorSource
 
 export const SensorSource: typeof $Enums.SensorSource
-
-export type AdminRole = $Enums.AdminRole
-
-export const AdminRole: typeof $Enums.AdminRole
 
 /**
  * ##  Prisma Client ʲˢ
@@ -1252,7 +1240,6 @@ export namespace Prisma {
     email: string | null
     passwordHash: string | null
     name: string | null
-    role: $Enums.AdminRole | null
     active: boolean | null
     lastLoginAt: Date | null
     createdAt: Date | null
@@ -1264,7 +1251,6 @@ export namespace Prisma {
     email: string | null
     passwordHash: string | null
     name: string | null
-    role: $Enums.AdminRole | null
     active: boolean | null
     lastLoginAt: Date | null
     createdAt: Date | null
@@ -1276,7 +1262,6 @@ export namespace Prisma {
     email: number
     passwordHash: number
     name: number
-    role: number
     active: number
     lastLoginAt: number
     createdAt: number
@@ -1290,7 +1275,6 @@ export namespace Prisma {
     email?: true
     passwordHash?: true
     name?: true
-    role?: true
     active?: true
     lastLoginAt?: true
     createdAt?: true
@@ -1302,7 +1286,6 @@ export namespace Prisma {
     email?: true
     passwordHash?: true
     name?: true
-    role?: true
     active?: true
     lastLoginAt?: true
     createdAt?: true
@@ -1314,7 +1297,6 @@ export namespace Prisma {
     email?: true
     passwordHash?: true
     name?: true
-    role?: true
     active?: true
     lastLoginAt?: true
     createdAt?: true
@@ -1399,7 +1381,6 @@ export namespace Prisma {
     email: string
     passwordHash: string
     name: string | null
-    role: $Enums.AdminRole
     active: boolean
     lastLoginAt: Date | null
     createdAt: Date
@@ -1428,7 +1409,6 @@ export namespace Prisma {
     email?: boolean
     passwordHash?: boolean
     name?: boolean
-    role?: boolean
     active?: boolean
     lastLoginAt?: boolean
     createdAt?: boolean
@@ -1442,7 +1422,6 @@ export namespace Prisma {
     email?: boolean
     passwordHash?: boolean
     name?: boolean
-    role?: boolean
     active?: boolean
     lastLoginAt?: boolean
     createdAt?: boolean
@@ -1454,7 +1433,6 @@ export namespace Prisma {
     email?: boolean
     passwordHash?: boolean
     name?: boolean
-    role?: boolean
     active?: boolean
     lastLoginAt?: boolean
     createdAt?: boolean
@@ -1466,14 +1444,13 @@ export namespace Prisma {
     email?: boolean
     passwordHash?: boolean
     name?: boolean
-    role?: boolean
     active?: boolean
     lastLoginAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type AdminUserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "name" | "role" | "active" | "lastLoginAt" | "createdAt" | "updatedAt", ExtArgs["result"]["adminUser"]>
+  export type AdminUserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "passwordHash" | "name" | "active" | "lastLoginAt" | "createdAt" | "updatedAt", ExtArgs["result"]["adminUser"]>
   export type AdminUserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     sessions?: boolean | AdminUser$sessionsArgs<ExtArgs>
     _count?: boolean | AdminUserCountOutputTypeDefaultArgs<ExtArgs>
@@ -1491,7 +1468,6 @@ export namespace Prisma {
       email: string
       passwordHash: string
       name: string | null
-      role: $Enums.AdminRole
       active: boolean
       lastLoginAt: Date | null
       createdAt: Date
@@ -1924,7 +1900,6 @@ export namespace Prisma {
     readonly email: FieldRef<"AdminUser", 'String'>
     readonly passwordHash: FieldRef<"AdminUser", 'String'>
     readonly name: FieldRef<"AdminUser", 'String'>
-    readonly role: FieldRef<"AdminUser", 'AdminRole'>
     readonly active: FieldRef<"AdminUser", 'Boolean'>
     readonly lastLoginAt: FieldRef<"AdminUser", 'DateTime'>
     readonly createdAt: FieldRef<"AdminUser", 'DateTime'>
@@ -5931,7 +5906,6 @@ export namespace Prisma {
     email: 'email',
     passwordHash: 'passwordHash',
     name: 'name',
-    role: 'role',
     active: 'active',
     lastLoginAt: 'lastLoginAt',
     createdAt: 'createdAt',
@@ -6037,20 +6011,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'AdminRole'
-   */
-  export type EnumAdminRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdminRole'>
-    
-
-
-  /**
-   * Reference to a field of type 'AdminRole[]'
-   */
-  export type ListEnumAdminRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AdminRole[]'>
-    
-
-
-  /**
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
@@ -6152,7 +6112,6 @@ export namespace Prisma {
     email?: StringFilter<"AdminUser"> | string
     passwordHash?: StringFilter<"AdminUser"> | string
     name?: StringNullableFilter<"AdminUser"> | string | null
-    role?: EnumAdminRoleFilter<"AdminUser"> | $Enums.AdminRole
     active?: BoolFilter<"AdminUser"> | boolean
     lastLoginAt?: DateTimeNullableFilter<"AdminUser"> | Date | string | null
     createdAt?: DateTimeFilter<"AdminUser"> | Date | string
@@ -6165,7 +6124,6 @@ export namespace Prisma {
     email?: SortOrder
     passwordHash?: SortOrder
     name?: SortOrderInput | SortOrder
-    role?: SortOrder
     active?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -6181,7 +6139,6 @@ export namespace Prisma {
     NOT?: AdminUserWhereInput | AdminUserWhereInput[]
     passwordHash?: StringFilter<"AdminUser"> | string
     name?: StringNullableFilter<"AdminUser"> | string | null
-    role?: EnumAdminRoleFilter<"AdminUser"> | $Enums.AdminRole
     active?: BoolFilter<"AdminUser"> | boolean
     lastLoginAt?: DateTimeNullableFilter<"AdminUser"> | Date | string | null
     createdAt?: DateTimeFilter<"AdminUser"> | Date | string
@@ -6194,7 +6151,6 @@ export namespace Prisma {
     email?: SortOrder
     passwordHash?: SortOrder
     name?: SortOrderInput | SortOrder
-    role?: SortOrder
     active?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -6212,7 +6168,6 @@ export namespace Prisma {
     email?: StringWithAggregatesFilter<"AdminUser"> | string
     passwordHash?: StringWithAggregatesFilter<"AdminUser"> | string
     name?: StringNullableWithAggregatesFilter<"AdminUser"> | string | null
-    role?: EnumAdminRoleWithAggregatesFilter<"AdminUser"> | $Enums.AdminRole
     active?: BoolWithAggregatesFilter<"AdminUser"> | boolean
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"AdminUser"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"AdminUser"> | Date | string
@@ -6488,7 +6443,6 @@ export namespace Prisma {
     email: string
     passwordHash: string
     name?: string | null
-    role?: $Enums.AdminRole
     active?: boolean
     lastLoginAt?: Date | string | null
     createdAt?: Date | string
@@ -6501,7 +6455,6 @@ export namespace Prisma {
     email: string
     passwordHash: string
     name?: string | null
-    role?: $Enums.AdminRole
     active?: boolean
     lastLoginAt?: Date | string | null
     createdAt?: Date | string
@@ -6514,7 +6467,6 @@ export namespace Prisma {
     email?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumAdminRoleFieldUpdateOperationsInput | $Enums.AdminRole
     active?: BoolFieldUpdateOperationsInput | boolean
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6527,7 +6479,6 @@ export namespace Prisma {
     email?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumAdminRoleFieldUpdateOperationsInput | $Enums.AdminRole
     active?: BoolFieldUpdateOperationsInput | boolean
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6540,7 +6491,6 @@ export namespace Prisma {
     email: string
     passwordHash: string
     name?: string | null
-    role?: $Enums.AdminRole
     active?: boolean
     lastLoginAt?: Date | string | null
     createdAt?: Date | string
@@ -6552,7 +6502,6 @@ export namespace Prisma {
     email?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumAdminRoleFieldUpdateOperationsInput | $Enums.AdminRole
     active?: BoolFieldUpdateOperationsInput | boolean
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6564,7 +6513,6 @@ export namespace Prisma {
     email?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumAdminRoleFieldUpdateOperationsInput | $Enums.AdminRole
     active?: BoolFieldUpdateOperationsInput | boolean
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -6904,13 +6852,6 @@ export namespace Prisma {
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
-  export type EnumAdminRoleFilter<$PrismaModel = never> = {
-    equals?: $Enums.AdminRole | EnumAdminRoleFieldRefInput<$PrismaModel>
-    in?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    not?: NestedEnumAdminRoleFilter<$PrismaModel> | $Enums.AdminRole
-  }
-
   export type BoolFilter<$PrismaModel = never> = {
     equals?: boolean | BooleanFieldRefInput<$PrismaModel>
     not?: NestedBoolFilter<$PrismaModel> | boolean
@@ -6958,7 +6899,6 @@ export namespace Prisma {
     email?: SortOrder
     passwordHash?: SortOrder
     name?: SortOrder
-    role?: SortOrder
     active?: SortOrder
     lastLoginAt?: SortOrder
     createdAt?: SortOrder
@@ -6970,7 +6910,6 @@ export namespace Prisma {
     email?: SortOrder
     passwordHash?: SortOrder
     name?: SortOrder
-    role?: SortOrder
     active?: SortOrder
     lastLoginAt?: SortOrder
     createdAt?: SortOrder
@@ -6982,7 +6921,6 @@ export namespace Prisma {
     email?: SortOrder
     passwordHash?: SortOrder
     name?: SortOrder
-    role?: SortOrder
     active?: SortOrder
     lastLoginAt?: SortOrder
     createdAt?: SortOrder
@@ -7023,16 +6961,6 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedStringNullableFilter<$PrismaModel>
     _max?: NestedStringNullableFilter<$PrismaModel>
-  }
-
-  export type EnumAdminRoleWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.AdminRole | EnumAdminRoleFieldRefInput<$PrismaModel>
-    in?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    not?: NestedEnumAdminRoleWithAggregatesFilter<$PrismaModel> | $Enums.AdminRole
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumAdminRoleFilter<$PrismaModel>
-    _max?: NestedEnumAdminRoleFilter<$PrismaModel>
   }
 
   export type BoolWithAggregatesFilter<$PrismaModel = never> = {
@@ -7426,10 +7354,6 @@ export namespace Prisma {
     set?: string | null
   }
 
-  export type EnumAdminRoleFieldUpdateOperationsInput = {
-    set?: $Enums.AdminRole
-  }
-
   export type BoolFieldUpdateOperationsInput = {
     set?: boolean
   }
@@ -7608,13 +7532,6 @@ export namespace Prisma {
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
-  export type NestedEnumAdminRoleFilter<$PrismaModel = never> = {
-    equals?: $Enums.AdminRole | EnumAdminRoleFieldRefInput<$PrismaModel>
-    in?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    not?: NestedEnumAdminRoleFilter<$PrismaModel> | $Enums.AdminRole
-  }
-
   export type NestedBoolFilter<$PrismaModel = never> = {
     equals?: boolean | BooleanFieldRefInput<$PrismaModel>
     not?: NestedBoolFilter<$PrismaModel> | boolean
@@ -7696,16 +7613,6 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
-  }
-
-  export type NestedEnumAdminRoleWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.AdminRole | EnumAdminRoleFieldRefInput<$PrismaModel>
-    in?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AdminRole[] | ListEnumAdminRoleFieldRefInput<$PrismaModel>
-    not?: NestedEnumAdminRoleWithAggregatesFilter<$PrismaModel> | $Enums.AdminRole
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumAdminRoleFilter<$PrismaModel>
-    _max?: NestedEnumAdminRoleFilter<$PrismaModel>
   }
 
   export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
@@ -7934,7 +7841,6 @@ export namespace Prisma {
     email: string
     passwordHash: string
     name?: string | null
-    role?: $Enums.AdminRole
     active?: boolean
     lastLoginAt?: Date | string | null
     createdAt?: Date | string
@@ -7946,7 +7852,6 @@ export namespace Prisma {
     email: string
     passwordHash: string
     name?: string | null
-    role?: $Enums.AdminRole
     active?: boolean
     lastLoginAt?: Date | string | null
     createdAt?: Date | string
@@ -7974,7 +7879,6 @@ export namespace Prisma {
     email?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumAdminRoleFieldUpdateOperationsInput | $Enums.AdminRole
     active?: BoolFieldUpdateOperationsInput | boolean
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -7986,7 +7890,6 @@ export namespace Prisma {
     email?: StringFieldUpdateOperationsInput | string
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
-    role?: EnumAdminRoleFieldUpdateOperationsInput | $Enums.AdminRole
     active?: BoolFieldUpdateOperationsInput | boolean
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string

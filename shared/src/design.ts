@@ -55,6 +55,11 @@ export const radius = {
   pill: 999,
 } as const;
 
+export const borderWidth = {
+  thin: 1,
+  thick: 2,
+} as const;
+
 export const typography = {
   family: "\"Open Sans\", system-ui, sans-serif",
   sizes: {
@@ -106,7 +111,7 @@ export const componentStyles = {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.xl,
-    borderWidth: 1,
+    borderWidth: borderWidth.thin,
     padding: space.lg,
   },
   tileInner: {
@@ -124,7 +129,7 @@ export const componentStyles = {
     backgroundColor: colors.surfaceWarm,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    borderWidth: 1,
+    borderWidth: borderWidth.thin,
     minHeight: 52,
     paddingHorizontal: space.xl,
   },
@@ -195,6 +200,7 @@ export const skateDesign = {
   colors,
   space,
   radius,
+  borderWidth,
   typography,
   shadows,
   layout,

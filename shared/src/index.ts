@@ -1,4 +1,7 @@
 export type {
+  AdminUserCreatePayload,
+  AdminUserSummary,
+  AdminUserUpdatePayload,
   MeasurementSample,
   MeasurementStatus,
   Ride,
@@ -22,3 +25,5 @@ export {
   space,
   typography,
 } from "./design";
+
+export type { AdminResource, AdminResourceField } from "./adminResources";

@@ -1,5 +1,11 @@
 import { Prisma, PrismaClient } from "../generated/prisma/index.js";
-import type { MeasurementSample, RideStartPayload } from "@skate-route-mapper/shared/contracts";
+import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
+import type {
+  AdminUserCreatePayload,
+  AdminUserUpdatePayload,
+  MeasurementSample,
+  RideStartPayload,
+} from "@skate-route-mapper/shared/contracts";
 import { env } from "./config.js";
 import { hashPassword, verifyPassword } from "./passwords.js";
 import { createSessionToken, hashSessionToken } from "./tokens.js";
@@ -37,12 +43,10 @@ export async function seedInitialAdminUser() {
     data: {
       email: env.INIT_ADMIN_EMAIL.toLowerCase(),
       passwordHash: hashPassword(env.INIT_ADMIN_PASSWORD),
-      role: "owner",
     },
     select: {
       id: true,
       email: true,
-      role: true,
     },
   });
 }
@@ -56,7 +60,6 @@ export async function loginAdminUser(email: string, password: string) {
       id: true,
       email: true,
       passwordHash: true,
-      role: true,
       active: true,
     },
   });
@@ -92,9 +95,247 @@ export async function loginAdminUser(email: string, password: string) {
     adminUser: {
       id: adminUser.id,
       email: adminUser.email,
-      role: adminUser.role,
     },
   };
+}
+
+const adminUserSelect = {
+  id: true,
+  email: true,
+  name: true,
+  active: true,
+  lastLoginAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.AdminUserSelect;
+
+function serializeAdminUser(user: Prisma.AdminUserGetPayload<{ select: typeof adminUserSelect }>) {
+  return {
+    ...user,
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  };
+}
+
+export async function listAdminUsers() {
+  const users = await prisma.adminUser.findMany({
+    orderBy: {
+      createdAt: "asc",
+    },
+    select: adminUserSelect,
+  });
+
+  return users.map(serializeAdminUser);
+}
+
+export async function createAdminUser(payload: AdminUserCreatePayload) {
+  const user = await prisma.adminUser.create({
+    data: {
+      email: payload.email.toLowerCase(),
+      passwordHash: hashPassword(payload.password),
+      name: payload.name?.trim() || null,
+      active: payload.active ?? true,
+    },
+    select: adminUserSelect,
+  });
+
+  return serializeAdminUser(user);
+}
+
+export async function updateAdminUser(id: string, payload: AdminUserUpdatePayload) {
+  const data: Prisma.AdminUserUpdateInput = {};
+
+  if (payload.email !== undefined) {
+    data.email = payload.email.toLowerCase();
+  }
+
+  if (payload.password !== undefined) {
+    data.passwordHash = hashPassword(payload.password);
+  }
+
+  if (payload.name !== undefined) {
+    data.name = payload.name?.trim() || null;
+  }
+
+  if (payload.active !== undefined) {
+    data.active = payload.active;
+  }
+
+  const user = await prisma.adminUser.update({
+    where: {
+      id,
+    },
+    data,
+    select: adminUserSelect,
+  });
+
+  return serializeAdminUser(user);
+}
+
+function serializeEntityValue(value: unknown): unknown {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(serializeEntityValue);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entryValue]) => [key, serializeEntityValue(entryValue)])
+    );
+  }
+
+  return value;
+}
+
+function getDelegate(delegate: string) {
+  const prismaRecord = prisma as unknown as Record<string, unknown>;
+  const modelDelegate = prismaRecord[delegate];
+
+  if (!modelDelegate || typeof modelDelegate !== "object") {
+    throw new Error("Admin resource not found");
+  }
+
+  return modelDelegate as {
+    create: (args: unknown) => Promise<unknown>;
+    delete: (args: unknown) => Promise<unknown>;
+    findMany: (args: unknown) => Promise<unknown[]>;
+    update: (args: unknown) => Promise<unknown>;
+  };
+}
+
+function selectVisibleFields(resource: AdminResource) {
+  return Object.fromEntries(
+    resource.fields
+      .filter((field) => field.list && field.name !== "password")
+      .map((field) => [field.name, true])
+  );
+}
+
+function coerceEntityValue(value: unknown, field: AdminResource["fields"][number]) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (field.type === "boolean") {
+    return Boolean(value);
+  }
+
+  if (field.type === "number") {
+    return Number(value);
+  }
+
+  if (field.type === "bigint") {
+    return BigInt(String(value));
+  }
+
+  if (field.type === "datetime") {
+    return new Date(String(value));
+  }
+
+  return String(value);
+}
+
+function buildEntityData(resource: AdminResource, payload: Record<string, unknown>, mode: "create" | "edit") {
+  const data = resource.fields.reduce<Record<string, unknown>>((nextData, field) => {
+    const canWrite = mode === "create" ? field.create : field.edit;
+
+    if (!canWrite || field.name === "password" || !(field.name in payload)) {
+      return nextData;
+    }
+
+    nextData[field.name] = coerceEntityValue(payload[field.name], field);
+    return nextData;
+  }, {});
+
+  if (resource.name === "adminUsers" && typeof payload.password === "string" && payload.password.length > 0) {
+    if (payload.password.length < 12) {
+      throw new Error("Admin password must be at least 12 characters");
+    }
+
+    data.passwordHash = hashPassword(payload.password);
+  }
+
+  if (resource.name === "adminUsers" && mode === "create" && typeof data.passwordHash !== "string") {
+    throw new Error("Admin password must be at least 12 characters");
+  }
+
+  return data;
+}
+
+function coerceEntityId(resource: AdminResource, rawId: string) {
+  const idField = resource.fields.find((field) => field.name === resource.idField);
+
+  if (idField?.type === "bigint") {
+    return BigInt(rawId);
+  }
+
+  if (idField?.type === "number") {
+    return Number(rawId);
+  }
+
+  return rawId;
+}
+
+export async function listAdminEntity(resource: AdminResource, delegate: string) {
+  const items = await getDelegate(delegate).findMany({
+    orderBy: {
+      [resource.idField]: "desc",
+    },
+    select: selectVisibleFields(resource),
+    take: 100,
+  });
+
+  return items.map((item) => serializeEntityValue(item));
+}
+
+export async function createAdminEntity(
+  resource: AdminResource,
+  delegate: string,
+  payload: Record<string, unknown>
+) {
+  const item = await getDelegate(delegate).create({
+    data: buildEntityData(resource, payload, "create"),
+    select: selectVisibleFields(resource),
+  });
+
+  return serializeEntityValue(item);
+}
+
+export async function updateAdminEntity(
+  resource: AdminResource,
+  delegate: string,
+  rawId: string,
+  payload: Record<string, unknown>
+) {
+  const item = await getDelegate(delegate).update({
+    where: {
+      [resource.idField]: coerceEntityId(resource, rawId),
+    },
+    data: buildEntityData(resource, payload, "edit"),
+    select: selectVisibleFields(resource),
+  });
+
+  return serializeEntityValue(item);
+}
+
+export async function deleteAdminEntity(
+  resource: AdminResource,
+  delegate: string,
+  rawId: string
+) {
+  await getDelegate(delegate).delete({
+    where: {
+      [resource.idField]: coerceEntityId(resource, rawId),
+    },
+  });
 }
 
 export async function disconnectDatabase() {

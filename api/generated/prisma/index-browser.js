@@ -126,7 +126,6 @@ exports.Prisma.AdminUserScalarFieldEnum = {
   email: 'email',
   passwordHash: 'passwordHash',
   name: 'name',
-  role: 'role',
   active: 'active',
   lastLoginAt: 'lastLoginAt',
   createdAt: 'createdAt',
@@ -190,11 +189,6 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-exports.AdminRole = exports.$Enums.AdminRole = {
-  owner: 'owner',
-  admin: 'admin'
-};
-
 exports.VehicleType = exports.$Enums.VehicleType = {
   skates: 'skates',
   skateboard: 'skateboard',
