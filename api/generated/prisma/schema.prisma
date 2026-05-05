@@ -19,17 +19,11 @@ enum SensorSource {
   external
 }
 
-enum AdminRole {
-  owner
-  admin
-}
-
 model AdminUser {
   id           String         @id @default(cuid())
   email        String         @unique
   passwordHash String         @map("password_hash")
   name         String?
-  role         AdminRole      @default(admin)
   active       Boolean        @default(true)
   lastLoginAt  DateTime?      @map("last_login_at")
   createdAt    DateTime       @default(now()) @map("created_at")

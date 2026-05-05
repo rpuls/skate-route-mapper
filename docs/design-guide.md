@@ -42,6 +42,15 @@ This app should feel bright, physical, and useful: an orange skating surface wit
 | `xxl` | `40` | Large feature panels |
 | `pill` | `999` | Pills, badges, segmented controls |
 
+## Border Width
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `thin` | `1` | Subtle container borders (tiles, secondary buttons) |
+| `thick` | `2` | Outlined controls and focused states |
+
+Outlined controls use `thick` borders (2px). Containers and subtle elements use `thin` borders (1px).
+
 ## Nested Radius Rule
 
 Use this default relationship:

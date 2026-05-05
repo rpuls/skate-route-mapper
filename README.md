@@ -34,6 +34,7 @@ Project docs:
 - `docs/api.md` defines the backend contract.
 - `docs/data-model.md` explains the Prisma datamodel.
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
+- `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
 - `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
 
 ## How The System Works
@@ -195,7 +196,7 @@ ADMIN_SESSION_TTL_HOURS=24
 
 For Railway, set long random values for `MOBILE_INGESTION_API_KEY`, `ADMIN_API_KEY`, and `INIT_ADMIN_PASSWORD` on the API service. Keep the API keys different. The mobile app should only receive the ingestion key; internal tooling can use the admin key.
 
-`INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` seed the first owner account only when no admin users exist yet. After the first successful deploy, you can remove those two variables or leave them in place; startup will not overwrite existing admin users.
+`INIT_ADMIN_EMAIL` and `INIT_ADMIN_PASSWORD` seed the first admin account only when no admin users exist yet. After the first successful deploy, you can remove those two variables or leave them in place; startup will not overwrite existing admin users.
 
 For the admin web service, set this build-time variable so the browser knows where to send login requests:
 
@@ -241,6 +242,24 @@ Health check:
 ```text
 GET http://localhost:3001/health
 ```
+
+### Admin Frontend Architecture
+
+The admin app uses MUI for UI primitives and TanStack Query for all server-state/data fetching.
+
+Canonical frontend rules live in:
+
+- `docs/admin-frontend.md`
+
+Short version:
+
+- raw HTTP functions live in `admin/src/api/`
+- query keys live in `admin/src/query/queryKeys.ts`
+- server-state hooks live in `admin/src/features/<feature>/`
+- pages call feature hooks
+- reusable components receive props and do not call `fetch()`
+- mutations invalidate TanStack Query keys instead of manually patching broad app state
+- the generic entity viewer is generated from Prisma datamodel metadata
 
 ### Run The Mobile App
 
