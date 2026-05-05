@@ -250,6 +250,8 @@ From the repo root:
 npm run mobile:start
 ```
 
+The root mobile scripts enter `mobile/` before starting Expo, matching the direct `cd mobile && npx expo start ...` workflow.
+
 To run on a physical iPhone or Android phone with Expo Go on the same Wi-Fi network:
 
 ```bash

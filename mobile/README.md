@@ -36,6 +36,8 @@ Start the Expo dev server:
 npm run mobile:start
 ```
 
+The root mobile scripts enter this directory before starting Expo, matching the direct `cd mobile && npx expo start ...` workflow.
+
 Run with Expo Go on a physical device on the same Wi-Fi network:
 
 ```bash
