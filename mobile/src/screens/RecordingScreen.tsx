@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
+  Platform,
+  PermissionsAndroid,
 } from "react-native";
 import { Accelerometer, Gyroscope } from "expo-sensors";
 import * as Location from "expo-location";
@@ -15,8 +17,12 @@ import { LineChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
+import * as BackgroundRecorder from "../native/BackgroundRecorder";
+import type { BackgroundRecorderSample } from "../native/BackgroundRecorder";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
+const USE_ANDROID_BACKGROUND_RECORDER =
+  Platform.OS === "android" && BackgroundRecorder.isAvailable();
 
 type AccelData = {
   x: number;
@@ -30,25 +36,64 @@ type GyroData = {
   z: number;
 };
 
+async function requestAndroidRecordingPermissions() {
+  if (Platform.OS !== "android") {
+    return true;
+  }
+
+  const permissions = [
+    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+  ];
+
+  if (Number(Platform.Version) >= 33) {
+    permissions.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  }
+
+  const results = await PermissionsAndroid.requestMultiple(permissions);
+  const hasForegroundLocation =
+    results[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
+      PermissionsAndroid.RESULTS.GRANTED ||
+    results[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] ===
+      PermissionsAndroid.RESULTS.GRANTED;
+
+  if (!hasForegroundLocation) {
+    console.log("Location permission not granted");
+  }
+
+  return hasForegroundLocation;
+}
+
 export default function RecordingScreen() {
   useKeepAwake();
 
   const navigation = useNavigation();
 
+  const currentRideId = useMeasurementStore((state) => state.currentRideId);
   const status = useMeasurementStore((state) => state.status);
   const samples = useMeasurementStore((state) => state.samples);
   const addSample = useMeasurementStore((state) => state.addSample);
-  const stopRecording = useMeasurementStore((state) => state.stopRecording);
+  const stopRecordingInStore = useMeasurementStore((state) => state.stopRecording);
 
   const [accel, setAccel] = useState<AccelData>({ x: 0, y: 0, z: 0 });
   const [gyro, setGyro] = useState<GyroData>({ x: 0, y: 0, z: 0 });
   const [latestLocation, setLatestLocation] =
     useState<Location.LocationObject | null>(null);
+  const [nativeSampleCount, setNativeSampleCount] = useState(0);
+  const [nativeLatestSample, setNativeLatestSample] =
+    useState<BackgroundRecorderSample | null>(null);
+  const [nativeChartData, setNativeChartData] = useState<number[]>([0]);
 
   const latestGyro = useRef<GyroData>({ x: 0, y: 0, z: 0 });
   const latestLocationRef = useRef<Location.LocationObject | null>(null);
 
   useEffect(() => {
+    if (USE_ANDROID_BACKGROUND_RECORDER) {
+      console.log("BackgroundRecorder native mode active; skipping JS sensors");
+      return;
+    }
+
+    console.log("BackgroundRecorder unavailable; using JS sensor fallback");
     Accelerometer.setUpdateInterval(200); // 5 hz
     Gyroscope.setUpdateInterval(200);
 
@@ -93,6 +138,11 @@ export default function RecordingScreen() {
   }, [addSample]);
 
   useEffect(() => {
+    if (USE_ANDROID_BACKGROUND_RECORDER) {
+      console.log("BackgroundRecorder native mode active; skipping JS location");
+      return;
+    }
+
     let subscription: Location.LocationSubscription | null = null;
 
     async function startLocation() {
@@ -123,16 +173,85 @@ export default function RecordingScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!USE_ANDROID_BACKGROUND_RECORDER || !currentRideId) {
+      return;
+    }
+
+    const rideId = currentRideId;
+    let mounted = true;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    async function startNativeRecording() {
+      const canRecord = await requestAndroidRecordingPermissions();
+
+      if (!canRecord || !mounted) {
+        return;
+      }
+
+      await BackgroundRecorder.startRecording(rideId, 200);
+
+      pollTimer = setInterval(async () => {
+        const nativeStatus = await BackgroundRecorder.getStatus();
+
+        if (!mounted) {
+          return;
+        }
+
+        setNativeSampleCount(nativeStatus.sampleCount);
+
+        if (nativeStatus.latestSample) {
+          const sample = nativeStatus.latestSample;
+          setNativeLatestSample(sample);
+          setAccel({ x: sample.ax, y: sample.ay, z: sample.az });
+          setGyro({ x: sample.gx, y: sample.gy, z: sample.gz });
+          setNativeChartData((values) => {
+            const nextValues = [...values, sample.vibrationMagnitude];
+            return nextValues.slice(-40);
+          });
+        }
+      }, 1000);
+    }
+
+    startNativeRecording();
+
+    return () => {
+      mounted = false;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
+    };
+  }, [currentRideId]);
+
   const latestSample = samples[samples.length - 1];
+  const visibleSampleCount = USE_ANDROID_BACKGROUND_RECORDER
+    ? nativeSampleCount
+    : samples.length;
+  const visibleLatestSample = USE_ANDROID_BACKGROUND_RECORDER
+    ? nativeLatestSample
+    : latestSample;
 
   const chartData = useMemo(() => {
+    if (USE_ANDROID_BACKGROUND_RECORDER) {
+      return nativeChartData;
+    }
+
     const latest = samples.slice(-40);
     const values = latest.map((sample) => sample.vibrationMagnitude);
 
     return values.length > 0 ? values : [0];
-  }, [samples]);
+  }, [nativeChartData, samples]);
 
   const averageVibration = useMemo(() => {
+    if (USE_ANDROID_BACKGROUND_RECORDER) {
+      const visibleValues = nativeChartData.filter((value) => value > 0);
+
+      if (visibleValues.length === 0) return 0;
+
+      const total = visibleValues.reduce((sum, value) => sum + value, 0);
+      return total / visibleValues.length;
+    }
+
     if (samples.length === 0) return 0;
 
     const latest = samples.slice(-40);
@@ -142,10 +261,25 @@ export default function RecordingScreen() {
     );
 
     return total / latest.length;
-  }, [samples]);
+  }, [nativeChartData, samples]);
+  const gpsStatus =
+    latestLocation || nativeLatestSample?.latitude != null ? "OK" : "Waiting";
+  const speedText =
+    latestLocation?.coords.speed != null
+      ? `${latestLocation.coords.speed.toFixed(1)} m/s`
+      : nativeLatestSample?.speed != null
+      ? `${nativeLatestSample.speed.toFixed(1)} m/s`
+      : "-";
 
-  const handleStop = () => {
-    stopRecording();
+  const handleStop = async () => {
+    if (USE_ANDROID_BACKGROUND_RECORDER && currentRideId) {
+      await BackgroundRecorder.stopRecording();
+      const nativeSamples = await BackgroundRecorder.readSamples(currentRideId);
+      nativeSamples.forEach(addSample);
+      await BackgroundRecorder.clearSamples(currentRideId);
+    }
+
+    stopRecordingInStore();
     navigation.goBack();
   };
 
@@ -161,8 +295,8 @@ export default function RecordingScreen() {
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
             Measuring vibration using the phone accelerometer and gyroscope.
-            Keep this screen open while recording. The screen will stay awake
-            automatically.
+            Android preview builds can keep recording from the foreground
+            service while the phone is locked.
           </Text>
         </View>
 
@@ -174,7 +308,7 @@ export default function RecordingScreen() {
 
           <View>
             <Text style={styles.statusLabel}>Samples</Text>
-            <Text style={styles.statusValue}>{samples.length}</Text>
+            <Text style={styles.statusValue}>{visibleSampleCount}</Text>
           </View>
         </View>
 
@@ -182,7 +316,7 @@ export default function RecordingScreen() {
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Vibration</Text>
             <Text style={styles.metricValue}>
-              {latestSample?.vibrationMagnitude.toFixed(3) ?? "0.000"}
+              {visibleLatestSample?.vibrationMagnitude.toFixed(3) ?? "0.000"}
             </Text>
           </View>
 
@@ -195,18 +329,12 @@ export default function RecordingScreen() {
         <View style={styles.metricGrid}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>GPS</Text>
-            <Text style={styles.metricValue}>
-              {latestLocation ? "OK" : "Waiting"}
-            </Text>
+            <Text style={styles.metricValue}>{gpsStatus}</Text>
           </View>
 
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Speed</Text>
-            <Text style={styles.metricValue}>
-              {latestLocation?.coords.speed != null
-                ? `${latestLocation.coords.speed.toFixed(1)} m/s`
-                : "-"}
-            </Text>
+            <Text style={styles.metricValue}>{speedText}</Text>
           </View>
         </View>
 

@@ -48,11 +48,43 @@ Run through Expo tunnel when LAN discovery is unreliable:
 npm run mobile:tunnel
 ```
 
+Run explicitly in Expo Go mode when a development build is also installed:
+
+```bash
+npm run mobile:tunnel:go
+```
+
 Run the browser target for UI/layout checks:
 
 ```bash
 npm run mobile:web
 ```
+
+## Android Background Recording Builds
+
+Android background recording uses a native foreground service for GPS,
+accelerometer, and gyroscope samples. It is not available in Expo Go.
+
+Install/update dependencies before building:
+
+```bash
+npm install
+```
+
+Create an installable Android preview APK from `mobile/`:
+
+```bash
+cd mobile
+eas build --platform android --profile preview
+```
+
+The `preview` profile uses internal distribution and produces an APK so it can
+be installed directly on an Android device for locked-phone testing.
+
+The recorder requests foreground location, background location, notification,
+and foreground-service permissions. Android may still require allowing location
+"all the time" and disabling aggressive battery optimization for long tests on
+some devices.
 
 ## Testing On iPhone
 
@@ -90,6 +122,13 @@ Expected limitations on web:
 - GPS and permissions differ from native
 - native map behavior is replaced by a simple fallback
 - BLE testing requires a native build/device path
+
+## iOS Background Recording
+
+iOS does not offer the same general-purpose foreground service model as
+Android. Keep iOS on foreground phone-sensor recording for now. Background GPS
+can be added later with iOS background location modes, but continuous
+accelerometer and gyroscope recording while locked is much more restricted.
 
 ## Design System
 
