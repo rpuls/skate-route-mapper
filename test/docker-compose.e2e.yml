@@ -1,0 +1,28 @@
+services:
+  db:
+    container_name: skate-route-mapper-e2e-db
+    environment:
+      POSTGRES_DB: skate_route_mapper_e2e
+    ports: !override
+      - "55433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d skate_route_mapper_e2e"]
+
+  api:
+    container_name: skate-route-mapper-e2e-api
+    environment:
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:3100
+      DATABASE_URL: postgres://postgres:postgres@db:5432/skate_route_mapper_e2e
+      INIT_ADMIN_EMAIL: admin@example.com
+      INIT_ADMIN_PASSWORD: local-dev-admin-password
+    ports: !override
+      - "3101:3001"
+
+  admin:
+    container_name: skate-route-mapper-e2e-admin
+    build:
+      args:
+        VITE_API_BASE_URL: http://localhost:3101
+    ports: !override
+      - "3100:80"

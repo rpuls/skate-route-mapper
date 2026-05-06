@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./adminResources": "./src/adminResources.ts",
     "./contracts": "./src/contracts.ts",
     "./design": "./src/design.ts"
   }

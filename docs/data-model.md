@@ -25,7 +25,22 @@ Relevant files:
 
 - `db/schema.prisma`
 - `db/migrations/`
-- `api/src/db.ts`
+- `backend/src/db/prisma.ts`
+- `backend/src/features/rides/repository.ts`
+- `backend/src/features/adminUsers/repository.ts`
+- `backend/src/features/adminResources/repository.ts`
+- `shared/src/adminResources.ts`
+
+## Admin Resource Metadata
+
+The custom admin app asks the API for resource metadata at `GET /v1/admin/resources`. The API builds that metadata from Prisma's generated datamodel, so the generic entity viewer stays aligned with `db/schema.prisma` after migrations and `npm run db:generate`.
+
+The admin resource layer should stay mostly generated from the datamodel. Keep only small policy overrides in the API layer for sensitive fields and special transforms:
+
+- hide secrets such as `passwordHash` and session token hashes
+- expose virtual fields such as `AdminUser.password`
+- keep transforms, such as password hashing, inside the API
+- graduate from the generic resource view to a custom interface when the workflow has real product logic
 
 ## Models
 
@@ -60,7 +75,6 @@ Main fields:
 - `email`
 - `passwordHash`
 - `name`
-- `role`
 - `active`
 - `lastLoginAt`
 - `createdAt`
@@ -113,11 +127,6 @@ Main fields:
 - `phone`
 - `external`
 
-### AdminRole
-
-- `owner`
-- `admin`
-
 ## Relationship
 
 - one `Ride` has many `Sample` rows
@@ -132,7 +141,14 @@ The current production boundary uses two layers:
 - API keys for mobile ingestion and internal scripts.
 - `AdminUser` plus `AdminSession` for dashboard login.
 
-The API can seed the first owner account on startup when both variables are present:
+API authorization is intentionally separated by route namespace:
+
+- `/v1/mobile/*` is the mobile/user-facing surface. Current ingestion routes accept the mobile ingestion key, and admin credentials are also allowed for internal tooling.
+- `/v1/admin/*` is the admin surface. It only accepts admin credentials.
+- `/v1/admin/mobile/*` is an admin-only surface for mobile-compatible actions. It mirrors mobile payload shapes where useful but still requires admin credentials.
+- Future user-facing read endpoints should be tied to a `User` or `Device` identity and must only return data that identity is allowed to access.
+
+The API can seed the first admin account on startup when both variables are present:
 
 ```env
 INIT_ADMIN_EMAIL=admin@example.com

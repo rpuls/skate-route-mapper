@@ -19,7 +19,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: backend/Dockerfile
     container_name: skate-route-mapper-api
     depends_on:
       db:

@@ -8,6 +8,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Mobile app notes: `mobile/README.md`
 - API contract: `docs/api.md`
 - Data model: `docs/data-model.md`
+- Admin frontend architecture: `docs/admin-frontend.md`
 - Design system guide: `docs/design-guide.md`
 - Design tokens/source of truth: `shared/src/design.ts`
 
@@ -16,8 +17,11 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Prefer existing repo patterns over adding new frameworks or abstractions.
 - Keep shared contracts in `shared/src/index.ts` aligned with API and mobile usage.
 - Do not commit secrets from `.env` files.
-- Do not edit generated Prisma client files under `api/generated/` unless explicitly asked.
+- Do not edit generated Prisma client files under `backend/generated/` unless explicitly asked.
 - Keep docs updated when scripts, setup flows, API contracts, platform fallbacks, or design rules change.
+- In the admin app, use TanStack Query for server state. Do not add ad hoc `fetch()` calls or `useEffect` API loading in pages/components.
+- Keep admin raw HTTP calls in `admin/src/api/`, query keys in `admin/src/query/queryKeys.ts`, and feature hooks in `admin/src/features/`.
+- Reusable admin components should receive data via props and should not fetch their own server data.
 
 ## Design Rules
 

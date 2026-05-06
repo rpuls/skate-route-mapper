@@ -2,7 +2,7 @@
   "name": "skate-route-mapper-monorepo",
   "private": true,
   "workspaces": [
-    "api",
+    "backend",
     "admin",
     "mobile",
     "shared"
@@ -27,6 +27,9 @@
     "api:build": "npm run build --workspace @skate-route-mapper/api",
     "api:start": "npm run start --workspace @skate-route-mapper/api",
     "api:check": "npm run check --workspace @skate-route-mapper/api",
+    "e2e": "playwright test --config test/playwright.config.ts",
+    "e2e:headed": "playwright test --config test/playwright.config.ts --headed",
+    "e2e:install": "playwright install chromium",
     "db:generate": "npm run prisma:generate --workspace @skate-route-mapper/api",
     "db:migrate:dev": "npm run prisma:migrate:dev --workspace @skate-route-mapper/api",
     "db:migrate:deploy": "npm run prisma:migrate:deploy --workspace @skate-route-mapper/api",
@@ -35,6 +38,7 @@
     "docker:logs": "docker compose logs -f"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "prisma": "^6.19.3"
   },
   "dependencies": {
