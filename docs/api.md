@@ -201,6 +201,10 @@ Notes:
 - `locationTimestamp`, `locationAccuracy`, and `locationAgeMs` are optional
   mobile-side confidence metadata for pairing IMU vibration samples with the
   GPS fix used for that sample.
+- Mobile route replay currently treats a sample as trusted only when
+  `locationAgeMs <= 2500` and `locationAccuracy <= 25`. Tune these proof-of-
+  concept thresholds in `mobile/src/screens/RideDetailScreen.tsx` via
+  `MAX_TRUSTED_LOCATION_AGE_MS` and `MAX_TRUSTED_LOCATION_ACCURACY_METERS`.
 - For `sensorSource: "external"`, accelerometer and gyroscope may come from an
   external BLE IMU such as Nesso N1, while GPS still comes from the phone.
 

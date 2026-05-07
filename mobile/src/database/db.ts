@@ -188,7 +188,10 @@ export function getLatestSamples(limit = 20) {
          s.vibrationMagnitude,
          s.latitude,
          s.longitude,
-         s.speed
+         s.speed,
+         s.locationTimestamp,
+         s.locationAccuracy,
+         s.locationAgeMs
        FROM rides r
        JOIN samples s ON s.rideId = r.id
        ORDER BY s.timestamp DESC
