@@ -29,6 +29,9 @@ export const measurementSampleSchema = z.object({
   latitude: z.number().min(-90).max(90).nullable(),
   longitude: z.number().min(-180).max(180).nullable(),
   speed: z.number().nullable(),
+  locationTimestamp: z.number().int().nonnegative().nullable().optional(),
+  locationAccuracy: z.number().nonnegative().nullable().optional(),
+  locationAgeMs: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const rideSamplesSchema = z.object({

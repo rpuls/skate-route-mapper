@@ -443,7 +443,8 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     val location = latestLocation
 
     return JSONObject().apply {
-      put("timestamp", System.currentTimeMillis())
+      val timestamp = System.currentTimeMillis()
+      put("timestamp", timestamp)
       put("ax", ax.toDouble())
       put("ay", ay.toDouble())
       put("az", az.toDouble())
@@ -454,6 +455,9 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
       putNullable("latitude", location?.latitude)
       putNullable("longitude", location?.longitude)
       putNullable("speed", if (location?.hasSpeed() == true) location.speed.toDouble() else null)
+      putNullable("locationTimestamp", location?.time?.toDouble())
+      putNullable("locationAccuracy", if (location?.hasAccuracy() == true) location.accuracy.toDouble() else null)
+      putNullable("locationAgeMs", location?.let { (timestamp - it.time).coerceAtLeast(0L).toDouble() })
     }
   }
 
@@ -470,7 +474,8 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     val location = latestLocation
 
     return JSONObject().apply {
-      put("timestamp", System.currentTimeMillis())
+      val timestamp = System.currentTimeMillis()
+      put("timestamp", timestamp)
       put("ax", ax)
       put("ay", ay)
       put("az", az)
@@ -481,6 +486,9 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
       putNullable("latitude", location?.latitude)
       putNullable("longitude", location?.longitude)
       putNullable("speed", if (location?.hasSpeed() == true) location.speed.toDouble() else null)
+      putNullable("locationTimestamp", location?.time?.toDouble())
+      putNullable("locationAccuracy", if (location?.hasAccuracy() == true) location.accuracy.toDouble() else null)
+      putNullable("locationAgeMs", location?.let { (timestamp - it.time).coerceAtLeast(0L).toDouble() })
     }
   }
 
@@ -490,10 +498,12 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     runCatching {
       currentWriter.write(sample.toString())
       currentWriter.write("\n")
-      currentWriter.flush()
 
       sampleCount += 1
       latestSample = jsonToMap(sample)
+      if (sampleCount % FLUSH_EVERY_SAMPLES == 0) {
+        currentWriter.flush()
+      }
       if (sampleCount == 1 || sampleCount % 25 == 0) {
         Log.i(TAG, "Recorded samples=$sampleCount")
       }
@@ -552,6 +562,7 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     private const val NOTIFICATION_ID = 4207
     private const val DEFAULT_INTERVAL_MS = 200
     private const val TAG = "BackgroundRecorder"
+    private const val FLUSH_EVERY_SAMPLES = 25
     private const val MAX_ACCEPTED_ACCURACY_METERS = 50f
     private const val MAX_REASONABLE_SPEED_MPS = 666.6
     private const val STRICT_JUMP_ACCURACY_METERS = 10f
@@ -647,7 +658,10 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
         "vibrationMagnitude" to json.getDouble("vibrationMagnitude"),
         "latitude" to json.nullableDouble("latitude"),
         "longitude" to json.nullableDouble("longitude"),
-        "speed" to json.nullableDouble("speed")
+        "speed" to json.nullableDouble("speed"),
+        "locationTimestamp" to json.nullableDouble("locationTimestamp"),
+        "locationAccuracy" to json.nullableDouble("locationAccuracy"),
+        "locationAgeMs" to json.nullableDouble("locationAgeMs")
       )
     }
 

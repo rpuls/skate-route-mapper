@@ -13,11 +13,15 @@ import dayjs from "dayjs";
 
 import { getRide, getSamplesForRide } from "../database/db";
 import RideRouteMap from "../components/RideRouteMap";
-import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
+import type { MeasurementSample } from "../types/measurement";
 
 type RouteParams = {
   rideId: string;
 };
+
+const MAX_TRUSTED_LOCATION_AGE_MS = 2500;
+const MAX_TRUSTED_LOCATION_ACCURACY_METERS = 25;
 
 export default function RideDetailScreen() {
   const navigation = useNavigation<any>();
@@ -29,31 +33,31 @@ export default function RideDetailScreen() {
   const ride = useMemo(() => getRide(rideId), [rideId]);
   const samples = useMemo(() => getSamplesForRide(rideId), [rideId]);
 
-  const geoSamples = useMemo(
+  const trustedGeoSamples = useMemo(
     () =>
       samples.filter(
-        (sample) => sample.latitude !== null && sample.longitude !== null
+        (sample) => isTrustedGeoSample(sample)
       ),
     [samples]
   );
 
   const coordinates = useMemo(
     () =>
-      geoSamples.map((sample) => ({
+      trustedGeoSamples.map((sample) => ({
         latitude: sample.latitude as number,
         longitude: sample.longitude as number,
       })),
-    [geoSamples]
+    [trustedGeoSamples]
   );
 
   const currentIndex = useMemo(() => {
-    if (geoSamples.length === 0) return 0;
+    if (trustedGeoSamples.length === 0) return 0;
 
     return Math.min(
-      geoSamples.length - 1,
-      Math.round((progress / 100) * (geoSamples.length - 1))
+      trustedGeoSamples.length - 1,
+      Math.round((progress / 100) * (trustedGeoSamples.length - 1))
     );
-  }, [geoSamples.length, progress]);
+  }, [trustedGeoSamples.length, progress]);
 
   const visibleCoordinates = useMemo(() => {
     if (coordinates.length === 0) return [];
@@ -61,7 +65,7 @@ export default function RideDetailScreen() {
     return coordinates.slice(0, currentIndex + 1);
   }, [coordinates, currentIndex]);
 
-  const currentSample = geoSamples[currentIndex];
+  const currentSample = trustedGeoSamples[currentIndex];
   const currentCoordinate = coordinates[currentIndex];
 
   const averageVibration = useMemo(() => {
@@ -179,7 +183,7 @@ export default function RideDetailScreen() {
           </View>
 
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>GPS points</Text>
+            <Text style={styles.metricLabel}>Trusted GPS</Text>
             <Text style={styles.metricValue}>{coordinates.length}</Text>
           </View>
         </View>
@@ -211,6 +215,17 @@ export default function RideDetailScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function isTrustedGeoSample(sample: MeasurementSample) {
+  return (
+    sample.latitude !== null &&
+    sample.longitude !== null &&
+    sample.locationAgeMs != null &&
+    sample.locationAgeMs <= MAX_TRUSTED_LOCATION_AGE_MS &&
+    sample.locationAccuracy != null &&
+    sample.locationAccuracy <= MAX_TRUSTED_LOCATION_ACCURACY_METERS
   );
 }
 

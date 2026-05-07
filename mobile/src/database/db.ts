@@ -28,11 +28,18 @@ export function initDatabase() {
       latitude REAL,
       longitude REAL,
       speed REAL,
+      locationTimestamp INTEGER,
+      locationAccuracy REAL,
+      locationAgeMs INTEGER,
       FOREIGN KEY (rideId) REFERENCES rides(id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_samples_rideId ON samples(rideId);
   `);
+
+  ensureSampleColumn("locationTimestamp", "INTEGER");
+  ensureSampleColumn("locationAccuracy", "REAL");
+  ensureSampleColumn("locationAgeMs", "INTEGER");
 }
 
 export function createRide(params: {
@@ -66,8 +73,9 @@ export function finishRide(rideId: string, endedAt: number) {
 export function insertSample(rideId: string, sample: MeasurementSample) {
   db.runSync(
     `INSERT INTO samples (
-      rideId, timestamp, ax, ay, az, gx, gy, gz, vibrationMagnitude, latitude, longitude, speed
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      rideId, timestamp, ax, ay, az, gx, gy, gz, vibrationMagnitude, latitude, longitude, speed,
+      locationTimestamp, locationAccuracy, locationAgeMs
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     rideId,
     sample.timestamp,
     sample.ax,
@@ -79,8 +87,50 @@ export function insertSample(rideId: string, sample: MeasurementSample) {
     sample.vibrationMagnitude,
     sample.latitude,
     sample.longitude,
-    sample.speed
+    sample.speed,
+    sample.locationTimestamp ?? null,
+    sample.locationAccuracy ?? null,
+    sample.locationAgeMs ?? null
   );
+}
+
+export function insertSamples(rideId: string, samples: MeasurementSample[]) {
+  if (samples.length === 0) {
+    return;
+  }
+
+  const statement = db.prepareSync(
+    `INSERT INTO samples (
+      rideId, timestamp, ax, ay, az, gx, gy, gz, vibrationMagnitude, latitude, longitude, speed,
+      locationTimestamp, locationAccuracy, locationAgeMs
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+  );
+
+  try {
+    db.withTransactionSync(() => {
+      samples.forEach((sample) => {
+        statement.executeSync([
+          rideId,
+          sample.timestamp,
+          sample.ax,
+          sample.ay,
+          sample.az,
+          sample.gx,
+          sample.gy,
+          sample.gz,
+          sample.vibrationMagnitude,
+          sample.latitude,
+          sample.longitude,
+          sample.speed,
+          sample.locationTimestamp ?? null,
+          sample.locationAccuracy ?? null,
+          sample.locationAgeMs ?? null,
+        ]);
+      });
+    });
+  } finally {
+    statement.finalizeSync();
+  }
 }
 
 export function getRides(): Ride[] {
@@ -98,12 +148,22 @@ export function getRide(rideId: string): Ride | null {
 
 export function getSamplesForRide(rideId: string): MeasurementSample[] {
   return db.getAllSync<MeasurementSample>(
-    `SELECT timestamp, ax, ay, az, gx, gy, gz, vibrationMagnitude, latitude, longitude, speed
+    `SELECT timestamp, ax, ay, az, gx, gy, gz, vibrationMagnitude, latitude, longitude, speed,
+            locationTimestamp, locationAccuracy, locationAgeMs
      FROM samples
      WHERE rideId = ?
      ORDER BY timestamp ASC;`,
     rideId
   );
+}
+
+function ensureSampleColumn(name: string, type: string) {
+  const columns = db.getAllSync<{ name: string }>("PRAGMA table_info(samples);");
+  const exists = columns.some((column) => column.name === name);
+
+  if (!exists) {
+    db.execSync(`ALTER TABLE samples ADD COLUMN ${name} ${type};`);
+  }
 }
 
 // For debugging
@@ -128,7 +188,10 @@ export function getLatestSamples(limit = 20) {
          s.vibrationMagnitude,
          s.latitude,
          s.longitude,
-         s.speed
+         s.speed,
+         s.locationTimestamp,
+         s.locationAccuracy,
+         s.locationAgeMs
        FROM rides r
        JOIN samples s ON s.rideId = r.id
        ORDER BY s.timestamp DESC

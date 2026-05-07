@@ -27,6 +27,8 @@ import * as NessoBle from "../native/NessoBle";
 import type { NessoBleConnection } from "../native/NessoBle";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";
 
+type NessoStatus = "idle" | "scanning" | "connected" | "error" | "unsupported";
+
 const vehicleOptions: { label: string; value: VehicleType }[] = [
   { label: "Inline skates", value: "skates" },
   { label: "Skateboard", value: "skateboard" },
@@ -57,9 +59,9 @@ export default function HomeScreen() {
     startRecording,
   } = useMeasurementStore();
 
-  const [nessoStatus, setNessoStatus] = useState<
-    "idle" | "scanning" | "connected" | "error" | "unsupported"
-  >(NessoBle.isNessoBleSupported() ? "idle" : "unsupported");
+  const [nessoStatus, setNessoStatus] = useState<NessoStatus>(
+    NessoBle.isNessoBleSupported() ? "idle" : "unsupported"
+  );
   const [nessoMessage, setNessoMessage] = useState(
     NessoBle.isNessoBleSupported()
       ? "Ready to pair with the Nesso N1."
@@ -71,6 +73,16 @@ export default function HomeScreen() {
 
   const hasNessoConnection = nessoStatus === "connected";
   const canStart = sensorSource === "phone" || hasNessoConnection;
+  const nessoSignalStrength =
+    nessoStatus === "connected" ? 4 : nessoStatus === "scanning" ? 2 : 0;
+  const nessoVisualLabel = getNessoVisualLabel(nessoStatus);
+  const latestNessoMagnitude = latestNessoSample
+    ? Math.sqrt(
+        latestNessoSample.ax * latestNessoSample.ax +
+          latestNessoSample.ay * latestNessoSample.ay +
+          latestNessoSample.az * latestNessoSample.az
+      )
+    : null;
 
   const navigation = useNavigation<any>();
 
@@ -103,7 +115,7 @@ export default function HomeScreen() {
           setLatestExternalImuSample(sample);
         },
       });
-      await connection.setSampleInterval(20);
+      await connection.setSampleInterval(200); //5 hz
 
       nessoConnection.current = connection;
       setNessoStatus("connected");
@@ -177,17 +189,62 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Sensor source</Text>
 
           <View style={styles.blePanel}>
-            <View style={styles.bleCopy}>
-              <Text style={styles.sensorTitle}>External IMU</Text>
-              <Text style={styles.sensorDescription}>
-                Connect the Nesso N1 for accelerometer and gyroscope data. Route GPS and camera stay on this phone.
-              </Text>
-              <Text style={styles.bleStatus}>{nessoMessage}</Text>
-              {latestNessoSample && (
-                <Text style={styles.bleMeta}>
-                  Live sample #{latestNessoSample.sequence}: {latestNessoSample.ax.toFixed(3)}g
+            <View style={styles.bleHero}>
+              <View style={styles.imuLogo}>
+                <View
+                  style={[
+                    styles.imuLogoCore,
+                    nessoStatus === "connected" && styles.imuLogoCoreConnected,
+                    nessoStatus === "scanning" && styles.imuLogoCoreScanning,
+                    nessoStatus === "error" && styles.imuLogoCoreError,
+                  ]}
+                >
+                  <Text style={styles.imuLogoText}>N1</Text>
+                </View>
+                <View style={styles.imuDeck} />
+                <View style={styles.imuWheelLeft} />
+                <View style={styles.imuWheelRight} />
+              </View>
+
+              <View style={styles.bleCopy}>
+                <View style={styles.bleTitleRow}>
+                  <View>
+                    <Text style={styles.sensorTitle}>Skate IMU</Text>
+                    <Text style={styles.bleName}>Nesso N1 motion module</Text>
+                  </View>
+
+                  <View style={[styles.statusPill, getNessoPillStyle(nessoStatus)]}>
+                    <View style={[styles.statusDot, getNessoDotStyle(nessoStatus)]} />
+                    <Text style={styles.statusPillText}>{nessoVisualLabel}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.sensorDescription}>
+                  Connect the Nesso N1 for accelerometer and gyroscope data. Route GPS and camera stay on this phone.
                 </Text>
-              )}
+                <Text style={styles.bleStatus}>{nessoMessage}</Text>
+              </View>
+            </View>
+
+            <View style={styles.bleTelemetry}>
+              <View style={styles.telemetryItem}>
+                <Text style={styles.telemetryLabel}>Signal</Text>
+                <SignalBars level={nessoSignalStrength} />
+              </View>
+
+              <View style={styles.telemetryItem}>
+                <Text style={styles.telemetryLabel}>Sample</Text>
+                <Text style={styles.telemetryValue}>
+                  {latestNessoSample ? `#${latestNessoSample.sequence}` : "-"}
+                </Text>
+              </View>
+
+              <View style={styles.telemetryItem}>
+                <Text style={styles.telemetryLabel}>Motion</Text>
+                <Text style={styles.telemetryValue}>
+                  {latestNessoMagnitude != null ? `${latestNessoMagnitude.toFixed(2)}g` : "-"}
+                </Text>
+              </View>
             </View>
 
             <Pressable
@@ -259,6 +316,77 @@ export default function HomeScreen() {
     </ScrollView>
   </SafeAreaView>
 );
+}
+
+function SignalBars({ level }: { level: number }) {
+  return (
+    <View style={styles.signalBars}>
+      {[1, 2, 3, 4].map((bar) => (
+        <View
+          key={bar}
+          style={[
+            styles.signalBar,
+            getSignalBarStyle(bar),
+            bar <= level && styles.signalBarActive,
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function getNessoVisualLabel(status: NessoStatus) {
+  switch (status) {
+    case "connected":
+      return "Linked";
+    case "scanning":
+      return "Booting";
+    case "error":
+      return "Check";
+    case "unsupported":
+      return "Native only";
+    default:
+      return "Ready";
+  }
+}
+
+function getNessoPillStyle(status: NessoStatus) {
+  switch (status) {
+    case "connected":
+      return styles.statusPillConnected;
+    case "scanning":
+      return styles.statusPillScanning;
+    case "error":
+      return styles.statusPillError;
+    default:
+      return styles.statusPillIdle;
+  }
+}
+
+function getNessoDotStyle(status: NessoStatus) {
+  switch (status) {
+    case "connected":
+      return styles.statusDotConnected;
+    case "scanning":
+      return styles.statusDotScanning;
+    case "error":
+      return styles.statusDotError;
+    default:
+      return styles.statusDotIdle;
+  }
+}
+
+function getSignalBarStyle(bar: number) {
+  switch (bar) {
+    case 1:
+      return styles.signalBar1;
+    case 2:
+      return styles.signalBar2;
+    case 3:
+      return styles.signalBar3;
+    default:
+      return styles.signalBar4;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -368,14 +496,178 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
+  bleHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  imuLogo: {
+    width: 82,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imuLogoCore: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.lg,
+    backgroundColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "-8deg" }],
+  },
+  imuLogoCoreConnected: {
+    backgroundColor: colors.success,
+  },
+  imuLogoCoreScanning: {
+    backgroundColor: colors.accent,
+  },
+  imuLogoCoreError: {
+    backgroundColor: colors.danger,
+  },
+  imuLogoText: {
+    color: colors.textOnOrange,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  imuDeck: {
+    position: "absolute",
+    bottom: 10,
+    width: 68,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.text,
+  },
+  imuWheelLeft: {
+    position: "absolute",
+    bottom: 4,
+    left: 19,
+    width: 10,
+    height: 10,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
+  imuWheelRight: {
+    position: "absolute",
+    bottom: 4,
+    right: 19,
+    width: 10,
+    height: 10,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
   bleCopy: {
-    gap: 4,
+    flex: 1,
+    gap: 5,
+  },
+  bleTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  bleName: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
   },
   bleStatus: {
     color: colors.text,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 18,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  statusPillIdle: {
+    backgroundColor: colors.surface,
+  },
+  statusPillConnected: {
+    backgroundColor: colors.surfaceWarm,
+  },
+  statusPillScanning: {
+    backgroundColor: colors.surfaceWarm,
+  },
+  statusPillError: {
+    backgroundColor: colors.surfaceWarm,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+  },
+  statusDotIdle: {
+    backgroundColor: colors.textMuted,
+  },
+  statusDotConnected: {
+    backgroundColor: colors.success,
+  },
+  statusDotScanning: {
+    backgroundColor: colors.accent,
+  },
+  statusDotError: {
+    backgroundColor: colors.danger,
+  },
+  statusPillText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  bleTelemetry: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  telemetryItem: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    justifyContent: "space-between",
+  },
+  telemetryLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  telemetryValue: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  signalBars: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 3,
+    height: 20,
+  },
+  signalBar: {
+    width: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+  },
+  signalBar1: {
+    height: 6,
+  },
+  signalBar2: {
+    height: 10,
+  },
+  signalBar3: {
+    height: 14,
+  },
+  signalBar4: {
+    height: 18,
+  },
+  signalBarActive: {
+    backgroundColor: colors.success,
   },
   bleMeta: {
     color: colors.textMuted,

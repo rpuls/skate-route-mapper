@@ -7,7 +7,14 @@ import type {
   SensorSource,
   VehicleType,
 } from "../types/measurement";
-import { createRide, finishRide, insertSample } from "../database/db";
+import {
+  createRide,
+  finishRide,
+  insertSample,
+  insertSamples,
+} from "../database/db";
+
+const SAMPLE_BATCH_SIZE = 500;
 
 type MeasurementState = {
   currentRideId: string | null;
@@ -26,6 +33,7 @@ type MeasurementState = {
   resetRecording: () => void;
 
   addSample: (sample: MeasurementSample) => void;
+  addSamples: (samples: MeasurementSample[]) => Promise<void>;
 };
 
 export const useMeasurementStore = create<MeasurementState>((set, get) => ({
@@ -90,4 +98,29 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       samples: [...state.samples.slice(-299), sample],
     }));
   },
+
+  addSamples: async (samples) => {
+    if (samples.length === 0) {
+      return;
+    }
+
+    const rideId = get().currentRideId;
+
+    if (rideId) {
+      for (let index = 0; index < samples.length; index += SAMPLE_BATCH_SIZE) {
+        insertSamples(rideId, samples.slice(index, index + SAMPLE_BATCH_SIZE));
+        await yieldToUi();
+      }
+    }
+
+    set((state) => ({
+      samples: [...state.samples, ...samples].slice(-300),
+    }));
+  },
 }));
+
+function yieldToUi() {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
