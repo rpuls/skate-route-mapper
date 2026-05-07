@@ -17,6 +17,7 @@ This project is built for inline skates, skateboards, and longboards, where smal
 backend/         Backend API service
 admin/       Admin dashboard app
 db/          Prisma schema and migrations
+firmware/    Device firmware such as the Nesso N1 BLE IMU sketch
 mobile/      Expo React Native app
 shared/      Shared TypeScript types and contracts
 ```
@@ -27,6 +28,7 @@ What each part does:
 - `backend` is the Node.js backend that receives ride data, serves admin endpoints, and owns server-side processing.
 - `admin` is the internal dashboard app.
 - `db` holds the Prisma datamodel and migrations.
+- `firmware` holds companion-device firmware that supports mobile recording.
 - `shared` holds the shared ride/sample contract and design tokens used by the apps.
 
 Project docs:
@@ -36,6 +38,7 @@ Project docs:
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
 - `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
+- `firmware/nesso-n1/README.md` covers the Nesso N1 BLE IMU sketch and packet format.
 
 ## How The System Works
 

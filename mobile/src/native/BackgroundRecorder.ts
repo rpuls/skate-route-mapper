@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { requireNativeModule } from "expo-modules-core";
+import type { SensorSource } from "../types/measurement";
 
 export type BackgroundRecorderSample = {
   timestamp: number;
@@ -26,7 +27,8 @@ export type BackgroundRecorderStatus = {
 type BackgroundRecorderModule = {
   startRecording: (
     rideId: string,
-    intervalMs: number
+    intervalMs: number,
+    sensorSource: SensorSource
   ) => Promise<BackgroundRecorderStatus>;
   stopRecording: () => Promise<BackgroundRecorderStatus>;
   getStatus: () => Promise<BackgroundRecorderStatus>;
@@ -52,8 +54,12 @@ function requireAndroidModule() {
   return nativeModule;
 }
 
-export async function startRecording(rideId: string, intervalMs = 200) {
-  return requireAndroidModule().startRecording(rideId, intervalMs);
+export async function startRecording(
+  rideId: string,
+  intervalMs = 200,
+  sensorSource: SensorSource = "phone"
+) {
+  return requireAndroidModule().startRecording(rideId, intervalMs, sensorSource);
 }
 
 export async function stopRecording() {

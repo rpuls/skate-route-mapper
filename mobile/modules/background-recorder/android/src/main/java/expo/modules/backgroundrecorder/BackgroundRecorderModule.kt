@@ -10,12 +10,13 @@ class BackgroundRecorderModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("BackgroundRecorder")
 
-    AsyncFunction("startRecording") { rideId: String, intervalMs: Int ->
+    AsyncFunction("startRecording") { rideId: String, intervalMs: Int, sensorSource: String ->
       val context = requireContext()
       val intent = Intent(context, BackgroundRecorderService::class.java).apply {
         action = BackgroundRecorderService.ACTION_START
         putExtra(BackgroundRecorderService.EXTRA_RIDE_ID, rideId)
         putExtra(BackgroundRecorderService.EXTRA_INTERVAL_MS, intervalMs)
+        putExtra(BackgroundRecorderService.EXTRA_SENSOR_SOURCE, sensorSource)
       }
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

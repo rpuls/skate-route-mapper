@@ -3,6 +3,7 @@ import * as Crypto from "expo-crypto";
 import type {
   MeasurementSample,
   MeasurementStatus,
+  NessoImuPacket,
   SensorSource,
   VehicleType,
 } from "../types/measurement";
@@ -14,9 +15,11 @@ type MeasurementState = {
   sensorSource: SensorSource;
   status: MeasurementStatus;
   samples: MeasurementSample[];
+  latestExternalImuSample: NessoImuPacket | null;
 
   setVehicleType: (vehicleType: VehicleType) => void;
   setSensorSource: (sensorSource: SensorSource) => void;
+  setLatestExternalImuSample: (sample: NessoImuPacket | null) => void;
 
   startRecording: () => string;
   stopRecording: () => void;
@@ -31,9 +34,11 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
   sensorSource: "phone",
   status: "ready",
   samples: [],
+  latestExternalImuSample: null,
 
   setVehicleType: (vehicleType) => set({ vehicleType }),
   setSensorSource: (sensorSource) => set({ sensorSource }),
+  setLatestExternalImuSample: (sample) => set({ latestExternalImuSample: sample }),
 
   startRecording: () => {
     const rideId = Crypto.randomUUID();

@@ -1,10 +1,23 @@
 package expo.modules.backgroundrecorder
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
+import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
+import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -19,23 +32,33 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.ParcelUuid
 import android.os.SystemClock
 import android.util.Log
 import java.io.File
 import java.io.FileWriter
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.UUID
+import kotlin.math.PI
 import kotlin.math.sqrt
 import org.json.JSONObject
 
 class BackgroundRecorderService : Service(), SensorEventListener, LocationListener {
   private lateinit var sensorManager: SensorManager
   private lateinit var locationManager: LocationManager
+  private var bluetoothAdapter: BluetoothAdapter? = null
   private var sensorThread: HandlerThread? = null
   private var sensorHandler: Handler? = null
   private var writer: FileWriter? = null
   private var lastWriteElapsedMs = 0L
   private var intervalMs = DEFAULT_INTERVAL_MS
+  private var sensorSource = SENSOR_SOURCE_PHONE
   private val latestGyro = DoubleArray(3)
   private var latestLocation: Location? = null
+  private var bleScanner: BluetoothLeScanner? = null
+  private var bleGatt: BluetoothGatt? = null
+  private var bleScanCallback: ScanCallback? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
 
@@ -44,6 +67,8 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     activeService = this
     sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
     locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    bluetoothAdapter =
+      (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -57,7 +82,8 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
         }
 
         intervalMs = intent.getIntExtra(EXTRA_INTERVAL_MS, DEFAULT_INTERVAL_MS).coerceAtLeast(50)
-        Log.i(TAG, "Starting foreground recorder for ride=$requestedRideId intervalMs=$intervalMs")
+        sensorSource = intent.getStringExtra(EXTRA_SENSOR_SOURCE) ?: SENSOR_SOURCE_PHONE
+        Log.i(TAG, "Starting foreground recorder for ride=$requestedRideId intervalMs=$intervalMs sensorSource=$sensorSource")
         startForeground(NOTIFICATION_ID, buildNotification())
         startRecording(requestedRideId)
       }
@@ -138,8 +164,12 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
       sensorHandler = Handler(it.looper)
     }
 
-    registerSensors()
     registerLocation()
+    if (sensorSource == SENSOR_SOURCE_EXTERNAL) {
+      startBleSensor()
+    } else {
+      registerSensors()
+    }
     Log.i(TAG, "Recorder active file=${activeFile?.absolutePath} existingSamples=$sampleCount")
   }
 
@@ -154,6 +184,7 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     runCatching {
       locationManager.removeUpdates(this)
     }
+    stopBleSensor()
     runCatching {
       writer?.flush()
       writer?.close()
@@ -218,6 +249,155 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     return fine == PackageManager.PERMISSION_GRANTED || coarse == PackageManager.PERMISSION_GRANTED
   }
 
+  private fun hasBluetoothPermission(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+      return true
+    }
+
+    val scan = checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)
+    val connect = checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    return scan == PackageManager.PERMISSION_GRANTED && connect == PackageManager.PERMISSION_GRANTED
+  }
+
+  @SuppressLint("MissingPermission")
+  private fun startBleSensor() {
+    if (!hasBluetoothPermission()) {
+      Log.w(TAG, "Bluetooth permission unavailable to native service")
+      return
+    }
+
+    val adapter = bluetoothAdapter
+    if (adapter == null || !adapter.isEnabled) {
+      Log.w(TAG, "Bluetooth adapter unavailable or disabled")
+      return
+    }
+
+    bleScanner = adapter.bluetoothLeScanner
+    val scanner = bleScanner
+    if (scanner == null) {
+      Log.w(TAG, "BLE scanner unavailable")
+      return
+    }
+
+    val filter = ScanFilter.Builder()
+      .setServiceUuid(ParcelUuid(NESSO_SERVICE_UUID))
+      .build()
+    val settings = ScanSettings.Builder()
+      .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+      .build()
+
+    bleScanCallback = object : ScanCallback() {
+      override fun onScanResult(callbackType: Int, result: ScanResult) {
+        val deviceName = result.device.name ?: result.scanRecord?.deviceName
+        if (deviceName?.contains("Nesso", ignoreCase = true) != true) {
+          return
+        }
+
+        Log.i(TAG, "Found Nesso BLE device name=$deviceName address=${result.device.address}")
+        stopBleScan()
+        bleGatt = result.device.connectGatt(this@BackgroundRecorderService, false, bleGattCallback)
+      }
+
+      override fun onScanFailed(errorCode: Int) {
+        Log.w(TAG, "Nesso BLE scan failed code=$errorCode")
+      }
+    }
+
+    Log.i(TAG, "Scanning for Nesso BLE service")
+    scanner.startScan(listOf(filter), settings, bleScanCallback)
+  }
+
+  @SuppressLint("MissingPermission")
+  private fun stopBleSensor() {
+    stopBleScan()
+    runCatching {
+      bleGatt?.disconnect()
+      bleGatt?.close()
+    }
+    bleGatt = null
+  }
+
+  @SuppressLint("MissingPermission")
+  private fun stopBleScan() {
+    val callback = bleScanCallback ?: return
+    runCatching {
+      bleScanner?.stopScan(callback)
+    }
+    bleScanCallback = null
+  }
+
+  private val bleGattCallback = object : BluetoothGattCallback() {
+    @SuppressLint("MissingPermission")
+    override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+      if (newState == BluetoothProfile.STATE_CONNECTED) {
+        Log.i(TAG, "Nesso BLE connected")
+        gatt.discoverServices()
+      } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+        Log.w(TAG, "Nesso BLE disconnected status=$status")
+      }
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+      val characteristic = gatt
+        .getService(NESSO_SERVICE_UUID)
+        ?.getCharacteristic(NESSO_IMU_CHARACTERISTIC_UUID)
+
+      if (characteristic == null) {
+        Log.w(TAG, "Nesso IMU characteristic unavailable")
+        return
+      }
+
+      gatt.setCharacteristicNotification(characteristic, true)
+      characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_UUID)?.let { descriptor ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          gatt.writeDescriptor(
+            descriptor,
+            BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+          )
+        } else {
+          @Suppress("DEPRECATION")
+          descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+          @Suppress("DEPRECATION")
+          gatt.writeDescriptor(descriptor)
+        }
+      }
+      Log.i(TAG, "Nesso IMU notifications enabled")
+    }
+
+    override fun onCharacteristicChanged(
+      gatt: BluetoothGatt,
+      characteristic: BluetoothGattCharacteristic,
+      value: ByteArray
+    ) {
+      handleNessoPacket(value)
+    }
+
+    @Deprecated("Deprecated in Android 13")
+    override fun onCharacteristicChanged(
+      gatt: BluetoothGatt,
+      characteristic: BluetoothGattCharacteristic
+    ) {
+      @Suppress("DEPRECATION")
+      handleNessoPacket(characteristic.value)
+    }
+  }
+
+  private fun handleNessoPacket(value: ByteArray) {
+    if (value.size != NESSO_PACKET_SIZE) {
+      Log.w(TAG, "Ignored Nesso packet size=${value.size}")
+      return
+    }
+
+    val elapsedMs = SystemClock.elapsedRealtime()
+    if (elapsedMs - lastWriteElapsedMs < intervalMs) {
+      return
+    }
+
+    lastWriteElapsedMs = elapsedMs
+    writeSample(sampleFromNessoPacket(value))
+  }
+
   private fun shouldAcceptLocation(location: Location): Boolean {
     if (location.latitude !in -90.0..90.0 || location.longitude !in -180.0..180.0) {
       return false
@@ -277,6 +457,33 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     }
   }
 
+  private fun sampleFromNessoPacket(value: ByteArray): JSONObject {
+    val packet = ByteBuffer.wrap(value).order(ByteOrder.LITTLE_ENDIAN)
+    packet.int
+    packet.int
+    val ax = packet.short.toDouble() / 1000.0
+    val ay = packet.short.toDouble() / 1000.0
+    val az = packet.short.toDouble() / 1000.0
+    val gx = (packet.short.toDouble() / 1000.0) * (PI / 180.0)
+    val gy = (packet.short.toDouble() / 1000.0) * (PI / 180.0)
+    val gz = (packet.short.toDouble() / 1000.0) * (PI / 180.0)
+    val location = latestLocation
+
+    return JSONObject().apply {
+      put("timestamp", System.currentTimeMillis())
+      put("ax", ax)
+      put("ay", ay)
+      put("az", az)
+      put("gx", gx)
+      put("gy", gy)
+      put("gz", gz)
+      put("vibrationMagnitude", sqrt(ax * ax + ay * ay + az * az))
+      putNullable("latitude", location?.latitude)
+      putNullable("longitude", location?.longitude)
+      putNullable("speed", if (location?.hasSpeed() == true) location.speed.toDouble() else null)
+    }
+  }
+
   private fun writeSample(sample: JSONObject) {
     val currentWriter = writer ?: return
 
@@ -306,7 +513,7 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
 
     return builder
       .setContentTitle("Recording skate route")
-      .setContentText("GPS, accelerometer and gyroscope are being recorded.")
+      .setContentText(if (sensorSource == SENSOR_SOURCE_EXTERNAL) "Phone GPS and Nesso IMU are being recorded." else "GPS, accelerometer and gyroscope are being recorded.")
       .setSmallIcon(icon)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
@@ -340,13 +547,20 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     const val ACTION_STOP = "expo.modules.backgroundrecorder.STOP"
     const val EXTRA_RIDE_ID = "rideId"
     const val EXTRA_INTERVAL_MS = "intervalMs"
+    const val EXTRA_SENSOR_SOURCE = "sensorSource"
     private const val CHANNEL_ID = "skate-route-recording"
     private const val NOTIFICATION_ID = 4207
     private const val DEFAULT_INTERVAL_MS = 200
     private const val TAG = "BackgroundRecorder"
     private const val MAX_ACCEPTED_ACCURACY_METERS = 50f
-    private const val MAX_REASONABLE_SPEED_MPS = 20.0
+    private const val MAX_REASONABLE_SPEED_MPS = 666.6
     private const val STRICT_JUMP_ACCURACY_METERS = 10f
+    private const val SENSOR_SOURCE_PHONE = "phone"
+    private const val SENSOR_SOURCE_EXTERNAL = "external"
+    private const val NESSO_PACKET_SIZE = 20
+    private val NESSO_SERVICE_UUID = UUID.fromString("7b32f8c0-5d0b-4f0e-a1f5-8f30c44c0001")
+    private val NESSO_IMU_CHARACTERISTIC_UUID = UUID.fromString("7b32f8c1-5d0b-4f0e-a1f5-8f30c44c0001")
+    private val CLIENT_CHARACTERISTIC_CONFIG_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
     @Volatile
     private var isRecording = false

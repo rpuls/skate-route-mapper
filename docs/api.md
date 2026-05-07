@@ -195,6 +195,8 @@ Notes:
 - `vibrationMagnitude` must already be calculated by the mobile app.
 - `latitude`, `longitude`, and `speed` may be `null`.
 - `speed` should be meters per second if provided by the mobile app.
+- For `sensorSource: "external"`, accelerometer and gyroscope may come from an
+  external BLE IMU such as Nesso N1, while GPS still comes from the phone.
 
 ## Endpoints
 

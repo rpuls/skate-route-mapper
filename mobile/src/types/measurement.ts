@@ -1,6 +1,7 @@
 export type {
   MeasurementSample,
   MeasurementStatus,
+  NessoImuPacket,
   Ride,
   SensorSource,
   VehicleType,

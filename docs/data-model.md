@@ -125,7 +125,7 @@ Main fields:
 ### SensorSource
 
 - `phone`
-- `external`
+- `external` - external IMU for accelerometer/gyroscope, with phone GPS
 
 ## Relationship
 

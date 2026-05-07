@@ -36,7 +36,7 @@ type GyroData = {
   z: number;
 };
 
-async function requestAndroidRecordingPermissions() {
+async function requestAndroidRecordingPermissions(sensorSource: "phone" | "external") {
   if (Platform.OS !== "android") {
     return true;
   }
@@ -50,6 +50,13 @@ async function requestAndroidRecordingPermissions() {
     permissions.push(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
   }
 
+  if (sensorSource === "external" && Number(Platform.Version) >= 31) {
+    permissions.push(
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
+    );
+  }
+
   const results = await PermissionsAndroid.requestMultiple(permissions);
   const hasForegroundLocation =
     results[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
@@ -61,7 +68,19 @@ async function requestAndroidRecordingPermissions() {
     console.log("Location permission not granted");
   }
 
-  return hasForegroundLocation;
+  const hasBluetooth =
+    sensorSource === "phone" ||
+    Number(Platform.Version) < 31 ||
+    (results[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] ===
+      PermissionsAndroid.RESULTS.GRANTED &&
+      results[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] ===
+        PermissionsAndroid.RESULTS.GRANTED);
+
+  if (!hasBluetooth) {
+    console.log("Bluetooth permission not granted");
+  }
+
+  return hasForegroundLocation && hasBluetooth;
 }
 
 export default function RecordingScreen() {
@@ -70,10 +89,15 @@ export default function RecordingScreen() {
   const navigation = useNavigation();
 
   const currentRideId = useMeasurementStore((state) => state.currentRideId);
+  const sensorSource = useMeasurementStore((state) => state.sensorSource);
   const status = useMeasurementStore((state) => state.status);
   const samples = useMeasurementStore((state) => state.samples);
+  const latestExternalImuSample = useMeasurementStore(
+    (state) => state.latestExternalImuSample
+  );
   const addSample = useMeasurementStore((state) => state.addSample);
   const stopRecordingInStore = useMeasurementStore((state) => state.stopRecording);
+  const canUseAndroidBackgroundRecorder = USE_ANDROID_BACKGROUND_RECORDER;
 
   const [accel, setAccel] = useState<AccelData>({ x: 0, y: 0, z: 0 });
   const [gyro, setGyro] = useState<GyroData>({ x: 0, y: 0, z: 0 });
@@ -88,8 +112,13 @@ export default function RecordingScreen() {
   const latestLocationRef = useRef<Location.LocationObject | null>(null);
 
   useEffect(() => {
-    if (USE_ANDROID_BACKGROUND_RECORDER) {
+    if (canUseAndroidBackgroundRecorder) {
       console.log("BackgroundRecorder native mode active; skipping JS sensors");
+      return;
+    }
+
+    if (sensorSource === "external") {
+      console.log("External IMU mode active; skipping phone motion sensors");
       return;
     }
 
@@ -135,10 +164,57 @@ export default function RecordingScreen() {
       accelSubscription.remove();
       gyroSubscription.remove();
     };
-  }, [addSample]);
+  }, [addSample, canUseAndroidBackgroundRecorder, sensorSource]);
 
   useEffect(() => {
-    if (USE_ANDROID_BACKGROUND_RECORDER) {
+    if (canUseAndroidBackgroundRecorder || sensorSource !== "external") {
+      return;
+    }
+
+    if (!latestExternalImuSample) {
+      return;
+    }
+
+    const loc = latestLocationRef.current;
+    const vibrationMagnitude = Math.sqrt(
+      latestExternalImuSample.ax * latestExternalImuSample.ax +
+        latestExternalImuSample.ay * latestExternalImuSample.ay +
+        latestExternalImuSample.az * latestExternalImuSample.az
+    );
+
+    setAccel({
+      x: latestExternalImuSample.ax,
+      y: latestExternalImuSample.ay,
+      z: latestExternalImuSample.az,
+    });
+    setGyro({
+      x: latestExternalImuSample.gx,
+      y: latestExternalImuSample.gy,
+      z: latestExternalImuSample.gz,
+    });
+
+    addSample({
+      timestamp: Date.now(),
+      ax: latestExternalImuSample.ax,
+      ay: latestExternalImuSample.ay,
+      az: latestExternalImuSample.az,
+      gx: latestExternalImuSample.gx,
+      gy: latestExternalImuSample.gy,
+      gz: latestExternalImuSample.gz,
+      vibrationMagnitude,
+      latitude: loc?.coords.latitude ?? null,
+      longitude: loc?.coords.longitude ?? null,
+      speed: loc?.coords.speed ?? null,
+    });
+  }, [
+    addSample,
+    canUseAndroidBackgroundRecorder,
+    latestExternalImuSample,
+    sensorSource,
+  ]);
+
+  useEffect(() => {
+    if (canUseAndroidBackgroundRecorder) {
       console.log("BackgroundRecorder native mode active; skipping JS location");
       return;
     }
@@ -171,10 +247,10 @@ export default function RecordingScreen() {
     return () => {
       subscription?.remove();
     };
-  }, []);
+  }, [canUseAndroidBackgroundRecorder]);
 
   useEffect(() => {
-    if (!USE_ANDROID_BACKGROUND_RECORDER || !currentRideId) {
+    if (!canUseAndroidBackgroundRecorder || !currentRideId) {
       return;
     }
 
@@ -183,13 +259,13 @@ export default function RecordingScreen() {
     let pollTimer: ReturnType<typeof setInterval> | null = null;
 
     async function startNativeRecording() {
-      const canRecord = await requestAndroidRecordingPermissions();
+      const canRecord = await requestAndroidRecordingPermissions(sensorSource);
 
       if (!canRecord || !mounted) {
         return;
       }
 
-      await BackgroundRecorder.startRecording(rideId, 200);
+      await BackgroundRecorder.startRecording(rideId, 200, sensorSource);
 
       pollTimer = setInterval(async () => {
         const nativeStatus = await BackgroundRecorder.getStatus();
@@ -221,18 +297,18 @@ export default function RecordingScreen() {
         clearInterval(pollTimer);
       }
     };
-  }, [currentRideId]);
+  }, [canUseAndroidBackgroundRecorder, currentRideId, sensorSource]);
 
   const latestSample = samples[samples.length - 1];
-  const visibleSampleCount = USE_ANDROID_BACKGROUND_RECORDER
+  const visibleSampleCount = canUseAndroidBackgroundRecorder
     ? nativeSampleCount
     : samples.length;
-  const visibleLatestSample = USE_ANDROID_BACKGROUND_RECORDER
+  const visibleLatestSample = canUseAndroidBackgroundRecorder
     ? nativeLatestSample
     : latestSample;
 
   const chartData = useMemo(() => {
-    if (USE_ANDROID_BACKGROUND_RECORDER) {
+    if (canUseAndroidBackgroundRecorder) {
       return nativeChartData;
     }
 
@@ -240,10 +316,10 @@ export default function RecordingScreen() {
     const values = latest.map((sample) => sample.vibrationMagnitude);
 
     return values.length > 0 ? values : [0];
-  }, [nativeChartData, samples]);
+  }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
 
   const averageVibration = useMemo(() => {
-    if (USE_ANDROID_BACKGROUND_RECORDER) {
+    if (canUseAndroidBackgroundRecorder) {
       const visibleValues = nativeChartData.filter((value) => value > 0);
 
       if (visibleValues.length === 0) return 0;
@@ -261,7 +337,7 @@ export default function RecordingScreen() {
     );
 
     return total / latest.length;
-  }, [nativeChartData, samples]);
+  }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
   const gpsStatus =
     latestLocation || nativeLatestSample?.latitude != null ? "OK" : "Waiting";
   const speedText =
@@ -272,7 +348,7 @@ export default function RecordingScreen() {
       : "-";
 
   const handleStop = async () => {
-    if (USE_ANDROID_BACKGROUND_RECORDER && currentRideId) {
+    if (canUseAndroidBackgroundRecorder && currentRideId) {
       await BackgroundRecorder.stopRecording();
       const nativeSamples = await BackgroundRecorder.readSamples(currentRideId);
       nativeSamples.forEach(addSample);
@@ -294,7 +370,7 @@ export default function RecordingScreen() {
           <Text style={styles.appName}>skate-route-mapper</Text>
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
-            Measuring vibration using the phone accelerometer and gyroscope.
+            Measuring vibration using {sensorSource === "external" ? "the Nesso N1 IMU" : "the phone accelerometer and gyroscope"}.
             Android preview builds can keep recording from the foreground
             service while the phone is locked.
           </Text>

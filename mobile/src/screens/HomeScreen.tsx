@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -7,17 +7,23 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
+  Platform,
 } from "react-native";
 import { useMeasurementStore } from "../store/measurementStore";
 import type { SensorSource, VehicleType } from "../types/measurement";
 import { useNavigation } from "@react-navigation/native";
 import {
+  NESSO_BLE_DEVICE_NAME,
+  type NessoImuPacket,
   buttonVariants,
   colors,
   radius,
   shadows,
   space,
 } from "@skate-route-mapper/shared";
+import * as NessoBle from "../native/NessoBle";
+import type { NessoBleConnection } from "../native/NessoBle";
+import * as BackgroundRecorder from "../native/BackgroundRecorder";
 
 const vehicleOptions: { label: string; value: VehicleType }[] = [
   { label: "Inline skates", value: "skates" },
@@ -32,9 +38,9 @@ const sensorOptions: { label: string; value: SensorSource; description: string }
     description: "Use accelerometer, gyroscope, GPS and camera from this phone.",
   },
   {
-    label: "External sensor",
+    label: "Nesso N1 + phone GPS",
     value: "external",
-    description: "Coming later: connect BLE sensors like ADXL355/Nesso.",
+    description: `${NESSO_BLE_DEVICE_NAME} supplies accelerometer and gyroscope. GPS and camera stay on this phone.`,
   },
 ];
 
@@ -45,12 +51,86 @@ export default function HomeScreen() {
     status,
     setVehicleType,
     setSensorSource,
+    setLatestExternalImuSample,
     startRecording,
   } = useMeasurementStore();
 
-  const canStart = sensorSource === "phone";
+  const [nessoStatus, setNessoStatus] = useState<
+    "idle" | "scanning" | "connected" | "error" | "unsupported"
+  >(NessoBle.isNessoBleSupported() ? "idle" : "unsupported");
+  const [nessoMessage, setNessoMessage] = useState(
+    NessoBle.isNessoBleSupported()
+      ? "Ready to pair with the Nesso N1."
+      : "BLE sensor pairing requires a native mobile build."
+  );
+  const [latestNessoSample, setLatestNessoSample] =
+    useState<NessoImuPacket | null>(null);
+  const nessoConnection = useRef<NessoBleConnection | null>(null);
+
+  const hasNessoConnection = nessoStatus === "connected";
+  const canStart = sensorSource === "phone" || hasNessoConnection;
 
   const navigation = useNavigation<any>();
+
+  useEffect(() => {
+    return () => {
+      nessoConnection.current?.disconnect();
+      setLatestExternalImuSample(null);
+    };
+  }, [setLatestExternalImuSample]);
+
+  const handleConnectNesso = async () => {
+    if (nessoStatus === "connected") {
+      await nessoConnection.current?.disconnect();
+      nessoConnection.current = null;
+      setLatestNessoSample(null);
+      setLatestExternalImuSample(null);
+      setNessoStatus("idle");
+      setNessoMessage("Ready to pair with the Nesso N1.");
+      setSensorSource("phone");
+      return;
+    }
+
+    setNessoStatus("scanning");
+    setNessoMessage(`Searching for ${NESSO_BLE_DEVICE_NAME}...`);
+
+    try {
+      const connection = await NessoBle.connectToNesso({
+        onSample: (sample) => {
+          setLatestNessoSample(sample);
+          setLatestExternalImuSample(sample);
+        },
+      });
+      await connection.setSampleInterval(20);
+
+      nessoConnection.current = connection;
+      setNessoStatus("connected");
+      setNessoMessage(`${connection.deviceName} connected. GPS remains on this phone.`);
+      setSensorSource("external");
+    } catch (error) {
+      nessoConnection.current = null;
+      setNessoStatus("error");
+      setNessoMessage(error instanceof Error ? error.message : "Unable to connect.");
+      setSensorSource("phone");
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (
+      sensorSource === "external" &&
+      Platform.OS === "android" &&
+      BackgroundRecorder.isAvailable()
+    ) {
+      await nessoConnection.current?.disconnect();
+      nessoConnection.current = null;
+      setNessoMessage(
+        "Nesso N1 will reconnect through the Android recording service."
+      );
+    }
+
+    startRecording();
+    navigation.navigate("Recording");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -94,9 +174,43 @@ export default function HomeScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Sensor source</Text>
 
+          <View style={styles.blePanel}>
+            <View style={styles.bleCopy}>
+              <Text style={styles.sensorTitle}>External IMU</Text>
+              <Text style={styles.sensorDescription}>
+                Connect the Nesso N1 for accelerometer and gyroscope data. Route GPS and camera stay on this phone.
+              </Text>
+              <Text style={styles.bleStatus}>{nessoMessage}</Text>
+              {latestNessoSample && (
+                <Text style={styles.bleMeta}>
+                  Live sample #{latestNessoSample.sequence}: {latestNessoSample.ax.toFixed(3)}g
+                </Text>
+              )}
+            </View>
+
+            <Pressable
+              disabled={nessoStatus === "unsupported" || nessoStatus === "scanning"}
+              onPress={handleConnectNesso}
+              style={[
+                styles.bleButton,
+                nessoStatus === "connected" && styles.bleButtonConnected,
+                (nessoStatus === "unsupported" || nessoStatus === "scanning") &&
+                  styles.bleButtonDisabled,
+              ]}
+            >
+              <Text style={styles.bleButtonText}>
+                {nessoStatus === "connected"
+                  ? "Disconnect"
+                  : nessoStatus === "scanning"
+                  ? "Pairing..."
+                  : "Connect Nesso N1"}
+              </Text>
+            </Pressable>
+          </View>
+
           {sensorOptions.map((option) => {
             const selected = option.value === sensorSource;
-            const disabled = option.value === "external";
+            const disabled = option.value === "external" && !hasNessoConnection;
 
             return (
               <Pressable
@@ -116,7 +230,7 @@ export default function HomeScreen() {
                 </View>
 
                 {selected && <Text style={styles.badge}>Selected</Text>}
-                {disabled && <Text style={styles.badgeMuted}>Soon</Text>}
+                {disabled && <Text style={styles.badgeMuted}>Pair first</Text>}
               </Pressable>
             );
           })}
@@ -125,10 +239,7 @@ export default function HomeScreen() {
         <View style={styles.footer}>
         <Pressable
           disabled={!canStart}
-          onPress={() => {
-            startRecording();
-            navigation.navigate("Recording");
-          }}
+          onPress={handleStartRecording}
           style={[styles.startButton, !canStart && styles.startButtonDisabled]}
         >
           <Text style={styles.startButtonText}>Start route scan</Text>
@@ -247,6 +358,45 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 18,
+  },
+  blePanel: {
+    padding: 14,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
+    marginBottom: 12,
+    gap: 12,
+  },
+  bleCopy: {
+    gap: 4,
+  },
+  bleStatus: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  bleMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  bleButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: buttonVariants.primary.filled.backgroundColor,
+  },
+  bleButtonConnected: {
+    backgroundColor: colors.text,
+  },
+  bleButtonDisabled: {
+    backgroundColor: colors.textMuted,
+  },
+  bleButtonText: {
+    color: buttonVariants.primary.filled.color,
+    fontSize: 13,
+    fontWeight: "800",
   },
   badge: {
     alignSelf: "flex-start",

@@ -7,6 +7,8 @@ The mobile app is an Expo React Native app for recording skating rides with phon
 The mobile app owns:
 
 - ride recording with phone accelerometer, gyroscope, and GPS
+- Nesso N1 firmware/protocol scaffolding for external accelerometer and
+  gyroscope over BLE, with GPS still supplied by the phone
 - local ride/sample persistence
 - ride replay and basic ride inspection
 - future external sensor connection
@@ -85,6 +87,24 @@ The recorder requests foreground location, background location, notification,
 and foreground-service permissions. Android may still require allowing location
 "all the time" and disabling aggressive battery optimization for long tests on
 some devices.
+
+When external sensor mode is enabled, keep the phone as the GPS source. The
+foreground service should swap only the accelerometer and gyroscope source to
+the Nesso BLE stream, then persist the same `MeasurementSample` shape.
+
+## Nesso N1 BLE IMU
+
+The Nesso N1 firmware lives in `../firmware/nesso-n1/`.
+
+The initial sketch advertises `Skate Nesso N1`, streams accelerometer and
+gyroscope packets over a custom BLE service, and leaves GPS/camera ownership in
+the mobile app. The shared BLE UUIDs and binary packet parser live in
+`../shared/src/nessoBle.ts`.
+
+Home screen pairing uses `react-native-ble-plx` for a foreground connection
+preview. On Android native builds, starting a Nesso ride disconnects that
+preview connection so the foreground recording service can reconnect to the
+Nesso while the phone is locked.
 
 ## Testing On iPhone
 
