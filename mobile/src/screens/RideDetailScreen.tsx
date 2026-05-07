@@ -13,7 +13,7 @@ import dayjs from "dayjs";
 
 import { getRide, getSamplesForRide } from "../database/db";
 import RideRouteMap from "../components/RideRouteMap";
-import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
 import type { MeasurementSample } from "../types/measurement";
 
 type RouteParams = {
