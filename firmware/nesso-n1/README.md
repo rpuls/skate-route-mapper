@@ -16,6 +16,14 @@ notifies compact binary IMU packets.
 
 The protocol constants are mirrored in `shared/src/nessoBle.ts`.
 
+The device display is intentionally optimized for the Nesso N1's small touch
+screen:
+
+- startup shows a high-contrast Nesso skate IMU splash/logo
+- main screen shows large battery percentage text
+- BLE state uses compact labels: `BOOT`, `PAIR`, and `LINKED`
+- sample rate and a simple IMU on/off state stay visible while connected
+
 ## Arduino IDE Setup
 
 Install these libraries/board packages before flashing:
