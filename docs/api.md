@@ -187,6 +187,9 @@ type MeasurementSample = {
   latitude: number | null;
   longitude: number | null;
   speed: number | null;
+  locationTimestamp?: number | null;
+  locationAccuracy?: number | null;
+  locationAgeMs?: number | null;
 };
 ```
 
@@ -195,6 +198,9 @@ Notes:
 - `vibrationMagnitude` must already be calculated by the mobile app.
 - `latitude`, `longitude`, and `speed` may be `null`.
 - `speed` should be meters per second if provided by the mobile app.
+- `locationTimestamp`, `locationAccuracy`, and `locationAgeMs` are optional
+  mobile-side confidence metadata for pairing IMU vibration samples with the
+  GPS fix used for that sample.
 - For `sensorSource: "external"`, accelerometer and gyroscope may come from an
   external BLE IMU such as Nesso N1, while GPS still comes from the phone.
 

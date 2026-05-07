@@ -141,9 +141,10 @@ export default function RecordingScreen() {
       const vibrationMagnitude = Math.sqrt(
         data.x * data.x + data.y * data.y + data.z * data.z
       );
+      const timestamp = Date.now();
 
       addSample({
-        timestamp: Date.now(),
+        timestamp,
 
         ax: data.x,
         ay: data.y,
@@ -158,6 +159,9 @@ export default function RecordingScreen() {
         latitude: loc?.coords.latitude ?? null,
         longitude: loc?.coords.longitude ?? null,
         speed: loc?.coords.speed ?? null,
+        locationTimestamp: loc?.timestamp ?? null,
+        locationAccuracy: loc?.coords.accuracy ?? null,
+        locationAgeMs: loc ? Math.max(0, timestamp - loc.timestamp) : null,
       });
     });
 
@@ -182,6 +186,7 @@ export default function RecordingScreen() {
         latestExternalImuSample.ay * latestExternalImuSample.ay +
         latestExternalImuSample.az * latestExternalImuSample.az
     );
+    const timestamp = Date.now();
 
     setAccel({
       x: latestExternalImuSample.ax,
@@ -195,7 +200,7 @@ export default function RecordingScreen() {
     });
 
     addSample({
-      timestamp: Date.now(),
+      timestamp,
       ax: latestExternalImuSample.ax,
       ay: latestExternalImuSample.ay,
       az: latestExternalImuSample.az,
@@ -206,6 +211,9 @@ export default function RecordingScreen() {
       latitude: loc?.coords.latitude ?? null,
       longitude: loc?.coords.longitude ?? null,
       speed: loc?.coords.speed ?? null,
+      locationTimestamp: loc?.timestamp ?? null,
+      locationAccuracy: loc?.coords.accuracy ?? null,
+      locationAgeMs: loc ? Math.max(0, timestamp - loc.timestamp) : null,
     });
   }, [
     addSample,

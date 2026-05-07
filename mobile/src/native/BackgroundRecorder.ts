@@ -14,6 +14,9 @@ export type BackgroundRecorderSample = {
   latitude: number | null;
   longitude: number | null;
   speed: number | null;
+  locationTimestamp: number | null;
+  locationAccuracy: number | null;
+  locationAgeMs: number | null;
 };
 
 export type BackgroundRecorderStatus = {

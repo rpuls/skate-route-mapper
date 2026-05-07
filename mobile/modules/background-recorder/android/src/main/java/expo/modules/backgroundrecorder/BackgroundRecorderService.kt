@@ -443,7 +443,8 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     val location = latestLocation
 
     return JSONObject().apply {
-      put("timestamp", System.currentTimeMillis())
+      val timestamp = System.currentTimeMillis()
+      put("timestamp", timestamp)
       put("ax", ax.toDouble())
       put("ay", ay.toDouble())
       put("az", az.toDouble())
@@ -454,6 +455,9 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
       putNullable("latitude", location?.latitude)
       putNullable("longitude", location?.longitude)
       putNullable("speed", if (location?.hasSpeed() == true) location.speed.toDouble() else null)
+      putNullable("locationTimestamp", location?.time?.toDouble())
+      putNullable("locationAccuracy", if (location?.hasAccuracy() == true) location.accuracy.toDouble() else null)
+      putNullable("locationAgeMs", location?.let { (timestamp - it.time).coerceAtLeast(0L).toDouble() })
     }
   }
 
@@ -470,7 +474,8 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     val location = latestLocation
 
     return JSONObject().apply {
-      put("timestamp", System.currentTimeMillis())
+      val timestamp = System.currentTimeMillis()
+      put("timestamp", timestamp)
       put("ax", ax)
       put("ay", ay)
       put("az", az)
@@ -481,6 +486,9 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
       putNullable("latitude", location?.latitude)
       putNullable("longitude", location?.longitude)
       putNullable("speed", if (location?.hasSpeed() == true) location.speed.toDouble() else null)
+      putNullable("locationTimestamp", location?.time?.toDouble())
+      putNullable("locationAccuracy", if (location?.hasAccuracy() == true) location.accuracy.toDouble() else null)
+      putNullable("locationAgeMs", location?.let { (timestamp - it.time).coerceAtLeast(0L).toDouble() })
     }
   }
 
@@ -650,7 +658,10 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
         "vibrationMagnitude" to json.getDouble("vibrationMagnitude"),
         "latitude" to json.nullableDouble("latitude"),
         "longitude" to json.nullableDouble("longitude"),
-        "speed" to json.nullableDouble("speed")
+        "speed" to json.nullableDouble("speed"),
+        "locationTimestamp" to json.nullableDouble("locationTimestamp"),
+        "locationAccuracy" to json.nullableDouble("locationAccuracy"),
+        "locationAgeMs" to json.nullableDouble("locationAgeMs")
       )
     }
 
