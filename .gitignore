@@ -55,6 +55,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+/mobile/android
+/mobile/modules/background-recorder/android/
+/mobile/ios
 
 # Coverage
 coverage/
@@ -81,3 +84,4 @@ fastlane/test_output/
 
 # Misc
 Thumbs.db
+results.bin
