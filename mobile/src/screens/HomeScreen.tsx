@@ -101,7 +101,7 @@ export default function HomeScreen() {
           setLatestExternalImuSample(sample);
         },
       });
-      await connection.setSampleInterval(20);
+      await connection.setSampleInterval(200); //5 hz
 
       nessoConnection.current = connection;
       setNessoStatus("connected");

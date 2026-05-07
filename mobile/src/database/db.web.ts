@@ -66,6 +66,21 @@ export function insertSample(rideId: string, sample: MeasurementSample) {
   writeSnapshot();
 }
 
+export function insertSamples(rideId: string, samples: MeasurementSample[]) {
+  if (samples.length === 0) {
+    return;
+  }
+
+  snapshot.samples = [
+    ...snapshot.samples,
+    ...samples.map((sample) => ({
+      ...sample,
+      rideId,
+    })),
+  ];
+  writeSnapshot();
+}
+
 export function getRides(): Ride[] {
   return [...snapshot.rides].sort((left, right) => right.startedAt - left.startedAt);
 }

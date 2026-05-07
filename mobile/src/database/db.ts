@@ -83,6 +83,41 @@ export function insertSample(rideId: string, sample: MeasurementSample) {
   );
 }
 
+export function insertSamples(rideId: string, samples: MeasurementSample[]) {
+  if (samples.length === 0) {
+    return;
+  }
+
+  const statement = db.prepareSync(
+    `INSERT INTO samples (
+      rideId, timestamp, ax, ay, az, gx, gy, gz, vibrationMagnitude, latitude, longitude, speed
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+  );
+
+  try {
+    db.withTransactionSync(() => {
+      samples.forEach((sample) => {
+        statement.executeSync([
+          rideId,
+          sample.timestamp,
+          sample.ax,
+          sample.ay,
+          sample.az,
+          sample.gx,
+          sample.gy,
+          sample.gz,
+          sample.vibrationMagnitude,
+          sample.latitude,
+          sample.longitude,
+          sample.speed,
+        ]);
+      });
+    });
+  } finally {
+    statement.finalizeSync();
+  }
+}
+
 export function getRides(): Ride[] {
   return db.getAllSync<Ride>(
     `SELECT * FROM rides ORDER BY startedAt DESC;`

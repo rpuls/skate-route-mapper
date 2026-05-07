@@ -96,6 +96,7 @@ export default function RecordingScreen() {
     (state) => state.latestExternalImuSample
   );
   const addSample = useMeasurementStore((state) => state.addSample);
+  const addSamples = useMeasurementStore((state) => state.addSamples);
   const stopRecordingInStore = useMeasurementStore((state) => state.stopRecording);
   const canUseAndroidBackgroundRecorder = USE_ANDROID_BACKGROUND_RECORDER;
 
@@ -351,7 +352,7 @@ export default function RecordingScreen() {
     if (canUseAndroidBackgroundRecorder && currentRideId) {
       await BackgroundRecorder.stopRecording();
       const nativeSamples = await BackgroundRecorder.readSamples(currentRideId);
-      nativeSamples.forEach(addSample);
+      await addSamples(nativeSamples);
       await BackgroundRecorder.clearSamples(currentRideId);
     }
 

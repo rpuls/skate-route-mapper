@@ -490,10 +490,12 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     runCatching {
       currentWriter.write(sample.toString())
       currentWriter.write("\n")
-      currentWriter.flush()
 
       sampleCount += 1
       latestSample = jsonToMap(sample)
+      if (sampleCount % FLUSH_EVERY_SAMPLES == 0) {
+        currentWriter.flush()
+      }
       if (sampleCount == 1 || sampleCount % 25 == 0) {
         Log.i(TAG, "Recorded samples=$sampleCount")
       }
@@ -552,6 +554,7 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
     private const val NOTIFICATION_ID = 4207
     private const val DEFAULT_INTERVAL_MS = 200
     private const val TAG = "BackgroundRecorder"
+    private const val FLUSH_EVERY_SAMPLES = 25
     private const val MAX_ACCEPTED_ACCURACY_METERS = 50f
     private const val MAX_REASONABLE_SPEED_MPS = 666.6
     private const val STRICT_JUMP_ACCURACY_METERS = 10f
