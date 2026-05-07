@@ -47,7 +47,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "react-native-ble-plx",
+        {
+          "bluetoothAlwaysPermission": "Skate Route Mapper connects to Nesso N1 sensors for accelerometer and gyroscope data."
+        }
+      ]
     ],
     "extra": {
       "eas": {

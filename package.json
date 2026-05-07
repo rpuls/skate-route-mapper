@@ -8,15 +8,12 @@
     "shared"
   ],
   "scripts": {
-    "admin-app": "npm run docker:up",
-    "app": "npm run admin-app",
+    "app": "npm run docker:up",
     "stop": "npm run docker:down",
     "logs": "npm run docker:logs",
     "mobile:start": "npm run start --workspace @skate-route-mapper/mobile --",
-    "mobile:start:go": "npm run start --workspace @skate-route-mapper/mobile -- --go",
-    "mobile:expogo": "npm run start --workspace @skate-route-mapper/mobile -- --lan",
-    "mobile:tunnel": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel",
-    "mobile:tunnel:go": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel --go",
+    "mobile:iphone": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel --go",
+    "mobile:device": "npm run start --workspace @skate-route-mapper/mobile -- --lan --go",
     "mobile:android": "npm run android --workspace @skate-route-mapper/mobile",
     "mobile:ios": "npm run ios --workspace @skate-route-mapper/mobile",
     "mobile:web": "npm run web --workspace @skate-route-mapper/mobile",

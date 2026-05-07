@@ -38,22 +38,16 @@ Start the Expo dev server:
 npm run mobile:start
 ```
 
+Run with Expo Go on a physical iPhone through Expo tunnel:
+
+```bash
+npm run mobile:iphone
+```
+
 Run with Expo Go on a physical device on the same Wi-Fi network:
 
 ```bash
-npm run mobile:expogo
-```
-
-Run through Expo tunnel when LAN discovery is unreliable:
-
-```bash
-npm run mobile:tunnel
-```
-
-Run explicitly in Expo Go mode when a development build is also installed:
-
-```bash
-npm run mobile:tunnel:go
+npm run mobile:device
 ```
 
 Run the browser target for UI/layout checks:
@@ -106,18 +100,22 @@ preview. On Android native builds, starting a Nesso ride disconnects that
 preview connection so the foreground recording service can reconnect to the
 Nesso while the phone is locked.
 
+BLE pairing is not available in Expo Go. After changing BLE dependencies or
+Expo native config, rebuild the iOS development app so the `react-native-ble-plx`
+native module and Bluetooth permission strings are compiled into the app.
+
 ## Testing On iPhone
 
 For quick UI and Expo-module testing:
 
 1. Install Expo Go from the App Store.
 2. Sign in with the same Expo account used by the CLI.
-3. Run `npm run mobile:tunnel` from the repo root.
+3. Run `npm run mobile:iphone` from the repo root.
 4. Scan the QR code with the iPhone camera or Expo Go.
 
 Expo Go is the easiest path from Windows because it does not require Xcode.
 
-Use an EAS development build when Expo Go is not enough, especially for custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account.
+Use an EAS development build when Expo Go is not enough, especially for custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account. Rebuild the development app after native dependency or config-plugin changes; reloading JavaScript is not enough for BLE module changes.
 
 The repo already has `mobile/eas.json` with a `development` profile. When ready for a development build, run from `mobile/`:
 

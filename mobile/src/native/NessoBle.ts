@@ -1,4 +1,4 @@
-import { PermissionsAndroid, Platform } from "react-native";
+import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 import { BleManager, type Device, type Subscription } from "react-native-ble-plx";
 import {
   NESSO_BLE_CONFIG_CHARACTERISTIC_UUID,
@@ -23,7 +23,17 @@ type ConnectOptions = {
 
 let manager: BleManager | null = null;
 
+function hasNativeBleModule() {
+  return NativeModules.BlePlx != null;
+}
+
 function getManager() {
+  if (!hasNativeBleModule()) {
+    throw new Error(
+      "Nesso BLE requires a development/native build with react-native-ble-plx included. Rebuild the iOS app after installing native modules; Expo Go cannot connect to Nesso N1."
+    );
+  }
+
   if (!manager) {
     manager = new BleManager();
   }
@@ -32,7 +42,7 @@ function getManager() {
 }
 
 export function isNessoBleSupported() {
-  return Platform.OS === "android" || Platform.OS === "ios";
+  return (Platform.OS === "android" || Platform.OS === "ios") && hasNativeBleModule();
 }
 
 export async function requestNessoBlePermissions() {

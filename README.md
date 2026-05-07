@@ -310,29 +310,23 @@ From the repo root:
 npm run mobile:start
 ```
 
-To run on a physical iPhone or Android phone with Expo Go on the same Wi-Fi network:
+To run on a physical iPhone with Expo Go from Windows, use the tunnel command:
 
 ```bash
-npm run mobile:expogo
+npm run mobile:iphone
 ```
 
-If LAN discovery is not available, you can try Expo's ngrok tunnel mode:
-
-```bash
-npm run mobile:tunnel
-```
-
-For a physical iPhone without a Mac/Xcode, start with Expo Go:
+For a physical iPhone without a Mac/Xcode:
 
 1. Install Expo Go from the App Store.
 2. Sign in with the same Expo account used by the CLI.
-3. Run `npm run mobile:tunnel`.
+3. Run `npm run mobile:iphone`.
 4. Scan the QR code on the iPhone.
 
 If your phone and computer are on the same Wi-Fi network, LAN mode is usually faster:
 
 ```bash
-npm run mobile:expogo
+npm run mobile:device
 ```
 
 Use an EAS development build only when Expo Go is not enough, for example when testing custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account.
@@ -348,8 +342,9 @@ npm run mobile:web
 Notes:
 
 - a physical device is strongly recommended because the app depends on motion sensors and GPS
-- `mobile:expogo` is the easiest LAN option from Windows when using Expo Go on a physical device
-- `mobile:tunnel` depends on Expo's ngrok tunnel service and can fail when ngrok is blocked or unavailable
+- `mobile:iphone` is the default iPhone + Expo Go path and uses Expo's ngrok tunnel
+- `mobile:device` is the faster LAN Expo Go path when the phone can reach your computer on Wi-Fi
+- tunnel mode depends on Expo's ngrok service and can fail when ngrok is blocked or unavailable
 - `mobile:ios` launches the local iOS simulator and requires macOS with Xcode
 - the web target is mainly useful for UI checks, not full ride recording
 - the web target uses fallbacks for native-only pieces such as SQLite storage and maps
