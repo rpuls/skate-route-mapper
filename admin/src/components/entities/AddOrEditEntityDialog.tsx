@@ -8,7 +8,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { AdminResource } from "@skate-route-mapper/shared";
+import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { useEffect, useState } from "react";
 import { controlRadiusPx, radiusLevel } from "../../theme/adminTheme";
 import type { EntityPayload, EntityRecord } from "../../types";

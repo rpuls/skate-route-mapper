@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { colors } from "@skate-route-mapper/shared";
+import { colors } from "@skate-route-mapper/shared/design";
 
 type Coordinate = {
   latitude: number;

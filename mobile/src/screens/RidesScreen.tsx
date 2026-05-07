@@ -13,7 +13,7 @@ import { getRides } from "../database/db";
 import type { Ride } from "../types/measurement";
 //For debugging
 import { getLatestRideWithSamples } from "../database/db";
-import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
 
 export default function RidesScreen() {
   const navigation = useNavigation<any>();

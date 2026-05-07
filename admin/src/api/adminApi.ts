@@ -1,4 +1,4 @@
-import type { AdminResource } from "@skate-route-mapper/shared";
+import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { apiBaseUrl } from "../config";
 import type { AdminSession, EntityPayload, EntityRecord } from "../types";
 

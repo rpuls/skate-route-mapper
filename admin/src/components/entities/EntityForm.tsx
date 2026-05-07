@@ -13,7 +13,7 @@ import {
 import type { SelectChangeEvent } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import CloseIcon from "@mui/icons-material/Close";
-import type { AdminResource } from "@skate-route-mapper/shared";
+import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { componentStyles, space } from "@skate-route-mapper/shared/design";
 import { useState } from "react";
 import type { FormEvent } from "react";

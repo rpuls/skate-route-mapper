@@ -1,5 +1,7 @@
-import type { AdminResource } from "@skate-route-mapper/shared";
-import type { AdminResourceField } from "@skate-route-mapper/shared";
+import type {
+  AdminResource,
+  AdminResourceField,
+} from "@skate-route-mapper/shared/adminResources";
 import type { EntityPayload, EntityRecord } from "../../types";
 
 export type EntityFormState = Record<string, string | boolean>;

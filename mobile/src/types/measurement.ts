@@ -1,8 +1,9 @@
 export type {
   MeasurementSample,
   MeasurementStatus,
-  NessoImuPacket,
   Ride,
   SensorSource,
   VehicleType,
-} from "@skate-route-mapper/shared";
+} from "@skate-route-mapper/shared/contracts";
+
+export type { NessoImuPacket } from "@skate-route-mapper/shared/nessoBle";

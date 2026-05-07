@@ -1,4 +1,4 @@
-import type { AdminResource } from "@skate-route-mapper/shared";
+import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createEntityRecord,

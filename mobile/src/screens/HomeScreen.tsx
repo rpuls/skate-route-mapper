@@ -13,14 +13,16 @@ import { useMeasurementStore } from "../store/measurementStore";
 import type { SensorSource, VehicleType } from "../types/measurement";
 import { useNavigation } from "@react-navigation/native";
 import {
-  NESSO_BLE_DEVICE_NAME,
-  type NessoImuPacket,
   buttonVariants,
   colors,
   radius,
   shadows,
   space,
-} from "@skate-route-mapper/shared";
+} from "@skate-route-mapper/shared/design";
+import {
+  NESSO_BLE_DEVICE_NAME,
+  type NessoImuPacket,
+} from "@skate-route-mapper/shared/nessoBle";
 import * as NessoBle from "../native/NessoBle";
 import type { NessoBleConnection } from "../native/NessoBle";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";

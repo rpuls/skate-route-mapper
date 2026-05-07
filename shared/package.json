@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./adminResources": "./src/adminResources.ts",
     "./contracts": "./src/contracts.ts",
-    "./design": "./src/design.ts"
+    "./design": "./src/design.ts",
+    "./nessoBle": "./src/nessoBle.ts"
   }
 }

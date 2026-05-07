@@ -16,6 +16,13 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 
 - Prefer existing repo patterns over adding new frameworks or abstractions.
 - Keep shared contracts in `shared/src/index.ts` aligned with API and mobile usage.
+- Treat `shared` as a set of explicit contract modules. Prefer subpath imports
+  such as `@skate-route-mapper/shared/contracts`,
+  `@skate-route-mapper/shared/design`,
+  `@skate-route-mapper/shared/adminResources`, and
+  `@skate-route-mapper/shared/nessoBle` over importing from the root package.
+- Do not re-export feature-specific or platform-specific modules from
+  `shared/src/index.ts`; doing so makes unrelated builds type-check that code.
 - Do not commit secrets from `.env` files.
 - Do not edit generated Prisma client files under `backend/generated/` unless explicitly asked.
 - Keep docs updated when scripts, setup flows, API contracts, platform fallbacks, or design rules change.
@@ -26,7 +33,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 ## Design Rules
 
 - Do not invent one-off colors, radii, shadows, or button styles in app screens.
-- Import tokens from `@skate-route-mapper/shared` where possible.
+- Import tokens from `@skate-route-mapper/shared/design` where possible.
 - Update `shared/src/design.ts` first when changing brand colors, spacing, radius, typography, shadows, or button variants.
 - Update `docs/design-guide.md` when changing design rules or visual principles.
 - Use predefined `buttonVariants`; do not create random button styles.

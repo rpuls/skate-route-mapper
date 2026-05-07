@@ -6,7 +6,7 @@ import HomeScreen from "../screens/HomeScreen";
 import RecordingScreen from "../screens/RecordingScreen";
 import RidesScreen from "../screens/RidesScreen";
 import RideDetailScreen from "../screens/RideDetailScreen";
-import { colors } from "@skate-route-mapper/shared";
+import { colors } from "@skate-route-mapper/shared/design";
 
 export type RootStackParamList = {
   Home: undefined;

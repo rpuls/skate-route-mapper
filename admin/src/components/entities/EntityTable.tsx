@@ -7,7 +7,10 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import type { AdminResource, AdminResourceField } from "@skate-route-mapper/shared";
+import type {
+  AdminResource,
+  AdminResourceField,
+} from "@skate-route-mapper/shared/adminResources";
 import { space } from "@skate-route-mapper/shared/design";
 import { radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";

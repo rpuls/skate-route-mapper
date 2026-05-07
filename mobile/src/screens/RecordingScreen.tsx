@@ -16,7 +16,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { LineChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
-import { colors, radius, shadows, space } from "@skate-route-mapper/shared";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";
 import type { BackgroundRecorderSample } from "../native/BackgroundRecorder";
 

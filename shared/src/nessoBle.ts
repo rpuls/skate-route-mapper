@@ -18,20 +18,6 @@ export type NessoImuPacket = {
   gz: number;
 };
 
-function readUint32Le(bytes: Uint8Array, offset: number) {
-  return (
-    bytes[offset] |
-    (bytes[offset + 1] << 8) |
-    (bytes[offset + 2] << 16) |
-    (bytes[offset + 3] << 24)
-  ) >>> 0;
-}
-
-function readInt16Le(bytes: Uint8Array, offset: number) {
-  const value = bytes[offset] | (bytes[offset + 1] << 8);
-  return value & 0x8000 ? value - 0x10000 : value;
-}
-
 export function parseNessoImuPacket(bytes: Uint8Array): NessoImuPacket {
   if (bytes.byteLength !== NESSO_BLE_IMU_PACKET_SIZE) {
     throw new Error(
@@ -39,15 +25,17 @@ export function parseNessoImuPacket(bytes: Uint8Array): NessoImuPacket {
     );
   }
 
+  const packet = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
   return {
-    sequence: readUint32Le(bytes, 0),
-    uptimeMs: readUint32Le(bytes, 4),
-    ax: readInt16Le(bytes, 8) / 1000,
-    ay: readInt16Le(bytes, 10) / 1000,
-    az: readInt16Le(bytes, 12) / 1000,
-    gx: (readInt16Le(bytes, 14) / 1000) * (Math.PI / 180),
-    gy: (readInt16Le(bytes, 16) / 1000) * (Math.PI / 180),
-    gz: (readInt16Le(bytes, 18) / 1000) * (Math.PI / 180),
+    sequence: packet.getUint32(0, true),
+    uptimeMs: packet.getUint32(4, true),
+    ax: packet.getInt16(8, true) / 1000,
+    ay: packet.getInt16(10, true) / 1000,
+    az: packet.getInt16(12, true) / 1000,
+    gx: (packet.getInt16(14, true) / 1000) * (Math.PI / 180),
+    gy: (packet.getInt16(16, true) / 1000) * (Math.PI / 180),
+    gz: (packet.getInt16(18, true) / 1000) * (Math.PI / 180),
   };
 }
 

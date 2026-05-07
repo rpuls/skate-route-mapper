@@ -1,4 +1,4 @@
-import type { NessoImuPacket } from "@skate-route-mapper/shared";
+import type { NessoImuPacket } from "@skate-route-mapper/shared/nessoBle";
 
 export type NessoBleConnection = {
   deviceId: string;

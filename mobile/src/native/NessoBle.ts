@@ -7,7 +7,7 @@ import {
   NESSO_BLE_SERVICE_UUID,
   parseNessoImuPacket,
   type NessoImuPacket,
-} from "@skate-route-mapper/shared";
+} from "@skate-route-mapper/shared/nessoBle";
 
 export type NessoBleConnection = {
   deviceId: string;
