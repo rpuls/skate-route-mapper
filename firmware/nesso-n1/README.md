@@ -23,6 +23,8 @@ screen:
 - main screen shows large battery percentage text
 - BLE state uses compact labels: `BOOT`, `PAIR`, and `LINKED`
 - sample rate and a simple IMU on/off state stay visible while connected
+- the display sleeps after 25 seconds to save battery; press the side button
+  next to the display to wake and redraw the dashboard
 
 ## Arduino IDE Setup
 

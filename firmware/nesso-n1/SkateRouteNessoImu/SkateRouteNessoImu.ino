@@ -14,7 +14,9 @@ const uint16_t DEFAULT_SAMPLE_INTERVAL_MS = 20;
 const uint16_t MIN_SAMPLE_INTERVAL_MS = 10;
 const uint16_t MAX_SAMPLE_INTERVAL_MS = 1000;
 const uint32_t BATTERY_REFRESH_MS = 30000;
+const uint32_t CHARGE_STATE_REFRESH_MS = 1000;
 const uint32_t BOOT_SPLASH_MS = 1600;
+const uint32_t SCREEN_SLEEP_MS = 25000;
 
 const uint16_t COLOR_BG = 0x1082;
 const uint16_t COLOR_PANEL = 0xffff;
@@ -36,14 +38,19 @@ BLECharacteristic *configCharacteristic = nullptr;
 uint32_t sequence = 0;
 uint32_t lastSampleAtMs = 0;
 uint32_t lastBatteryAtMs = 0;
+uint32_t lastChargeCheckAtMs = 0;
 uint32_t bootStartedAtMs = 0;
+uint32_t lastScreenInteractionAtMs = 0;
 uint16_t sampleIntervalMs = DEFAULT_SAMPLE_INTERVAL_MS;
 bool deviceConnected = false;
 bool wasConnected = false;
 bool bootSplashActive = true;
 bool dashboardDrawn = false;
+bool screenAwake = true;
 bool displayedConnected = false;
 int displayedBatteryPercent = -1;
+bool displayedCharging = false;
+bool lastChargingState = false;
 uint16_t displayedSampleIntervalMs = 0;
 
 void writeUint32Le(uint8_t *buffer, size_t offset, uint32_t value) {
@@ -70,6 +77,10 @@ int getBatteryPercent() {
   if (battery < 0) return 0;
   if (battery > 100) return 100;
   return battery;
+}
+
+bool isBatteryCharging() {
+  return M5.Power.isCharging() == m5::Power_Class::is_charging;
 }
 
 const char *connectionLabel() {
@@ -128,6 +139,7 @@ void drawConnectionStatus() {
 void drawBattery(int percent) {
   const int x = 14;
   const int y = 48;
+  const bool charging = isBatteryCharging();
   const uint16_t batteryColor = percent <= 20 ? COLOR_RED : COLOR_GREEN;
 
   M5.Display.fillRect(x, y, 80, 54, COLOR_PANEL);
@@ -143,8 +155,15 @@ void drawBattery(int percent) {
   M5.Display.drawRoundRect(x, y + 34, 72, 16, 4, COLOR_TEXT);
   M5.Display.fillRect(x + 72, y + 39, 4, 6, COLOR_TEXT);
   M5.Display.fillRoundRect(x + 3, y + 37, max(3, (66 * percent) / 100), 10, 3, batteryColor);
+  if (charging) {
+    const int boltX = x + 35;
+    const int boltY = y + 36;
+    M5.Display.fillTriangle(boltX + 5, boltY + 1, boltX - 2, boltY + 9, boltX + 5, boltY + 9, COLOR_PANEL);
+    M5.Display.fillTriangle(boltX + 1, boltY + 8, boltX + 8, boltY + 8, boltX + 1, boltY + 16, COLOR_PANEL);
+  }
 
   displayedBatteryPercent = percent;
+  displayedCharging = charging;
 }
 
 void drawSampleRate() {
@@ -194,8 +213,80 @@ void drawDashboard() {
   lastBatteryAtMs = millis();
 }
 
+bool didPressWakeButton() {
+  return M5.BtnA.wasPressed() ||
+    M5.BtnB.wasPressed() ||
+    M5.BtnC.wasPressed() ||
+    M5.BtnPWR.wasPressed();
+}
+
+void sleepScreen() {
+  if (!screenAwake) {
+    return;
+  }
+
+  M5.Display.sleep();
+  screenAwake = false;
+}
+
+void wakeScreen() {
+  if (screenAwake) {
+    lastScreenInteractionAtMs = millis();
+    return;
+  }
+
+  M5.Display.wakeup();
+  screenAwake = true;
+  dashboardDrawn = false;
+  displayedBatteryPercent = -1;
+  displayedCharging = false;
+  displayedSampleIntervalMs = 0;
+  lastScreenInteractionAtMs = millis();
+  drawDashboard();
+}
+
+void updateScreenPower() {
+  const uint32_t nowMs = millis();
+
+  if (didPressWakeButton()) {
+    wakeScreen();
+    return;
+  }
+
+  if (nowMs - lastChargeCheckAtMs >= CHARGE_STATE_REFRESH_MS) {
+    const bool charging = isBatteryCharging();
+    lastChargeCheckAtMs = nowMs;
+
+    if (charging != lastChargingState) {
+      lastChargingState = charging;
+
+      if (!screenAwake && charging) {
+        wakeScreen();
+        return;
+      }
+
+      if (screenAwake) {
+        lastScreenInteractionAtMs = nowMs;
+        drawBattery(getBatteryPercent());
+      }
+    }
+  }
+
+  if (
+    screenAwake &&
+    !bootSplashActive &&
+    nowMs - lastScreenInteractionAtMs >= SCREEN_SLEEP_MS
+  ) {
+    sleepScreen();
+  }
+}
+
 void refreshDisplay(bool force = false) {
   const uint32_t nowMs = millis();
+
+  if (!screenAwake) {
+    return;
+  }
 
   if (bootSplashActive && nowMs - bootStartedAtMs < BOOT_SPLASH_MS) {
     if (force) {
@@ -222,9 +313,10 @@ void refreshDisplay(bool force = false) {
 
   if (force || nowMs - lastBatteryAtMs >= BATTERY_REFRESH_MS) {
     const int battery = getBatteryPercent();
+    const bool charging = isBatteryCharging();
     lastBatteryAtMs = nowMs;
 
-    if (force || battery != displayedBatteryPercent) {
+    if (force || battery != displayedBatteryPercent || charging != displayedCharging) {
       drawBattery(battery);
     }
   }
@@ -294,6 +386,8 @@ void setup() {
   M5.Display.setRotation(1);
   M5.Display.setTextSize(1);
   bootStartedAtMs = millis();
+  lastChargingState = isBatteryCharging();
+  lastScreenInteractionAtMs = bootStartedAtMs;
   refreshDisplay(true);
 
   BLEDevice::init(DEVICE_NAME);
@@ -327,6 +421,7 @@ void setup() {
 
 void loop() {
   M5.update();
+  updateScreenPower();
 
   if (deviceConnected && !wasConnected) {
     wasConnected = true;
