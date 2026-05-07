@@ -27,9 +27,9 @@ const uint16_t COLOR_GREEN = 0x3fe7;
 const uint16_t COLOR_RED = 0xe8a3;
 const uint16_t COLOR_BLUE = 0x45bf;
 
-const int RIGHT_COLUMN_X = 110;
-const int SAMPLE_RATE_Y = 54;
-const int IMU_STATE_Y = 88;
+const int RIGHT_COLUMN_X = 120;
+const int SAMPLE_RATE_Y = 48;
+const int IMU_STATE_Y = 82;
 
 BLEServer *server = nullptr;
 BLECharacteristic *imuCharacteristic = nullptr;
@@ -138,7 +138,7 @@ void drawConnectionStatus() {
 
 void drawBattery(int percent) {
   const int x = 14;
-  const int y = 48;
+  const int y = 63;
   const bool charging = isBatteryCharging();
   const uint16_t batteryColor = percent <= 20 ? COLOR_RED : COLOR_GREEN;
 
