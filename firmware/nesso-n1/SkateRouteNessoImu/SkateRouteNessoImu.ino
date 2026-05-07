@@ -18,14 +18,14 @@ const uint32_t CHARGE_STATE_REFRESH_MS = 1000;
 const uint32_t BOOT_SPLASH_MS = 1600;
 const uint32_t SCREEN_SLEEP_MS = 25000;
 
-const uint16_t COLOR_BG = 0x1082;
-const uint16_t COLOR_PANEL = 0xffff;
-const uint16_t COLOR_TEXT = 0x18c3;
-const uint16_t COLOR_MUTED = 0x8b0f;
+const uint16_t COLOR_BG = 0x18c3;
+const uint16_t COLOR_PANEL = COLOR_BG;
+const uint16_t COLOR_TEXT = 0xef7d;
+const uint16_t COLOR_MUTED = 0x8410;
 const uint16_t COLOR_ORANGE = 0xfd20;
-const uint16_t COLOR_GREEN = 0x26e9;
+const uint16_t COLOR_GREEN = 0x3fe7;
 const uint16_t COLOR_RED = 0xe8a3;
-const uint16_t COLOR_BLUE = 0x5d9f;
+const uint16_t COLOR_BLUE = 0x45bf;
 
 const int RIGHT_COLUMN_X = 110;
 const int SAMPLE_RATE_Y = 54;
@@ -116,7 +116,7 @@ void drawBootSplash() {
   M5.Display.fillScreen(COLOR_BG);
   drawLogoMark(width / 2, height / 2 - 18);
 
-  M5.Display.setTextColor(COLOR_PANEL, COLOR_BG);
+  M5.Display.setTextColor(COLOR_TEXT, COLOR_BG);
   M5.Display.setTextSize(2);
   M5.Display.setCursor(10, height - 42);
   M5.Display.print("NESSO");
@@ -127,8 +127,8 @@ void drawBootSplash() {
 }
 
 void drawConnectionStatus() {
-  M5.Display.fillRoundRect(14, 14, 56, 22, 10, connectionColor());
-  M5.Display.setTextColor(COLOR_PANEL, connectionColor());
+  M5.Display.fillRect(14, 14, 58, 22, connectionColor());
+  M5.Display.setTextColor(COLOR_BG, connectionColor());
   M5.Display.setTextSize(1);
   M5.Display.setCursor(22, 21);
   M5.Display.print(connectionLabel());
@@ -142,8 +142,8 @@ void drawBattery(int percent) {
   const bool charging = isBatteryCharging();
   const uint16_t batteryColor = percent <= 20 ? COLOR_RED : COLOR_GREEN;
 
-  M5.Display.fillRect(x, y, 80, 54, COLOR_PANEL);
-  M5.Display.setTextColor(COLOR_TEXT, COLOR_PANEL);
+  M5.Display.fillRect(x, y, 82, 54, COLOR_BG);
+  M5.Display.setTextColor(COLOR_TEXT, COLOR_BG);
   M5.Display.setTextSize(3);
   M5.Display.setCursor(x, y);
   M5.Display.printf("%3d", percent);
@@ -152,14 +152,14 @@ void drawBattery(int percent) {
   M5.Display.setCursor(x + 56, y + 15);
   M5.Display.print("%");
 
-  M5.Display.drawRoundRect(x, y + 34, 72, 16, 4, COLOR_TEXT);
+  M5.Display.drawRect(x, y + 34, 72, 16, COLOR_TEXT);
   M5.Display.fillRect(x + 72, y + 39, 4, 6, COLOR_TEXT);
-  M5.Display.fillRoundRect(x + 3, y + 37, max(3, (66 * percent) / 100), 10, 3, batteryColor);
+  M5.Display.fillRect(x + 3, y + 37, max(3, (66 * percent) / 100), 10, batteryColor);
   if (charging) {
     const int boltX = x + 35;
     const int boltY = y + 36;
-    M5.Display.fillTriangle(boltX + 5, boltY + 1, boltX - 2, boltY + 9, boltX + 5, boltY + 9, COLOR_PANEL);
-    M5.Display.fillTriangle(boltX + 1, boltY + 8, boltX + 8, boltY + 8, boltX + 1, boltY + 16, COLOR_PANEL);
+    M5.Display.fillTriangle(boltX + 5, boltY + 1, boltX - 2, boltY + 9, boltX + 5, boltY + 9, COLOR_BG);
+    M5.Display.fillTriangle(boltX + 1, boltY + 8, boltX + 8, boltY + 8, boltX + 1, boltY + 16, COLOR_BG);
   }
 
   displayedBatteryPercent = percent;
@@ -167,12 +167,12 @@ void drawBattery(int percent) {
 }
 
 void drawSampleRate() {
-  M5.Display.fillRect(RIGHT_COLUMN_X, SAMPLE_RATE_Y, 44, 36, COLOR_PANEL);
-  M5.Display.setTextColor(COLOR_MUTED, COLOR_PANEL);
+  M5.Display.fillRect(RIGHT_COLUMN_X, SAMPLE_RATE_Y, 44, 36, COLOR_BG);
+  M5.Display.setTextColor(COLOR_MUTED, COLOR_BG);
   M5.Display.setTextSize(1);
   M5.Display.setCursor(RIGHT_COLUMN_X, SAMPLE_RATE_Y);
   M5.Display.print("HZ");
-  M5.Display.setTextColor(COLOR_TEXT, COLOR_PANEL);
+  M5.Display.setTextColor(COLOR_TEXT, COLOR_BG);
   M5.Display.setTextSize(2);
   M5.Display.setCursor(RIGHT_COLUMN_X, SAMPLE_RATE_Y + 14);
   M5.Display.printf("%2d", 1000 / sampleIntervalMs);
@@ -181,12 +181,12 @@ void drawSampleRate() {
 }
 
 void drawImuState() {
-  M5.Display.fillRect(RIGHT_COLUMN_X, IMU_STATE_Y, 44, 34, COLOR_PANEL);
-  M5.Display.setTextColor(COLOR_MUTED, COLOR_PANEL);
+  M5.Display.fillRect(RIGHT_COLUMN_X, IMU_STATE_Y, 44, 34, COLOR_BG);
+  M5.Display.setTextColor(COLOR_MUTED, COLOR_BG);
   M5.Display.setTextSize(1);
   M5.Display.setCursor(RIGHT_COLUMN_X, IMU_STATE_Y + 2);
   M5.Display.print("IMU");
-  M5.Display.setTextColor(deviceConnected ? COLOR_GREEN : COLOR_MUTED, COLOR_PANEL);
+  M5.Display.setTextColor(deviceConnected ? COLOR_GREEN : COLOR_MUTED, COLOR_BG);
   M5.Display.setTextSize(2);
   M5.Display.setCursor(RIGHT_COLUMN_X, IMU_STATE_Y + 16);
   M5.Display.print(deviceConnected ? "ON" : "--");
@@ -194,12 +194,10 @@ void drawImuState() {
 
 void drawDashboard() {
   const int width = M5.Display.width();
-  const int height = M5.Display.height();
 
   M5.Display.fillScreen(COLOR_BG);
-  M5.Display.fillRoundRect(6, 6, width - 12, height - 12, 12, COLOR_PANEL);
 
-  M5.Display.setTextColor(COLOR_TEXT, COLOR_PANEL);
+  M5.Display.setTextColor(COLOR_TEXT, COLOR_BG);
   M5.Display.setTextSize(1);
   M5.Display.setCursor(width - 72, 18);
   M5.Display.print("Nesso N1");
