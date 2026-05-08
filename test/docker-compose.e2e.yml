@@ -3,8 +3,7 @@ services:
     container_name: skate-route-mapper-e2e-db
     environment:
       POSTGRES_DB: skate_route_mapper_e2e
-    ports: !override
-      - "55433:5432"
+    ports: !override []
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d skate_route_mapper_e2e"]
 

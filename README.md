@@ -183,7 +183,8 @@ The E2E stack uses these local ports:
 
 - admin on `http://localhost:3100`
 - backend on `http://localhost:3101`
-- PostgreSQL on `localhost:55433`
+
+PostgreSQL stays internal to the Docker network for the E2E stack.
 
 The first test signs in with the local development admin account, creates a ride entity record through the generic admin entity UI, then deletes it again.
 

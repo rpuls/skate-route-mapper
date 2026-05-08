@@ -187,9 +187,9 @@ type MeasurementSample = {
   latitude: number | null;
   longitude: number | null;
   speed: number | null;
-  locationTimestamp?: number | null;
-  locationAccuracy?: number | null;
-  locationAgeMs?: number | null;
+  locationTimestamp?: number | null | undefined;
+  locationAccuracy?: number | null | undefined;
+  locationAgeMs?: number | null | undefined;
 };
 ```
 
