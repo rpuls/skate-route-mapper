@@ -18,11 +18,17 @@ import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";
-import type { BackgroundRecorderSample } from "../native/BackgroundRecorder";
+import type {
+  BackgroundRecorderSample,
+  BackgroundRecorderStatus,
+} from "../native/BackgroundRecorder";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const USE_ANDROID_BACKGROUND_RECORDER =
   Platform.OS === "android" && BackgroundRecorder.isAvailable();
+const RECORDING_SAMPLE_INTERVAL_MS = 200;
+const CHART_FRAME_INTERVAL_MS = 50;
+const CHART_WINDOW_SIZE = 40;
 
 type AccelData = {
   x: number;
@@ -35,6 +41,89 @@ type GyroData = {
   y: number;
   z: number;
 };
+
+function alignChartDataLength(values: number[], targetLength: number) {
+  if (targetLength <= 0) {
+    return [0];
+  }
+
+  if (values.length === targetLength) {
+    return values;
+  }
+
+  if (values.length > targetLength) {
+    return values.slice(values.length - targetLength);
+  }
+
+  const fallbackValue = values[values.length - 1] ?? 0;
+  return [
+    ...Array.from({ length: targetLength - values.length }, () => fallbackValue),
+    ...values,
+  ];
+}
+
+function interpolateChartData(from: number[], to: number[], progress: number) {
+  const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+  return to.map((targetValue, index) => {
+    const startValue = from[index] ?? targetValue;
+    return startValue + (targetValue - startValue) * easedProgress;
+  });
+}
+
+function useSmoothedChartData(sourceData: number[]) {
+  const normalizedSourceData = sourceData.length > 0 ? sourceData : [0];
+  const [smoothedData, setSmoothedData] = useState(normalizedSourceData);
+  const smoothedDataRef = useRef(normalizedSourceData);
+  const animationRef = useRef({
+    from: normalizedSourceData,
+    to: normalizedSourceData,
+    startedAt: Date.now(),
+  });
+
+  useEffect(() => {
+    const nextTarget = normalizedSourceData;
+    const alignedCurrentData = alignChartDataLength(
+      smoothedDataRef.current,
+      nextTarget.length
+    );
+
+    animationRef.current = {
+      from: alignedCurrentData,
+      to: nextTarget,
+      startedAt: Date.now(),
+    };
+  }, [normalizedSourceData]);
+
+  useEffect(() => {
+    const frameTimer = setInterval(() => {
+      const animation = animationRef.current;
+      const progress = Math.min(
+        1,
+        (Date.now() - animation.startedAt) / RECORDING_SAMPLE_INTERVAL_MS
+      );
+
+      if (progress >= 1 && smoothedDataRef.current === animation.to) {
+        return;
+      }
+
+      const nextData = interpolateChartData(
+        animation.from,
+        animation.to,
+        progress
+      );
+
+      smoothedDataRef.current = progress >= 1 ? animation.to : nextData;
+      setSmoothedData(smoothedDataRef.current);
+    }, CHART_FRAME_INTERVAL_MS);
+
+    return () => {
+      clearInterval(frameTimer);
+    };
+  }, []);
+
+  return smoothedData;
+}
 
 async function requestAndroidRecordingPermissions(sensorSource: "phone" | "external") {
   if (Platform.OS !== "android") {
@@ -111,6 +200,7 @@ export default function RecordingScreen() {
 
   const latestGyro = useRef<GyroData>({ x: 0, y: 0, z: 0 });
   const latestLocationRef = useRef<Location.LocationObject | null>(null);
+  const latestNativeChartSampleTimestamp = useRef<number | null>(null);
 
   useEffect(() => {
     if (canUseAndroidBackgroundRecorder) {
@@ -265,7 +355,9 @@ export default function RecordingScreen() {
 
     const rideId = currentRideId;
     let mounted = true;
+    let isPolling = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    latestNativeChartSampleTimestamp.current = null;
 
     async function startNativeRecording() {
       const canRecord = await requestAndroidRecordingPermissions(sensorSource);
@@ -274,12 +366,29 @@ export default function RecordingScreen() {
         return;
       }
 
-      await BackgroundRecorder.startRecording(rideId, 200, sensorSource);
+      await BackgroundRecorder.startRecording(
+        rideId,
+        RECORDING_SAMPLE_INTERVAL_MS,
+        sensorSource
+      );
 
       pollTimer = setInterval(async () => {
-        const nativeStatus = await BackgroundRecorder.getStatus();
+        if (isPolling) {
+          return;
+        }
 
-        if (!mounted) {
+        isPolling = true;
+        let nativeStatus: BackgroundRecorderStatus | null = null;
+
+        try {
+          nativeStatus = await BackgroundRecorder.getStatus();
+        } catch (error) {
+          console.log("BackgroundRecorder status poll failed", error);
+        } finally {
+          isPolling = false;
+        }
+
+        if (!mounted || !nativeStatus) {
           return;
         }
 
@@ -290,12 +399,18 @@ export default function RecordingScreen() {
           setNativeLatestSample(sample);
           setAccel({ x: sample.ax, y: sample.ay, z: sample.az });
           setGyro({ x: sample.gx, y: sample.gy, z: sample.gz });
+
+          if (latestNativeChartSampleTimestamp.current === sample.timestamp) {
+            return;
+          }
+
+          latestNativeChartSampleTimestamp.current = sample.timestamp;
           setNativeChartData((values) => {
             const nextValues = [...values, sample.vibrationMagnitude];
-            return nextValues.slice(-40);
+            return nextValues.slice(-CHART_WINDOW_SIZE);
           });
         }
-      }, 1000);
+      }, RECORDING_SAMPLE_INTERVAL_MS);
     }
 
     startNativeRecording();
@@ -316,16 +431,17 @@ export default function RecordingScreen() {
     ? nativeLatestSample
     : latestSample;
 
-  const chartData = useMemo(() => {
+  const rawChartData = useMemo(() => {
     if (canUseAndroidBackgroundRecorder) {
       return nativeChartData;
     }
 
-    const latest = samples.slice(-40);
+    const latest = samples.slice(-CHART_WINDOW_SIZE);
     const values = latest.map((sample) => sample.vibrationMagnitude);
 
     return values.length > 0 ? values : [0];
   }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
+  const chartData = useSmoothedChartData(rawChartData);
 
   const averageVibration = useMemo(() => {
     if (canUseAndroidBackgroundRecorder) {
@@ -339,7 +455,7 @@ export default function RecordingScreen() {
 
     if (samples.length === 0) return 0;
 
-    const latest = samples.slice(-40);
+    const latest = samples.slice(-CHART_WINDOW_SIZE);
     const total = latest.reduce(
       (sum, sample) => sum + sample.vibrationMagnitude,
       0
