@@ -17,7 +17,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.timmosquadros.skateroutemapper",
       "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "Skate Route Mapper connects to Nesso N1 sensors for accelerometer and gyroscope data."
+        "NSBluetoothAlwaysUsageDescription": "Skate Route Mapper connects to Nesso N1 sensors for accelerometer and gyroscope data.",
+        "UIBackgroundModes": [
+          "bluetooth-central"
+        ]
       }
     },
     "android": {
@@ -51,6 +54,9 @@
       [
         "react-native-ble-plx",
         {
+          "modes": [
+            "central"
+          ],
           "bluetoothAlwaysPermission": "Skate Route Mapper connects to Nesso N1 sensors for accelerometer and gyroscope data."
         }
       ]

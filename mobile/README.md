@@ -148,6 +148,13 @@ Android. Keep iOS on foreground phone-sensor recording for now. Background GPS
 can be added later with iOS background location modes, but continuous
 accelerometer and gyroscope recording while locked is much more restricted.
 
+The iOS native config enables `bluetooth-central` so a physical iPhone build can
+test whether the Nesso BLE connection survives backgrounding. This does not make
+iOS equivalent to Android foreground services: the app must still be tested on a
+real iPhone, and long-running background BLE behavior depends on iOS state,
+permissions, battery policy, and whether the system keeps the app eligible for
+central-manager restoration.
+
 ## Design System
 
 The design source of truth lives in `shared/src/design.ts` and is documented in `docs/design-guide.md`.
