@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Dimensions,
   SafeAreaView,
   View,
   Text,
@@ -8,7 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import Slider from "@react-native-community/slider";
+import { LineChart } from "react-native-chart-kit";
 import dayjs from "dayjs";
 
 import { getRide, getSamplesForRide } from "../database/db";
@@ -22,13 +23,22 @@ type RouteParams = {
 
 const MAX_TRUSTED_LOCATION_AGE_MS = 2500;
 const MAX_TRUSTED_LOCATION_ACCURACY_METERS = 25;
+const PLAYBACK_TICK_MS = 100;
+const CHART_SAMPLE_WINDOW = 40;
+const PLAYBACK_SPEEDS = [1, 2, 4] as const;
+const SCREEN_WIDTH = Dimensions.get("window").width;
+
+type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
 
 export default function RideDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { rideId } = route.params as RouteParams;
 
-  const [progress, setProgress] = useState(0);
+  const [playbackIndex, setPlaybackIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
+  const playbackTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const ride = useMemo(() => getRide(rideId), [rideId]);
   const samples = useMemo(() => getSamplesForRide(rideId), [rideId]);
@@ -50,23 +60,46 @@ export default function RideDetailScreen() {
     [trustedGeoSamples]
   );
 
-  const currentIndex = useMemo(() => {
-    if (trustedGeoSamples.length === 0) return 0;
-
-    return Math.min(
-      trustedGeoSamples.length - 1,
-      Math.round((progress / 100) * (trustedGeoSamples.length - 1))
-    );
-  }, [trustedGeoSamples.length, progress]);
-
   const visibleCoordinates = useMemo(() => {
-    if (coordinates.length === 0) return [];
+    if (samples.length === 0) return [];
 
-    return coordinates.slice(0, currentIndex + 1);
-  }, [coordinates, currentIndex]);
+    return samples
+      .slice(0, playbackIndex + 1)
+      .filter((sample) => isTrustedGeoSample(sample))
+      .map((sample) => ({
+        latitude: sample.latitude as number,
+        longitude: sample.longitude as number,
+      }));
+  }, [samples, playbackIndex]);
 
-  const currentSample = trustedGeoSamples[currentIndex];
-  const currentCoordinate = coordinates[currentIndex];
+  const currentSample = samples[playbackIndex];
+  const currentCoordinate = visibleCoordinates[visibleCoordinates.length - 1];
+  const timelineProgress =
+    samples.length > 1 ? (playbackIndex / (samples.length - 1)) * 100 : 0;
+
+  const totalDurationMs = useMemo(() => {
+    if (samples.length < 2) return 0;
+
+    return Math.max(
+      0,
+      samples[samples.length - 1].timestamp - samples[0].timestamp
+    );
+  }, [samples]);
+
+  const elapsedMs = useMemo(() => {
+    if (!currentSample || samples.length === 0) return 0;
+
+    return Math.max(0, currentSample.timestamp - samples[0].timestamp);
+  }, [currentSample, samples]);
+
+  const chartData = useMemo(() => {
+    const startIndex = Math.max(0, playbackIndex - CHART_SAMPLE_WINDOW + 1);
+    const values = samples
+      .slice(startIndex, playbackIndex + 1)
+      .map((sample) => sample.vibrationMagnitude);
+
+    return values.length > 0 ? values : [0];
+  }, [samples, playbackIndex]);
 
   const averageVibration = useMemo(() => {
     if (samples.length === 0) return 0;
@@ -95,6 +128,67 @@ export default function RideDetailScreen() {
       longitudeDelta: 0.01,
     };
   }, [coordinates]);
+
+  useEffect(() => {
+    setPlaybackIndex(0);
+    setIsPlaying(false);
+  }, [rideId]);
+
+  useEffect(() => {
+    if (!isPlaying || samples.length < 2) {
+      if (playbackTimerRef.current) {
+        clearInterval(playbackTimerRef.current);
+        playbackTimerRef.current = null;
+      }
+      return;
+    }
+
+    playbackTimerRef.current = setInterval(() => {
+      setPlaybackIndex((currentIndex) => {
+        const current = samples[currentIndex];
+
+        if (!current || currentIndex >= samples.length - 1) {
+          setIsPlaying(false);
+          return samples.length - 1;
+        }
+
+        const targetTimestamp = current.timestamp + PLAYBACK_TICK_MS * playbackSpeed;
+        const nextIndex = samples.findIndex(
+          (sample, sampleIndex) =>
+            sampleIndex > currentIndex && sample.timestamp >= targetTimestamp
+        );
+
+        if (nextIndex === -1) {
+          setIsPlaying(false);
+          return samples.length - 1;
+        }
+
+        return nextIndex;
+      });
+    }, PLAYBACK_TICK_MS);
+
+    return () => {
+      if (playbackTimerRef.current) {
+        clearInterval(playbackTimerRef.current);
+        playbackTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, playbackSpeed, samples]);
+
+  const handleTogglePlayback = () => {
+    if (samples.length === 0) return;
+
+    if (playbackIndex >= samples.length - 1) {
+      setPlaybackIndex(0);
+    }
+
+    setIsPlaying((value) => !value);
+  };
+
+  const handleResetPlayback = () => {
+    setIsPlaying(false);
+    setPlaybackIndex(0);
+  };
 
   if (!ride) {
     return (
@@ -133,28 +227,74 @@ export default function RideDetailScreen() {
             currentMarkerDescription={`Vibration: ${
               currentSample?.vibrationMagnitude.toFixed(3) ?? "-"
             }`}
-            currentMarkerTitle={`${Math.round(progress)}%`}
+            currentMarkerTitle={formatDuration(elapsedMs)}
             initialRegion={initialRegion}
             startCoordinate={coordinates[0]}
             visibleCoordinates={visibleCoordinates}
           />
 
-          <View style={styles.sliderPanel}>
-            <View style={styles.sliderHeader}>
-              <Text style={styles.sliderTitle}>Route replay</Text>
-              <Text style={styles.sliderPercent}>{Math.round(progress)}%</Text>
+          <View style={styles.replayPanel}>
+            <View style={styles.replayHeader}>
+              <Text style={styles.replayTitle}>Route replay</Text>
+              <Text style={styles.replayTime}>
+                {formatDuration(elapsedMs)} / {formatDuration(totalDurationMs)}
+              </Text>
             </View>
 
-            <Slider
-              minimumValue={0}
-              maximumValue={100}
-              step={1}
-              value={progress}
-              onValueChange={setProgress}
-              minimumTrackTintColor={colors.accent}
-              maximumTrackTintColor="#c8def5"
-              thumbTintColor={colors.accent}
-            />
+            <View style={styles.timelineTrack}>
+              <View
+                style={[
+                  styles.timelineFill,
+                  {
+                    width: `${timelineProgress}%` as `${number}%`,
+                  },
+                ]}
+              />
+            </View>
+
+            <View style={styles.playbackControls}>
+              <Pressable
+                onPress={handleTogglePlayback}
+                style={[
+                  styles.controlButton,
+                  samples.length === 0 && styles.disabledButton,
+                ]}
+                disabled={samples.length === 0}
+              >
+                <Text style={styles.primaryControlText}>
+                  {isPlaying ? "Pause" : "Play"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleResetPlayback}
+                style={styles.controlButtonSecondary}
+              >
+                <Text style={styles.secondaryControlText}>Reset</Text>
+              </Pressable>
+
+              <View style={styles.speedControls}>
+                {PLAYBACK_SPEEDS.map((speed) => (
+                  <Pressable
+                    key={speed}
+                    onPress={() => setPlaybackSpeed(speed)}
+                    style={[
+                      styles.speedButton,
+                      playbackSpeed === speed && styles.speedButtonSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.speedButtonText,
+                        playbackSpeed === speed && styles.speedButtonTextSelected,
+                      ]}
+                    >
+                      {speed}x
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
 
             <View style={styles.replayStats}>
               <Text style={styles.replayText}>
@@ -174,6 +314,36 @@ export default function RideDetailScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        <View style={styles.chartCard}>
+          <Text style={styles.sectionTitle}>Vibration replay</Text>
+
+          <LineChart
+            data={{
+              labels: [],
+              datasets: [{ data: chartData }],
+            }}
+            width={SCREEN_WIDTH - 56}
+            height={220}
+            withDots={false}
+            withInnerLines
+            withOuterLines={false}
+            withVerticalLabels={false}
+            withHorizontalLabels
+            chartConfig={{
+              backgroundGradientFrom: colors.surfaceMuted,
+              backgroundGradientTo: colors.surfaceMuted,
+              decimalPlaces: 2,
+              color: () => colors.accent,
+              labelColor: () => colors.textMuted,
+              propsForBackgroundLines: {
+                stroke: colors.border,
+              },
+            }}
+            bezier
+            style={styles.chart}
+          />
         </View>
 
         <View style={styles.metricGrid}>
@@ -229,6 +399,23 @@ function isTrustedGeoSample(sample: MeasurementSample) {
   );
 }
 
+function formatDuration(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${padTimePart(minutes)}:${padTimePart(seconds)}`;
+  }
+
+  return `${padTimePart(minutes)}:${padTimePart(seconds)}`;
+}
+
+function padTimePart(value: number) {
+  return value.toString().padStart(2, "0");
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -272,27 +459,100 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...shadows.tile,
   },
-  sliderPanel: {
+  replayPanel: {
     padding: space.lg,
     backgroundColor: colors.surface,
   },
-  sliderHeader: {
+  replayHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 8,
   },
-  sliderTitle: {
+  replayTitle: {
     color: colors.text,
     fontSize: 16,
     fontWeight: "900",
   },
-  sliderPercent: {
+  replayTime: {
     color: colors.accent,
     fontSize: 16,
     fontWeight: "900",
   },
+  timelineTrack: {
+    height: 10,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.pill,
+    overflow: "hidden",
+    marginBottom: 14,
+  },
+  timelineFill: {
+    height: "100%",
+    backgroundColor: colors.accent,
+    borderRadius: radius.pill,
+  },
+  playbackControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  controlButton: {
+    minHeight: 42,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.lg,
+  },
+  controlButtonSecondary: {
+    minHeight: 42,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.lg,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  primaryControlText: {
+    color: colors.textOnOrange,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  secondaryControlText: {
+    color: colors.accent,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  speedControls: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  speedButton: {
+    minHeight: 36,
+    minWidth: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.lg,
+  },
+  speedButtonSelected: {
+    backgroundColor: colors.accent,
+  },
+  speedButtonText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  speedButtonTextSelected: {
+    color: colors.textOnOrange,
+  },
   replayStats: {
-    marginTop: 8,
+    marginTop: 12,
     gap: 4,
   },
   replayText: {
@@ -331,11 +591,22 @@ const styles = StyleSheet.create({
     padding: space.lg,
     ...shadows.tile,
   },
+  chartCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    overflow: "hidden",
+    ...shadows.tile,
+  },
   sectionTitle: {
     color: colors.text,
     fontSize: 17,
     fontWeight: "900",
     marginBottom: 12,
+  },
+  chart: {
+    borderRadius: radius.lg,
+    marginLeft: -12,
   },
   infoText: {
     color: colors.textMuted,
