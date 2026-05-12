@@ -49,3 +49,34 @@ export type RideSamplesPayload = {
 export type RideFinishPayload = {
   endedAt: number;
 };
+
+export type MobileDeviceIdentity = {
+  clientId?: string | undefined;
+  deviceModel?: string | undefined;
+  appVersion?: string | undefined;
+};
+
+export type MobileSignupPayload = MobileDeviceIdentity & {
+  email: string;
+  password: string;
+  name?: string | undefined;
+};
+
+export type MobileLoginPayload = MobileDeviceIdentity & {
+  email: string;
+  password: string;
+};
+
+export type CurrentMobileUser = {
+  id: string;
+  email: string;
+  name: string | null;
+};
+
+export type MobileAuthResponse = {
+  ok: true;
+  token: string;
+  expiresAt: string;
+  user: CurrentMobileUser;
+  deviceId: string | null;
+};

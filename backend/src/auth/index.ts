@@ -22,6 +22,13 @@ export type MobileAuthContext =
   | {
       kind: "admin";
       admin: AdminAuthContext;
+    }
+  | {
+      kind: "user";
+      user: {
+        id: string;
+        email: string;
+      };
     };
 
 export function readBearerToken(request: FastifyRequest) {
@@ -99,6 +106,39 @@ async function authenticateAdmin(request: FastifyRequest, adminApiKey: string) {
   } satisfies AdminAuthContext;
 }
 
+export async function authenticateMobileUser(request: FastifyRequest) {
+  const bearerToken = readBearerToken(request);
+
+  if (!bearerToken) {
+    return null;
+  }
+
+  const session = await prisma.userSession.findUnique({
+    where: {
+      tokenHash: hashSessionToken(bearerToken),
+    },
+    select: {
+      expiresAt: true,
+      revokedAt: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!session || session.revokedAt || session.expiresAt <= new Date()) {
+    return null;
+  }
+
+  return {
+    id: session.user.id,
+    email: session.user.email,
+  };
+}
+
 export function keysMatch(provided: string, expected: string) {
   const providedBuffer = Buffer.from(provided);
   const expectedBuffer = Buffer.from(expected);
@@ -157,4 +197,43 @@ export async function requireMobileOrAdminAuth(
     message: "Unauthorized",
   });
   return false;
+}
+
+export async function requireMobileUserAuth(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const user = await authenticateMobileUser(request);
+
+  if (user) {
+    return {
+      kind: "user",
+      user,
+    } satisfies MobileAuthContext;
+  }
+
+  reply.header("WWW-Authenticate", 'Bearer realm="mobile-user"');
+  reply.code(401).send({
+    ok: false,
+    message: "Unauthorized",
+  });
+  return false;
+}
+
+export async function requireMobileUserOrIngestionOrAdminAuth(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  mobileIngestionApiKey: string,
+  adminApiKey: string
+) {
+  const user = await authenticateMobileUser(request);
+
+  if (user) {
+    return {
+      kind: "user",
+      user,
+    } satisfies MobileAuthContext;
+  }
+
+  return requireMobileOrAdminAuth(request, reply, mobileIngestionApiKey, adminApiKey);
 }

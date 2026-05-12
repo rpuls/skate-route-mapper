@@ -106,6 +106,12 @@ Selection rules:
 - Large selectable information tiles use faint fill plus orange border when selected.
 - Ordinary information containers use faint fill with no visible border.
 
+Disabled controls:
+
+- Keep disabled controls on their normal variant colors, border, and text treatment.
+- Apply `stateStyles.disabled` from `shared/src/design.ts` instead of swapping to a muted fill color.
+- Default disabled opacity is `0.5`.
+
 ### Screen
 
 - Background: `page`.

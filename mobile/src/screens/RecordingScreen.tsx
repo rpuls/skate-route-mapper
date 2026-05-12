@@ -376,7 +376,7 @@ export default function RecordingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.appName}>skate-route-mapper</Text>
+          <Text style={styles.appName}>Skate Route Mapper</Text>
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
             Measuring vibration using {sensorSource === "external" ? "the Nesso N1 IMU" : "the phone accelerometer and gyroscope"}.

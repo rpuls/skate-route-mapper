@@ -51,7 +51,21 @@ export async function buildApp() {
       });
     }
 
+    if (error instanceof Error && error.message === "Ride access denied") {
+      return reply.code(403).send({
+        ok: false,
+        message: error.message,
+      });
+    }
+
     if (error instanceof Error && error.message === "Invalid admin credentials") {
+      return reply.code(401).send({
+        ok: false,
+        message: error.message,
+      });
+    }
+
+    if (error instanceof Error && error.message === "Invalid user credentials") {
       return reply.code(401).send({
         ok: false,
         message: error.message,

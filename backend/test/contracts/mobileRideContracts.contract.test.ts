@@ -4,10 +4,20 @@ import * as mobileContracts from "@skate-route-mapper/shared/mobileContracts";
 import {
   sensorSources,
   vehicleTypes,
+  type CurrentMobileUser,
+  type MobileAuthResponse,
+  type MobileLoginPayload,
+  type MobileSignupPayload,
   type RideFinishPayload,
   type RideSamplesPayload,
   type RideStartPayload,
 } from "@skate-route-mapper/shared/mobileContracts";
+import {
+  currentMobileUserSchema,
+  mobileAuthResponseSchema,
+  mobileLoginSchema,
+  mobileSignupSchema,
+} from "../../src/features/mobileUsers/contracts.js";
 import {
   acceptedSensorSources,
   acceptedVehicleTypes,
@@ -68,6 +78,37 @@ const rideFinishFixture = {
   endedAt: 1760000900000,
 } satisfies RideFinishPayload;
 
+const mobileSignupFixture = {
+  email: "rider@example.com",
+  password: "correct-horse-battery",
+  name: "Rider One",
+  clientId: "device-abc-123",
+  appVersion: "1.0.0",
+  deviceModel: "iPhone 15",
+} satisfies MobileSignupPayload;
+
+const mobileLoginFixture = {
+  email: "rider@example.com",
+  password: "correct-horse-battery",
+  clientId: "device-abc-123",
+  appVersion: "1.0.0",
+  deviceModel: "iPhone 15",
+} satisfies MobileLoginPayload;
+
+const currentMobileUserFixture = {
+  id: "cmuser123",
+  email: "rider@example.com",
+  name: "Rider One",
+} satisfies CurrentMobileUser;
+
+const mobileAuthResponseFixture = {
+  ok: true,
+  token: "session-token-returned-once",
+  expiresAt: "2026-06-11T20:00:00.000Z",
+  user: currentMobileUserFixture,
+  deviceId: "cmdevice123",
+} satisfies MobileAuthResponse;
+
 describe("mobile ride contract", () => {
   it("keeps admin-only symbols out of the mobile contract runtime module", () => {
     const exportedNames = Object.keys(mobileContracts);
@@ -117,5 +158,36 @@ describe("mobile ride contract", () => {
     });
 
     assert.equal(result.success, false);
+  });
+});
+
+describe("mobile auth contract", () => {
+  it("accepts the mobile signup fixture", () => {
+    assert.equal(mobileSignupSchema.safeParse(mobileSignupFixture).success, true);
+  });
+
+  it("accepts the mobile login fixture", () => {
+    assert.equal(mobileLoginSchema.safeParse(mobileLoginFixture).success, true);
+  });
+
+  it("keeps signup device identity optional", () => {
+    assert.equal(mobileSignupSchema.safeParse({
+      email: "rider@example.com",
+      password: "correct-horse-battery",
+    }).success, true);
+  });
+
+  it("rejects too-short mobile signup passwords", () => {
+    assert.equal(mobileSignupSchema.safeParse({
+      ...mobileSignupFixture,
+      password: "short",
+    }).success, false);
+  });
+
+  it("keeps auth response and current-user fixtures mobile-owned", () => {
+    assert.equal(currentMobileUserSchema.safeParse(currentMobileUserFixture).success, true);
+    assert.equal(mobileAuthResponseSchema.safeParse(mobileAuthResponseFixture).success, true);
+    assert.equal(mobileAuthResponseFixture.user.email, currentMobileUserFixture.email);
+    assert.equal(Object.keys(mobileAuthResponseFixture).includes("adminUser"), false);
   });
 });

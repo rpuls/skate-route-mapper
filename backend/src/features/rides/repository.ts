@@ -5,12 +5,32 @@ import type {
 } from "@skate-route-mapper/shared/mobileContracts";
 import { prisma } from "../../db/prisma.js";
 
-export async function createRide(payload: RideStartPayload) {
+type RideOwnership = {
+  userId?: string | null;
+  deviceId?: string | null;
+};
+
+type RideWriteAccess = {
+  userId?: string | null;
+};
+
+function assertRideWriteAccess(
+  ride: { userId: string | null },
+  access: RideWriteAccess
+) {
+  if (access.userId && ride.userId && ride.userId !== access.userId) {
+    throw new Error("Ride access denied");
+  }
+}
+
+export async function createRide(payload: RideStartPayload, ownership: RideOwnership = {}) {
   await prisma.ride.upsert({
     where: { id: payload.rideId },
     update: {},
     create: {
       id: payload.rideId,
+      userId: ownership.userId ?? null,
+      deviceId: ownership.deviceId ?? null,
       startedAt: new Date(payload.startedAt),
       vehicleType: payload.vehicleType,
       sensorSource: payload.sensorSource,
@@ -21,12 +41,17 @@ export async function createRide(payload: RideStartPayload) {
   });
 }
 
-export async function appendSamples(rideId: string, samples: MeasurementSample[]) {
+export async function appendSamples(
+  rideId: string,
+  samples: MeasurementSample[],
+  access: RideWriteAccess = {}
+) {
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const ride = await tx.ride.findUnique({
       where: { id: rideId },
       select: {
         id: true,
+        userId: true,
         endedAt: true,
         sampleCount: true,
         gpsPointCount: true,
@@ -38,6 +63,8 @@ export async function appendSamples(rideId: string, samples: MeasurementSample[]
     if (!ride) {
       throw new Error("Ride not found");
     }
+
+    assertRideWriteAccess(ride, access);
 
     if (ride.endedAt) {
       throw new Error("Ride already finished");
@@ -97,17 +124,34 @@ export async function appendSamples(rideId: string, samples: MeasurementSample[]
   });
 }
 
-export async function finishRide(rideId: string, endedAt: number) {
-  const result = await prisma.ride.updateMany({
-    where: { id: rideId },
+export async function finishRide(
+  rideId: string,
+  endedAt: number,
+  access: RideWriteAccess = {}
+) {
+  const ride = await prisma.ride.findUnique({
+    where: {
+      id: rideId,
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  if (!ride) {
+    throw new Error("Ride not found");
+  }
+
+  assertRideWriteAccess(ride, access);
+
+  await prisma.ride.update({
+    where: {
+      id: rideId,
+    },
     data: {
       endedAt: new Date(endedAt),
     },
   });
-
-  if (result.count === 0) {
-    throw new Error("Ride not found");
-  }
 }
 
 export async function listRides(limit: number) {

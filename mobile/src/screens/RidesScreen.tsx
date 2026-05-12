@@ -14,6 +14,7 @@ import type { Ride } from "../types/measurement";
 //For debugging
 import { getLatestRideWithSamples } from "../database/db";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
+import { ScreenHeader } from "../components/AppMenu";
 
 export default function RidesScreen() {
   const navigation = useNavigation<any>();
@@ -32,16 +33,10 @@ export default function RidesScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-
-          <Text style={styles.title}>Saved rides</Text>
-          <Text style={styles.subtitle}>
-            Local rides stored on this phone.
-          </Text>
-        </View>
+        <ScreenHeader
+          title="Saved Rides"
+          subtitle="Local rides stored on this device."
+        />
 
         <FlatList
           data={rides}
@@ -93,27 +88,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-  },
-  header: {
-    marginTop: 16,
-    marginBottom: 18,
-  },
-  backText: {
-    color: colors.textOnOrange,
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 18,
-  },
-  title: {
-    color: colors.textOnOrange,
-    fontSize: 34,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: colors.textOnOrange,
-    fontSize: 16,
-    opacity: 0.82,
   },
   listContent: {
     gap: 12,

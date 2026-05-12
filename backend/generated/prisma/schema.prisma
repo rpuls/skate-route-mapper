@@ -48,8 +48,55 @@ model AdminSession {
   @@map("admin_sessions")
 }
 
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  name         String?
+  lastLoginAt  DateTime?     @map("last_login_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  sessions     UserSession[]
+  devices      Device[]
+  rides        Ride[]
+
+  @@map("users")
+}
+
+model UserSession {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model Device {
+  id          String   @id @default(cuid())
+  userId      String?  @map("user_id")
+  clientId    String?  @unique @map("client_id")
+  deviceModel String?  @map("device_model")
+  appVersion  String?  @map("app_version")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  rides       Ride[]
+
+  @@index([userId])
+  @@map("devices")
+}
+
 model Ride {
   id            String       @id
+  userId        String?      @map("user_id")
+  deviceId      String?      @map("device_id")
   startedAt     DateTime     @map("started_at")
   endedAt       DateTime?    @map("ended_at")
   vehicleType   VehicleType  @map("vehicle_type")
@@ -63,28 +110,35 @@ model Ride {
   maxVibration  Float?       @map("max_vibration")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  device        Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   samples       Sample[]
 
+  @@index([userId])
+  @@index([deviceId])
   @@index([startedAt(sort: Desc)])
   @@map("rides")
 }
 
 model Sample {
-  id                 BigInt   @id @default(autoincrement())
-  rideId             String   @map("ride_id")
-  recordedAt         DateTime @map("recorded_at")
+  id                 BigInt    @id @default(autoincrement())
+  rideId             String    @map("ride_id")
+  recordedAt         DateTime  @map("recorded_at")
   ax                 Float
   ay                 Float
   az                 Float
   gx                 Float
   gy                 Float
   gz                 Float
-  vibrationMagnitude Float    @map("vibration_magnitude")
+  vibrationMagnitude Float     @map("vibration_magnitude")
   latitude           Float?
   longitude          Float?
   speed              Float?
-  createdAt          DateTime @default(now()) @map("created_at")
-  ride               Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  locationTimestamp  DateTime? @map("location_timestamp")
+  locationAccuracy   Float?    @map("location_accuracy")
+  locationAgeMs      Int?      @map("location_age_ms")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  ride               Ride      @relation(fields: [rideId], references: [id], onDelete: Cascade)
 
   @@index([rideId, recordedAt])
   @@map("samples")

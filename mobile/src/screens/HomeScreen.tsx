@@ -18,6 +18,7 @@ import {
   radius,
   shadows,
   space,
+  stateStyles,
 } from "@skate-route-mapper/shared/design";
 import {
   NESSO_BLE_DEVICE_NAME,
@@ -26,6 +27,7 @@ import {
 import * as NessoBle from "../native/NessoBle";
 import type { NessoBleConnection } from "../native/NessoBle";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";
+import { ScreenHeader } from "../components/AppMenu";
 
 type NessoStatus = "idle" | "scanning" | "connected" | "error" | "unsupported";
 
@@ -155,13 +157,10 @@ export default function HomeScreen() {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <Text style={styles.appName}>skate-route-mapper</Text>
-        <Text style={styles.title}>Map smooth skating routes</Text>
-        <Text style={styles.subtitle}>
-          Use your phone to measure vibration, GPS and road surface quality while skating.
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Map a New Ride"
+        subtitle="Set up your ride and begin measuring road vibration. No account required."
+      />
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Ride type</Text>
@@ -304,13 +303,6 @@ export default function HomeScreen() {
           <Text style={styles.startButtonText}>Start route scan</Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => navigation.navigate("Rides")}
-          style={styles.secondaryButton}
-        >
-          <Text style={styles.secondaryButtonText}>View saved rides</Text>
-        </Pressable>
-
         <Text style={styles.statusText}>Status: {status}</Text>
       </View>
     </ScrollView>
@@ -393,35 +385,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.page,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    gap: 18,
-  },
-  header: {
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  appName: {
-    color: colors.textOnOrange,
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 12,
-    opacity: 0.82,
-  },
-  title: {
-    color: colors.textOnOrange,
-    fontSize: 34,
-    fontWeight: "900",
-    lineHeight: 39,
-    marginBottom: 10,
-  },
-  subtitle: {
-    color: colors.textOnOrange,
-    fontSize: 16,
-    lineHeight: 23,
-    opacity: 0.82,
   },
   card: {
     backgroundColor: colors.surface,
@@ -685,7 +648,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
   },
   bleButtonDisabled: {
-    backgroundColor: colors.textMuted,
+    ...stateStyles.disabled,
   },
   bleButtonText: {
     color: buttonVariants.primary.filled.color,
@@ -746,18 +709,5 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 48,
     gap: 18,
-  },
-  secondaryButton: {
-    backgroundColor: buttonVariants.secondary.contained.backgroundColor,
-    paddingVertical: 15,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: buttonVariants.secondary.contained.borderColor,
-  },
-  secondaryButtonText: {
-    color: buttonVariants.secondary.contained.color,
-    fontSize: 16,
-    fontWeight: "800",
   },
 });

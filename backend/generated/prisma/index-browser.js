@@ -141,8 +141,40 @@ exports.Prisma.AdminSessionScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  name: 'name',
+  lastLoginAt: 'lastLoginAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.UserSessionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  revokedAt: 'revokedAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.DeviceScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  clientId: 'clientId',
+  deviceModel: 'deviceModel',
+  appVersion: 'appVersion',
+  lastSeenAt: 'lastSeenAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.RideScalarFieldEnum = {
   id: 'id',
+  userId: 'userId',
+  deviceId: 'deviceId',
   startedAt: 'startedAt',
   endedAt: 'endedAt',
   vehicleType: 'vehicleType',
@@ -172,6 +204,9 @@ exports.Prisma.SampleScalarFieldEnum = {
   latitude: 'latitude',
   longitude: 'longitude',
   speed: 'speed',
+  locationTimestamp: 'locationTimestamp',
+  locationAccuracy: 'locationAccuracy',
+  locationAgeMs: 'locationAgeMs',
   createdAt: 'createdAt'
 };
 
@@ -203,6 +238,9 @@ exports.SensorSource = exports.$Enums.SensorSource = {
 exports.Prisma.ModelName = {
   AdminUser: 'AdminUser',
   AdminSession: 'AdminSession',
+  User: 'User',
+  UserSession: 'UserSession',
+  Device: 'Device',
   Ride: 'Ride',
   Sample: 'Sample'
 };

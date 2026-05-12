@@ -51,6 +51,8 @@ One ride session recorded by the mobile app.
 Main fields:
 
 - `id`
+- `userId`
+- `deviceId`
 - `startedAt`
 - `endedAt`
 - `vehicleType`
@@ -92,6 +94,51 @@ Main fields:
 - `expiresAt`
 - `revokedAt`
 - `createdAt`
+
+### User
+
+One optional end-user account for the mobile app. This is separate from
+`AdminUser`, which is only for internal dashboard access.
+
+Main fields:
+
+- `id`
+- `email`
+- `passwordHash`
+- `name`
+- `lastLoginAt`
+- `createdAt`
+- `updatedAt`
+
+### UserSession
+
+One mobile user login session. The raw session token is returned once at
+signup/login; only a hash is stored in the database.
+
+Main fields:
+
+- `id`
+- `userId`
+- `tokenHash`
+- `expiresAt`
+- `revokedAt`
+- `createdAt`
+
+### Device
+
+One mobile install/device identity when the app provides a stable `clientId`.
+Devices can exist without a user so logged-out ride uploads remain possible.
+
+Main fields:
+
+- `id`
+- `userId`
+- `clientId`
+- `deviceModel`
+- `appVersion`
+- `lastSeenAt`
+- `createdAt`
+- `updatedAt`
 
 ### Sample
 
@@ -136,20 +183,32 @@ Main fields:
 - each `Sample` belongs to one `Ride`
 - one `AdminUser` has many `AdminSession` rows
 - each `AdminSession` belongs to one `AdminUser`
+- one `User` has many `UserSession`, `Device`, and `Ride` rows
+- one `Device` can have many `Ride` rows
+- `Ride.userId` and `Ride.deviceId` are nullable so anonymous and existing
+  ride data remains valid
 
 ## Auth And User Model Direction
 
-The current production boundary uses two layers:
+The current production boundary uses three layers:
 
 - API keys for mobile ingestion and internal scripts.
 - `AdminUser` plus `AdminSession` for dashboard login.
+- `User` plus `UserSession` for optional mobile accounts.
 
 API authorization is intentionally separated by route namespace:
 
-- `/v1/mobile/*` is the mobile/user-facing surface. Current ingestion routes accept the mobile ingestion key, and admin credentials are also allowed for internal tooling.
+- `/v1/mobile/*` is the mobile/user-facing surface. Auth endpoints are public,
+  current-user endpoints require a mobile user session, and ingestion routes
+  accept either a mobile user session, the mobile ingestion key, or admin
+  credentials for internal tooling.
 - `/v1/admin/*` is the admin surface. It only accepts admin credentials.
 - `/v1/admin/mobile/*` is an admin-only surface for mobile-compatible actions. It mirrors mobile payload shapes where useful but still requires admin credentials.
-- Future user-facing read endpoints should be tied to a `User` or `Device` identity and must only return data that identity is allowed to access.
+- Future user-facing read endpoints should be tied to a `User` or `Device`
+  identity and must only return data that identity is allowed to access.
+- Mobile signup/sign-in is optional. The app should still be able to record
+  locally while logged out; accounts enable future upload/sync and recovery
+  after reinstalling or wiping a device.
 
 The API can seed the first admin account on startup when both variables are present:
 
@@ -163,16 +222,15 @@ This is seed-once behavior: if any admin user already exists, startup leaves the
 Possible later datamodel additions:
 
 - `ApiKey`: hashed server-side key records with scopes such as `ingestion:write` and `admin:read`.
-- `User`: future app user identity once the product needs accounts.
-- `Device`: mobile install or physical device identity, related to a `User` when accounts exist.
-- `Ride.userId` and `Ride.deviceId`: nullable at first so existing anonymous ride data stays valid.
+- richer device/session metadata such as platform, push token, or token family.
 
 Suggested order:
 
 1. Build dashboard ride inspection on top of `AdminUser` sessions.
 2. Add admin management screens for creating, disabling, and rotating admin accounts.
 3. Move static environment keys into hashed `ApiKey` rows when you need key rotation, per-client keys, revocation, or audit trails.
-4. Add `User` only when the mobile app is ready for account UX.
+4. Build sync/read APIs on top of `User`, `Device`, and nullable ride ownership
+   without blocking anonymous local recording.
 
 ## Prisma Workflow
 

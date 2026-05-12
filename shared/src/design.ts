@@ -135,6 +135,12 @@ export const componentStyles = {
   },
 } as const;
 
+export const stateStyles = {
+  disabled: {
+    opacity: 0.5,
+  },
+} as const;
+
 export const buttonVariants = {
   primary: {
     filled: {
@@ -205,6 +211,7 @@ export const skateDesign = {
   shadows,
   layout,
   componentStyles,
+  stateStyles,
   buttonVariants,
   nestedRadius,
 } as const;

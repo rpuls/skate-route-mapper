@@ -6,6 +6,7 @@
   },
   "include": [
     "../../src/features/rides/contracts.ts",
+    "../../src/features/mobileUsers/contracts.ts",
     "../../../shared/src/mobileContracts.ts",
     "*.contract.test.ts"
   ]

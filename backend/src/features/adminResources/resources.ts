@@ -21,9 +21,11 @@ type RuntimeModel = {
 const hiddenFieldsByModel: Record<string, string[]> = {
   AdminSession: ["tokenHash"],
   AdminUser: ["passwordHash"],
+  User: ["passwordHash"],
+  UserSession: ["tokenHash"],
 };
 
-const readOnlyModels = new Set(["AdminSession"]);
+const readOnlyModels = new Set(["AdminSession", "User", "UserSession"]);
 
 function sentenceCase(value: string) {
   return value
