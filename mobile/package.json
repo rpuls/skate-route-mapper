@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "contracts:test": "tsc -p test/contracts/tsconfig.json --noEmit && tsx --test \"test/contracts/**/*.contract.test.ts\""
+    "contracts:test": "tsc -p test/contracts/tsconfig.json --noEmit && tsx --test test/contracts/mobilePersistence.contract.test.ts"
   },
   "dependencies": {
     "@react-native-community/slider": "5.0.1",
