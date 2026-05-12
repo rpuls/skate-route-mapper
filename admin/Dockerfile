@@ -13,7 +13,7 @@ RUN npm ci
 COPY admin admin
 COPY shared shared
 
-RUN npm run admin:build
+RUN npm run build --workspace @skate-route-mapper/admin
 
 FROM nginx:1.27-alpine AS runner
 

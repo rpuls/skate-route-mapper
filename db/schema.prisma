@@ -83,6 +83,9 @@ model Sample {
   latitude           Float?
   longitude          Float?
   speed              Float?
+  locationTimestamp  DateTime? @map("location_timestamp")
+  locationAccuracy   Float?    @map("location_accuracy")
+  locationAgeMs      Int?      @map("location_age_ms")
   createdAt          DateTime @default(now()) @map("created_at")
   ride               Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
 

@@ -1,7 +1,10 @@
 import { z } from "zod";
 
-const vehicleTypeSchema = z.enum(["skates", "skateboard", "longboard"]);
-const sensorSourceSchema = z.enum(["phone", "external"]);
+export const acceptedVehicleTypes = ["skates", "skateboard", "longboard"] as const;
+export const acceptedSensorSources = ["phone", "external"] as const;
+
+const vehicleTypeSchema = z.enum(acceptedVehicleTypes);
+const sensorSourceSchema = z.enum(acceptedSensorSources);
 
 export const rideParamsSchema = z.object({
   rideId: z.string().min(1),

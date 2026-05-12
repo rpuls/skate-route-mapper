@@ -18,6 +18,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Keep shared contracts in `shared/src/index.ts` aligned with API and mobile usage.
 - Treat `shared` as a set of explicit contract modules. Prefer subpath imports
   such as `@skate-route-mapper/shared/contracts`,
+  `@skate-route-mapper/shared/mobileContracts`,
   `@skate-route-mapper/shared/design`,
   `@skate-route-mapper/shared/adminResources`, and
   `@skate-route-mapper/shared/nessoBle` over importing from the root package.
@@ -49,7 +50,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Web map fallback lives in `mobile/src/components/RideRouteMap.web.tsx`.
 - Web font setup lives in `mobile/src/setupFonts.web.ts` and `mobile/src/web.css`.
 - Do not remove platform-specific `.web.tsx` or `.web.ts` files just because the native file exists.
-- `npm run mobile:web` is for UI/layout checks and uses native fallbacks.
+- `npm run dev:web` is for UI/layout checks and uses native fallbacks.
 - Full device behavior for sensors, GPS, maps, and BLE must be checked on a physical device or development build.
 
 ## Validation
@@ -59,8 +60,9 @@ The user prefers to run build/dev commands outside chat. After relevant changes,
 Common checks:
 
 ```bash
-npm run admin:build
-npm run mobile:web
+npm run build
+npm run dev:web
+npm run contracts:test
 ```
 
 Use narrower checks when the change only touches one package.

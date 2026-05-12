@@ -4,6 +4,6 @@ export type {
   Ride,
   SensorSource,
   VehicleType,
-} from "@skate-route-mapper/shared/contracts";
+} from "@skate-route-mapper/shared/mobileContracts";
 
 export type { NessoImuPacket } from "@skate-route-mapper/shared/nessoBle";

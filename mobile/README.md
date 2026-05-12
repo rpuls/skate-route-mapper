@@ -35,25 +35,25 @@ npm install
 Start the Expo dev server:
 
 ```bash
-npm run mobile:start
+npm run dev:mobile
 ```
 
 Run with Expo Go on a physical iPhone through Expo tunnel:
 
 ```bash
-npm run mobile:iphone
+npm run dev:iphone
 ```
 
 Run with Expo Go on a physical device on the same Wi-Fi network:
 
 ```bash
-npm run mobile:device
+npm run start --workspace @skate-route-mapper/mobile -- --lan --go
 ```
 
 Run the browser target for UI/layout checks:
 
 ```bash
-npm run mobile:web
+npm run dev:web
 ```
 
 ## Android Background Recording Builds
@@ -110,7 +110,7 @@ For quick UI and Expo-module testing:
 
 1. Install Expo Go from the App Store.
 2. Sign in with the same Expo account used by the CLI.
-3. Run `npm run mobile:iphone` from the repo root.
+3. Run `npm run dev:iphone` from the repo root.
 4. Scan the QR code with the iPhone camera or Expo Go.
 
 Expo Go is the easiest path from Windows because it does not require Xcode.

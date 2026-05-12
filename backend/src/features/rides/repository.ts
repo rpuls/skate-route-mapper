@@ -2,7 +2,7 @@ import { Prisma } from "../../../generated/prisma/index.js";
 import type {
   MeasurementSample,
   RideStartPayload,
-} from "@skate-route-mapper/shared/contracts";
+} from "@skate-route-mapper/shared/mobileContracts";
 import { prisma } from "../../db/prisma.js";
 
 export async function createRide(payload: RideStartPayload) {
@@ -57,6 +57,12 @@ export async function appendSamples(rideId: string, samples: MeasurementSample[]
         latitude: sample.latitude,
         longitude: sample.longitude,
         speed: sample.speed,
+        locationTimestamp:
+          sample.locationTimestamp === null || sample.locationTimestamp === undefined
+            ? null
+            : new Date(sample.locationTimestamp),
+        locationAccuracy: sample.locationAccuracy ?? null,
+        locationAgeMs: sample.locationAgeMs ?? null,
       })),
     });
 
@@ -143,6 +149,9 @@ export async function getRide(rideId: string) {
       latitude: true,
       longitude: true,
       speed: true,
+      locationTimestamp: true,
+      locationAccuracy: true,
+      locationAgeMs: true,
     },
   });
 
@@ -160,6 +169,9 @@ export async function getRide(rideId: string) {
       latitude: sample.latitude,
       longitude: sample.longitude,
       speed: sample.speed,
+      locationTimestamp: sample.locationTimestamp?.getTime() ?? null,
+      locationAccuracy: sample.locationAccuracy,
+      locationAgeMs: sample.locationAgeMs,
     })),
   };
 }

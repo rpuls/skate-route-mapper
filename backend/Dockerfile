@@ -12,7 +12,7 @@ COPY shared shared
 COPY db db
 
 RUN npm run prisma:generate --workspace @skate-route-mapper/api
-RUN npm run api:build
+RUN npm run build --workspace @skate-route-mapper/api
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -32,4 +32,4 @@ COPY --from=builder /app/backend/generated backend/generated
 
 EXPOSE 3001
 
-CMD ["npm", "run", "api:start"]
+CMD ["npm", "run", "start", "--workspace", "@skate-route-mapper/api"]

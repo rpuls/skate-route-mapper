@@ -111,31 +111,13 @@ If you want the backend stack running quickly and consistently, use Docker.
 Start the local backend/admin stack:
 
 ```bash
-npm run admin-app
-```
-
-This rebuilds and starts the PostgreSQL, API, and admin containers. The shorter alias also works:
-
-```bash
 npm run app
-```
-
-Stop everything:
-
-```bash
-npm run stop
 ```
 
 Follow logs:
 
 ```bash
 npm run logs
-```
-
-The lower-level Docker script is still available:
-
-```bash
-npm run docker:up
 ```
 
 Direct Docker command:
@@ -146,18 +128,13 @@ docker compose up --build --detach --wait
 
 When the stack is ready, the command prints the local access URLs.
 
+To stop the stack, use Docker Desktop or run `docker compose down`.
+
 This starts:
 
 - `db` on `localhost:5433`
 - `backend` on `http://localhost:3001`
 - `admin` on `http://localhost:3000`
-
-Useful commands:
-
-```bash
-npm run docker:down
-npm run docker:logs
-```
 
 ### End-to-End Tests
 
@@ -173,11 +150,7 @@ Run the same suite headed when you want to watch the browser:
 npm run e2e:headed
 ```
 
-Install the Chromium browser once before the first local run if Playwright has not installed it yet:
-
-```bash
-npm run e2e:install
-```
+The command installs the Playwright Chromium browser automatically when needed.
 
 The E2E stack uses these local ports:
 
@@ -187,6 +160,9 @@ The E2E stack uses these local ports:
 PostgreSQL stays internal to the Docker network for the E2E stack.
 
 The first test signs in with the local development admin account, creates a ride entity record through the generic admin entity UI, then deletes it again.
+
+GitHub Actions runs contract tests, builds, and E2E tests on pushes to `main`
+and on pull requests. The workflow lives in `.github/workflows/ci.yml`.
 
 What Docker covers:
 
@@ -246,24 +222,28 @@ For the admin web service, set this build-time variable so the browser knows whe
 VITE_API_BASE_URL=https://your-api-service.up.railway.app
 ```
 
-### Run The API
+### Backend And Admin
 
-From the repo root:
+Use the Docker stack for backend/admin work:
 
 ```bash
-npm run api:dev
+npm run app
 ```
 
-Other useful API commands:
+This is the supported local path for PostgreSQL, API, and admin together.
+Common root verification and database commands:
 
 ```bash
-npm run api:check
-npm run api:build
-npm run api:start
+npm run check
+npm run build
+npm run contracts:test
 npm run db:generate
-npm run db:migrate:dev
-npm run db:migrate:deploy
+npm run db:migrate
+npm run db:deploy
 ```
+
+Package-local API commands are still available for narrow work, for example
+`npm run check --workspace @skate-route-mapper/api`.
 
 What happens on startup:
 
@@ -308,48 +288,47 @@ Short version:
 From the repo root:
 
 ```bash
-npm run mobile:start
+npm run dev:mobile
 ```
 
 To run on a physical iPhone with Expo Go from Windows, use the tunnel command:
 
 ```bash
-npm run mobile:iphone
+npm run dev:iphone
 ```
 
 For a physical iPhone without a Mac/Xcode:
 
 1. Install Expo Go from the App Store.
 2. Sign in with the same Expo account used by the CLI.
-3. Run `npm run mobile:iphone`.
+3. Run `npm run dev:iphone`.
 4. Scan the QR code on the iPhone.
 
 If your phone and computer are on the same Wi-Fi network, LAN mode is usually faster:
 
 ```bash
-npm run mobile:device
+npm run start --workspace @skate-route-mapper/mobile -- --lan --go
 ```
 
 Use an EAS development build only when Expo Go is not enough, for example when testing custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account.
 
-Platform-specific commands:
+The browser target is useful for UI/layout checks:
 
 ```bash
-npm run mobile:android
-npm run mobile:ios
-npm run mobile:web
+npm run dev:web
 ```
 
 Notes:
 
 - a physical device is strongly recommended because the app depends on motion sensors and GPS
-- `mobile:iphone` is the default iPhone + Expo Go path and uses Expo's ngrok tunnel
-- `mobile:device` is the faster LAN Expo Go path when the phone can reach your computer on Wi-Fi
+- `dev:iphone` is the default iPhone + Expo Go path and uses Expo's ngrok tunnel
 - tunnel mode depends on Expo's ngrok service and can fail when ngrok is blocked or unavailable
-- `mobile:ios` launches the local iOS simulator and requires macOS with Xcode
 - the web target is mainly useful for UI checks, not full ride recording
 - the web target uses fallbacks for native-only pieces such as SQLite storage and maps
 - the mobile app is not containerized; Docker is meant for backend services and the admin app
+
+Package-local mobile commands are still available for platform-specific work, for
+example `npm run android --workspace @skate-route-mapper/mobile`.
 
 ### Design System
 
@@ -383,9 +362,10 @@ When working in this repo, this is the important mental model:
 
 If you change the ride or sample payload shape:
 
-1. Update `shared`.
+1. Update `shared/src/mobileContracts.ts`.
 2. Update the API validation and persistence layer.
 3. Update the mobile app to send or consume the new contract.
+4. Run `npm run contracts:test`.
 
 Key files:
 

@@ -112,6 +112,9 @@ Main fields:
 - `latitude`
 - `longitude`
 - `speed`
+- `locationTimestamp`
+- `locationAccuracy`
+- `locationAgeMs`
 - `createdAt`
 
 ## Enums
@@ -179,16 +182,29 @@ Generate the Prisma client:
 npm run db:generate
 ```
 
+Run mobile/backend contract drift tests:
+
+```bash
+npm run contracts:test
+```
+
+This command checks both sides of the mobile data boundary:
+
+- backend Zod schemas accept shared mobile API fixtures
+- mobile local persistence round-trips shared ride/sample fixtures
+
+It intentionally does not expose admin datamodel details to the mobile app.
+
 Create a new migration during development:
 
 ```bash
-npm run db:migrate:dev
+npm run db:migrate
 ```
 
 Apply committed migrations in deploy environments:
 
 ```bash
-npm run db:migrate:deploy
+npm run db:deploy
 ```
 
 ## Why This Helps

@@ -62,6 +62,10 @@ yarn-error.*
 # Coverage
 coverage/
 
+# Test artifacts
+test-results/
+playwright-report/
+
 # IDE
 .vscode/
 .idea/
