@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createEntityRecord,
   deleteEntityRecord,
+  getAdminRideDetail,
   listAdminResources,
   listEntityRecords,
   updateEntityRecord,
@@ -28,6 +29,20 @@ export function useEntityRecords(session: AdminSession, resource: AdminResource 
       }
 
       return listEntityRecords(session, resource);
+    },
+  });
+}
+
+export function useAdminRideDetail(session: AdminSession, rideId: string | null) {
+  return useQuery({
+    enabled: Boolean(rideId),
+    queryKey: rideId ? queryKeys.rideDetail(rideId) : queryKeys.rideDetail("none"),
+    queryFn: () => {
+      if (!rideId) {
+        throw new Error("No ride selected");
+      }
+
+      return getAdminRideDetail(session, rideId);
     },
   });
 }

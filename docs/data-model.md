@@ -27,6 +27,7 @@ Relevant files:
 - `db/migrations/`
 - `backend/src/db/prisma.ts`
 - `backend/src/features/rides/repository.ts`
+- `backend/src/features/sync/repository.ts`
 - `backend/src/features/adminUsers/repository.ts`
 - `backend/src/features/adminResources/repository.ts`
 - `shared/src/adminResources.ts`
@@ -164,6 +165,20 @@ Main fields:
 - `locationAgeMs`
 - `createdAt`
 
+### SyncOperation
+
+One idempotency record for an offline-first mobile sync operation that has
+already been applied to Postgres.
+
+Main fields:
+
+- `id`
+- `userId`
+- `operationType`
+- `createdAtMs`
+- `processedAt`
+- `payload`
+
 ## Enums
 
 ### VehicleType
@@ -184,9 +199,12 @@ Main fields:
 - one `AdminUser` has many `AdminSession` rows
 - each `AdminSession` belongs to one `AdminUser`
 - one `User` has many `UserSession`, `Device`, and `Ride` rows
+- one `User` can have many `SyncOperation` rows
 - one `Device` can have many `Ride` rows
 - `Ride.userId` and `Ride.deviceId` are nullable so anonymous and existing
   ride data remains valid
+- `SyncOperation.userId` is nullable so trusted ingestion/admin syncs can also
+  be idempotent
 
 ## Auth And User Model Direction
 
@@ -209,6 +227,9 @@ API authorization is intentionally separated by route namespace:
 - Mobile signup/sign-in is optional. The app should still be able to record
   locally while logged out; accounts enable future upload/sync and recovery
   after reinstalling or wiping a device.
+- The mobile app stores offline writes in local SQLite `pending_changes` and
+  sends them to `POST /v1/mobile/sync` over HTTPS. The backend stores applied
+  operation IDs in `sync_operations` so retries do not duplicate ride writes.
 
 The API can seed the first admin account on startup when both variables are present:
 

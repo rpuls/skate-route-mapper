@@ -21,6 +21,7 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -84,7 +85,7 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
         intervalMs = intent.getIntExtra(EXTRA_INTERVAL_MS, DEFAULT_INTERVAL_MS).coerceAtLeast(50)
         sensorSource = intent.getStringExtra(EXTRA_SENSOR_SOURCE) ?: SENSOR_SOURCE_PHONE
         Log.i(TAG, "Starting foreground recorder for ride=$requestedRideId intervalMs=$intervalMs sensorSource=$sensorSource")
-        startForeground(NOTIFICATION_ID, buildNotification())
+        startForegroundForSensorSource(buildNotification())
         startRecording(requestedRideId)
       }
 
@@ -171,6 +172,23 @@ class BackgroundRecorderService : Service(), SensorEventListener, LocationListen
       registerSensors()
     }
     Log.i(TAG, "Recorder active file=${activeFile?.absolutePath} existingSamples=$sampleCount")
+  }
+
+  private fun startForegroundForSensorSource(notification: Notification) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      val serviceType =
+        if (sensorSource == SENSOR_SOURCE_EXTERNAL) {
+          ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        } else {
+          ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        }
+
+      startForeground(NOTIFICATION_ID, notification, serviceType)
+      return
+    }
+
+    startForeground(NOTIFICATION_ID, notification)
   }
 
   private fun stopRecording() {

@@ -18,6 +18,12 @@ type EntityResponse = {
   message?: string;
 };
 
+type AdminRideDetailResponse = {
+  ride: EntityRecord;
+  samples: EntityRecord[];
+  message?: string;
+};
+
 async function parseJson<T>(response: Response) {
   const body = await response.json();
 
@@ -118,4 +124,12 @@ export async function deleteEntityRecord(
   });
 
   await parseJson<{ ok?: boolean; message?: string }>(response);
+}
+
+export async function getAdminRideDetail(session: AdminSession, rideId: string) {
+  const response = await fetch(`${apiBaseUrl}/v1/admin/rides/${rideId}`, {
+    headers: authHeaders(session),
+  });
+
+  return parseJson<AdminRideDetailResponse>(response);
 }

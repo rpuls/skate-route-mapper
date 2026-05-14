@@ -4,6 +4,8 @@ import type { MeasurementSample } from "@skate-route-mapper/shared/mobileContrac
 import {
   createRide,
   finishRide,
+  getPendingChangeCount,
+  getPendingChanges,
   getRide,
   getRides,
   getSamplesForRide,
@@ -72,5 +74,10 @@ describe("mobile persistence contract", () => {
 
     assert.deepEqual(getSamplesForRide(rideFixture.id), sampleFixtures);
     assert.equal(getRides().some((ride) => ride.id === rideFixture.id), true);
+    assert.equal(getPendingChangeCount(), 3);
+    assert.deepEqual(
+      getPendingChanges().map((change) => change.type),
+      ["ride.start", "ride.samples", "ride.finish"]
+    );
   });
 });

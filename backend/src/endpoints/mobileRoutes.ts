@@ -8,6 +8,7 @@ import {
 import { env } from "../config/env.js";
 import * as MobileUsers from "../features/mobileUsers/index.js";
 import * as Rides from "../features/rides/index.js";
+import * as Sync from "../features/sync/index.js";
 
 type MobileAuthenticatedRequest = {
   mobileAuth?: MobileAuthContext;
@@ -148,5 +149,16 @@ export async function registerMobileRoutes(app: FastifyInstance) {
       ok: true,
       rideId,
     });
+  });
+
+  app.post("/v1/mobile/sync", {
+    preHandler: requireMobileUserOrIngestionOrAdmin,
+  }, async (request, reply) => {
+    const payload = Sync.syncRequestSchema.parse(request.body);
+    const syncResult = await Sync.processSyncOperations(payload.operations, {
+      userId: getMobileUserId(request),
+    });
+
+    return reply.code(200).send(syncResult);
   });
 }

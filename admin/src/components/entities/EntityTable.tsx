@@ -15,6 +15,23 @@ import { space } from "@skate-route-mapper/shared/design";
 import { radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";
 
+const idFields = new Set(["id", "rideId", "userId", "deviceId", "adminUserId"]);
+
+function formatString(value: string, field: AdminResourceField) {
+  if (field.type === "datetime") {
+    const date = new Date(value);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleString([], {
+        dateStyle: "short",
+        timeStyle: "medium",
+      });
+    }
+  }
+
+  return value;
+}
+
 function fieldValue(record: EntityRecord, field: AdminResourceField) {
   const value = record[field.name];
 
@@ -26,8 +43,16 @@ function fieldValue(record: EntityRecord, field: AdminResourceField) {
     return value ? "Yes" : "No";
   }
 
-  if (field.type === "datetime" && typeof value === "string") {
-    return new Date(value).toLocaleString();
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
+  if (typeof value === "string") {
+    return formatString(value, field);
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
   }
 
   return String(value);
@@ -51,14 +76,26 @@ export function EntityTable({
       component={Box}
       sx={{
         ...surfaceSx({ level: radiusLevel.embedded, padding: space.none }),
+        maxWidth: "100%",
         overflowX: "auto",
+        width: "100%",
       }}
     >
-      <Table size="small" sx={{ minWidth: 760 }}>
+      <Table size="small" sx={{ minWidth: Math.max(760, fields.length * 132) }}>
         <TableHead>
           <TableRow>
             {fields.map((field) => (
-              <TableCell key={field.name} sx={{ color: "text.secondary", fontWeight: 900, textTransform: "uppercase" }}>
+              <TableCell
+                key={field.name}
+                sx={{
+                  color: "text.secondary",
+                  fontWeight: 900,
+                  maxWidth: 180,
+                  minWidth: idFields.has(field.name) ? 96 : 112,
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {field.label}
               </TableCell>
             ))}
@@ -77,7 +114,12 @@ export function EntityTable({
                 sx={{ cursor: "pointer" }}
               >
                 {fields.map((field) => (
-                  <TableCell key={field.name} sx={{ overflowWrap: "anywhere" }}>
+                  <TableCell
+                    key={field.name}
+                    sx={{
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {fieldValue(record, field)}
                   </TableCell>
                 ))}

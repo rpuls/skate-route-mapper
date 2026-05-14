@@ -79,6 +79,7 @@ playwright-report/
 *.zip
 *.tar
 *.gz
+backend/generated/prisma/
 
 # Fastlane
 fastlane/report.xml

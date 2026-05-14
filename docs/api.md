@@ -40,6 +40,8 @@ Set by deployment environment
   stored locally, and the ingestion API can still accept anonymous ride uploads.
 - Sample uploads must be sent after the ride has been started.
 - Samples cannot be uploaded after the ride has been finished.
+- Offline-first mobile sync sends locally queued operations over HTTPS to
+  `POST /v1/mobile/sync`; phones must not connect to backend queues directly.
 - `/health` is public for uptime checks.
 - User-facing mobile endpoints live under `/v1/mobile/*`.
 - Admin endpoints live under `/v1/admin/*`.
@@ -82,6 +84,7 @@ backend/src/
     healthRoute.ts           Public health check
   features/
     rides/                   Ride contracts, index export, and reusable ride logic
+    sync/                    Mobile sync contracts and operation processing
     mobileUsers/             Mobile user auth contracts and reusable account logic
     adminUsers/              Admin user contracts, index export, and reusable admin user logic
     adminResources/          Generated admin metadata, index export, and reusable entity logic
@@ -139,6 +142,8 @@ Use `MOBILE_INGESTION_API_KEY` for anonymous/trusted-client mobile ingestion:
 - `POST /v1/mobile/rides/start`
 - `POST /v1/mobile/rides/:rideId/samples`
 - `POST /v1/mobile/rides/:rideId/finish`
+- `POST /v1/mobile/sync`
+- `POST /v1/mobile/sync`
 
 Admin credentials can also authorize those same mobile ingestion endpoints for
 internal tools.
@@ -192,6 +197,20 @@ Recommended batching:
 - send batches instead of one request per sample
 - keep a local queue in case the network is temporarily unavailable
 - a good first batch size is `25` to `100` samples
+
+## Offline Sync
+
+The mobile app records rides in local SQLite first. Each local write also adds
+an operation to the local `pending_changes` queue. When the app has a mobile
+session token, it can send queued operations to `POST /v1/mobile/sync`.
+
+The sync endpoint is idempotent. Each operation has a client-generated
+`operationId`; the backend records processed IDs in `sync_operations` and
+returns duplicate results for already-applied operations.
+
+The MVP is upload-only. The response includes `serverChanges: []` so a future
+server-to-mobile read sync can extend the contract without replacing the
+endpoint.
 
 ## Data Types
 
@@ -713,6 +732,93 @@ Body:
 Important:
 
 - After a ride is finished, later sample uploads for that ride will be rejected.
+
+### `POST /v1/mobile/sync`
+
+Upload locally queued mobile SQLite operations to the backend.
+
+Auth:
+
+```http
+Authorization: Bearer <mobile-user-session-token>
+```
+
+The mobile ingestion API key or admin credentials may also authorize this
+endpoint for trusted tooling. Normal app sync should use a mobile user session
+token so rides are attached to that user.
+
+Request body:
+
+```json
+{
+  "operations": [
+    {
+      "operationId": "op_1778760000000_n4a7gk",
+      "type": "ride.start",
+      "createdAt": 1778760000000,
+      "payload": {
+        "rideId": "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
+        "startedAt": 1778760000000,
+        "vehicleType": "skates",
+        "sensorSource": "phone"
+      }
+    },
+    {
+      "operationId": "op_1778760001000_p9dm2q",
+      "type": "ride.samples",
+      "createdAt": 1778760001000,
+      "payload": {
+        "rideId": "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
+        "samples": [
+          {
+            "timestamp": 1778760001000,
+            "ax": 0.01,
+            "ay": 0.02,
+            "az": 0.98,
+            "gx": 0.01,
+            "gy": 0.02,
+            "gz": 0.03,
+            "vibrationMagnitude": 0.981,
+            "latitude": 52.3677,
+            "longitude": 4.9042,
+            "speed": 3.4
+          }
+        ]
+      }
+    },
+    {
+      "operationId": "op_1778760300000_y3e8v1",
+      "type": "ride.finish",
+      "createdAt": 1778760300000,
+      "payload": {
+        "rideId": "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
+        "endedAt": 1778760300000
+      }
+    }
+  ]
+}
+```
+
+Rules:
+
+- `operations` may contain at most `100` operations per request.
+- `ride.samples` operations may contain at most `1000` samples.
+- Operations are applied in request order inside one backend transaction.
+- Already processed `operationId` values are returned as duplicates.
+
+Success response:
+
+```json
+{
+  "ok": true,
+  "results": [
+    { "operationId": "op_1778760000000_n4a7gk", "status": "applied" },
+    { "operationId": "op_1778760001000_p9dm2q", "status": "applied" }
+  ],
+  "serverTime": 1778760301000,
+  "serverChanges": []
+}
+```
 
 ## Admin API
 

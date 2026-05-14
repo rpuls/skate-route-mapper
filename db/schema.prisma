@@ -56,9 +56,10 @@ model User {
   lastLoginAt  DateTime?     @map("last_login_at")
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
-  sessions     UserSession[]
-  devices      Device[]
-  rides        Ride[]
+  sessions       UserSession[]
+  devices        Device[]
+  rides          Ride[]
+  syncOperations SyncOperation[]
 
   @@map("users")
 }
@@ -142,4 +143,18 @@ model Sample {
 
   @@index([rideId, recordedAt])
   @@map("samples")
+}
+
+model SyncOperation {
+  id            String   @id @map("id")
+  userId        String?  @map("user_id")
+  operationType String   @map("operation_type")
+  createdAtMs   BigInt   @map("created_at_ms")
+  processedAt   DateTime @default(now()) @map("processed_at")
+  payload       Json
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([processedAt])
+  @@map("sync_operations")
 }

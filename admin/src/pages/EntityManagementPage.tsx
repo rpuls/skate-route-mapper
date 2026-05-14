@@ -21,18 +21,26 @@ import {
 } from "../features/entities/entityQueries";
 import { AddOrEditEntityDialog } from "../components/entities/AddOrEditEntityDialog";
 import { EntityTable } from "../components/entities/EntityTable";
+import { RidesExplorer } from "../components/entities/RidesExplorer";
+import { SamplesExplorer } from "../components/entities/SamplesExplorer";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
 import type { AdminSession, EntityPayload, EntityRecord } from "../types";
 
 export function EntityManagementPage({ session }: { session: AdminSession }) {
   const [resourceName, setResourceName] = useState<string | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(null);
+  const [selectedSamplesRideId, setSelectedSamplesRideId] = useState<string | null>(null);
   const [upsertOpen, setUpsertOpen] = useState(false);
 
   const resourcesQuery = useAdminResources(session);
   const resources = resourcesQuery.data ?? [];
   const resource = resources.find((item) => item.name === resourceName) ?? resources[0] ?? null;
-  const recordsQuery = useEntityRecords(session, resource);
+  const usesCustomSamplesView = resource?.name === "samples";
+  const usesCustomWorkflow = resource?.name === "rides" || usesCustomSamplesView;
+  const recordsQuery = useEntityRecords(
+    session,
+    usesCustomSamplesView ? null : resource
+  );
   const createMutation = useCreateEntityRecord(session, resource);
   const deleteMutation = useDeleteEntityRecord(session, resource);
   const updateMutation = useUpdateEntityRecord(session, resource);
@@ -40,7 +48,9 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   const idField = resource?.idField ?? "id";
   const selectedRecordId = selectedRecord?.[idField];
   const error = resourcesQuery.error ?? recordsQuery.error ?? createMutation.error ?? deleteMutation.error ?? updateMutation.error;
-  const isLoading = resourcesQuery.isPending || recordsQuery.isPending || recordsQuery.isFetching;
+  const isLoading =
+    resourcesQuery.isPending ||
+    (!usesCustomSamplesView && (recordsQuery.isPending || recordsQuery.isFetching));
 
   const selectedFreshRecord = useMemo(() => {
     if (!selectedRecordId) {
@@ -83,6 +93,9 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   function handleResourceChange(nextResourceName: string) {
     setResourceName(nextResourceName);
     setSelectedRecord(null);
+    if (nextResourceName !== "samples") {
+      setSelectedSamplesRideId(null);
+    }
     setUpsertOpen(false);
   }
 
@@ -98,8 +111,17 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   }, [resourceName, resources]);
 
   return (
-    <Paper elevation={0} sx={surfaceSx({ shadow: true })}>
-      <Stack sx={{ gap: px(adminLayout.containerGap) }}>
+    <Paper
+      elevation={0}
+      sx={{
+        ...surfaceSx({ shadow: true }),
+        maxWidth: "100%",
+        minWidth: 0,
+        overflow: "hidden",
+        width: "100%",
+      }}
+    >
+      <Stack sx={{ gap: px(adminLayout.containerGap), minWidth: 0 }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={2}
@@ -155,22 +177,29 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
         ) : null}
 
         {resource ? (
-          <Box sx={{ display: "grid", gap: px(adminLayout.containerGap) }}>
+          <Box sx={{ display: "grid", gap: px(adminLayout.containerGap), minWidth: 0 }}>
             <Paper
               elevation={0}
               sx={{
                 ...surfaceSx({ bgcolor: colors.surfaceMuted, level: radiusLevel.inner, padding: space.md }),
                 minHeight: 520,
+                minWidth: 0,
+                overflow: "hidden",
+                width: "100%",
               }}
             >
-              <Stack spacing={2}>
+              <Stack spacing={2} sx={{ minWidth: 0 }}>
                 <Stack direction="row" spacing={2} sx={{ justifyContent: "space-between" }}>
                   <Typography variant="h3">{resource.labelPlural}</Typography>
                   <Stack direction="row" spacing={1}>
                     <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
-                      {isLoading ? "Loading" : `${records.length} total`}
+                      {usesCustomSamplesView
+                        ? "Filter by user and ride"
+                        : isLoading
+                          ? "Loading"
+                          : `${records.length} total`}
                     </Typography>
-                    {resource.canCreate ? (
+                    {resource.canCreate && !usesCustomSamplesView ? (
                       <Button
                         onClick={() => {
                           setSelectedRecord(null);
@@ -185,15 +214,37 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                     ) : null}
                   </Stack>
                 </Stack>
-                <EntityTable
-                  onSelectRecord={(record) => {
-                    setSelectedRecord(record);
-                    setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
-                  }}
-                  records={records}
-                  resource={resource}
-                  selectedRecord={selectedFreshRecord}
-                />
+                {resource.name === "rides" ? (
+                  <RidesExplorer
+                    onEditRecord={(record) => {
+                      setSelectedRecord(record);
+                      setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
+                    }}
+                    onViewSamples={(rideId) => {
+                      setSelectedSamplesRideId(rideId);
+                      handleResourceChange("samples");
+                    }}
+                    records={records}
+                    resource={resource}
+                    session={session}
+                  />
+                ) : resource.name === "samples" ? (
+                  <SamplesExplorer
+                    initialRideId={selectedSamplesRideId}
+                    resources={resources}
+                    session={session}
+                  />
+                ) : (
+                  <EntityTable
+                    onSelectRecord={(record) => {
+                      setSelectedRecord(record);
+                      setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
+                    }}
+                    records={records}
+                    resource={resource}
+                    selectedRecord={selectedFreshRecord}
+                  />
+                )}
               </Stack>
             </Paper>
 

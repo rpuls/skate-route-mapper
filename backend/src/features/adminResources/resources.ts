@@ -25,7 +25,12 @@ const hiddenFieldsByModel: Record<string, string[]> = {
   UserSession: ["tokenHash"],
 };
 
-const readOnlyModels = new Set(["AdminSession", "User", "UserSession"]);
+const readOnlyModels = new Set([
+  "AdminSession",
+  "SyncOperation",
+  "User",
+  "UserSession",
+]);
 
 function sentenceCase(value: string) {
   return value
@@ -107,11 +112,13 @@ function toResourceField(model: RuntimeModel, field: RuntimeField): AdminResourc
   const type = fieldType(field);
   const writable = isFieldWritable(model, field);
 
+  const list = !(model.name === "SyncOperation" && field.name === "payload");
+
   const resourceField: AdminResourceField = {
     name: field.name,
     label: sentenceCase(field.name),
     type,
-    list: true,
+    list,
     create: isFieldCreatable(model, field),
     edit: writable,
     required: field.isRequired && !field.hasDefaultValue,

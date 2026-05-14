@@ -11,6 +11,7 @@ import {
   type RideFinishPayload,
   type RideSamplesPayload,
   type RideStartPayload,
+  type SyncRequest,
 } from "@skate-route-mapper/shared/mobileContracts";
 import {
   currentMobileUserSchema,
@@ -26,6 +27,7 @@ import {
   rideSamplesSchema,
   rideStartSchema,
 } from "../../src/features/rides/contracts.js";
+import { syncRequestSchema } from "../../src/features/sync/contracts.js";
 
 const rideStartFixture = {
   rideId: "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
@@ -77,6 +79,35 @@ const rideSamplesFixture = {
 const rideFinishFixture = {
   endedAt: 1760000900000,
 } satisfies RideFinishPayload;
+
+const syncRequestFixture = {
+  operations: [
+    {
+      operationId: "op-start",
+      type: "ride.start",
+      createdAt: 1760000000000,
+      payload: rideStartFixture,
+    },
+    {
+      operationId: "op-samples",
+      type: "ride.samples",
+      createdAt: 1760000001000,
+      payload: {
+        rideId: rideStartFixture.rideId,
+        samples: rideSamplesFixture.samples,
+      },
+    },
+    {
+      operationId: "op-finish",
+      type: "ride.finish",
+      createdAt: 1760000900000,
+      payload: {
+        rideId: rideStartFixture.rideId,
+        endedAt: rideFinishFixture.endedAt,
+      },
+    },
+  ],
+} satisfies SyncRequest;
 
 const mobileSignupFixture = {
   email: "rider@example.com",
@@ -149,6 +180,10 @@ describe("mobile ride contract", () => {
 
   it("accepts the mobile ride finish fixture", () => {
     assert.equal(rideFinishSchema.safeParse(rideFinishFixture).success, true);
+  });
+
+  it("accepts mobile sync operation fixtures", () => {
+    assert.equal(syncRequestSchema.safeParse(syncRequestFixture).success, true);
   });
 
   it("rejects invalid mobile sample coordinates", () => {

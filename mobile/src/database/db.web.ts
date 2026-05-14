@@ -1,12 +1,22 @@
+import type {
+  SyncOperation,
+  SyncOperationResult,
+} from "@skate-route-mapper/shared/mobileContracts";
 import type { MeasurementSample, Ride, SensorSource, VehicleType } from "../types/measurement";
 
 type StoredSample = MeasurementSample & {
   rideId: string;
 };
 
+export type PendingChange = SyncOperation & {
+  attempts: number;
+  lastError: string | null;
+};
+
 type DatabaseSnapshot = {
   rides: Ride[];
   samples: StoredSample[];
+  pendingChanges: Array<PendingChange & { syncedAt: number | null }>;
 };
 
 const storageKey = "skate-route-mapper-web-db";
@@ -14,6 +24,7 @@ const storageKey = "skate-route-mapper-web-db";
 let snapshot: DatabaseSnapshot = {
   rides: [],
   samples: [],
+  pendingChanges: [],
 };
 
 export function initDatabase() {
@@ -37,6 +48,16 @@ export function createRide(params: {
     },
     ...snapshot.rides,
   ];
+  enqueuePendingChange({
+    type: "ride.start",
+    createdAt: Date.now(),
+    payload: {
+      rideId: params.id,
+      startedAt: params.startedAt,
+      vehicleType: params.vehicleType,
+      sensorSource: params.sensorSource,
+    },
+  });
   writeSnapshot();
 }
 
@@ -52,6 +73,14 @@ export function finishRide(rideId: string, endedAt: number) {
         }
       : ride
   );
+  enqueuePendingChange({
+    type: "ride.finish",
+    createdAt: Date.now(),
+    payload: {
+      rideId,
+      endedAt,
+    },
+  });
   writeSnapshot();
 }
 
@@ -63,6 +92,7 @@ export function insertSample(rideId: string, sample: MeasurementSample) {
       rideId,
     },
   ];
+  enqueueSamplesPendingChange(rideId, [sample]);
   writeSnapshot();
 }
 
@@ -78,7 +108,32 @@ export function insertSamples(rideId: string, samples: MeasurementSample[]) {
       rideId,
     })),
   ];
+  enqueueSamplesPendingChange(rideId, samples);
   writeSnapshot();
+}
+
+function enqueueSamplesPendingChange(rideId: string, samples: MeasurementSample[]) {
+  enqueuePendingChange({
+    type: "ride.samples",
+    createdAt: Date.now(),
+    payload: {
+      rideId,
+      samples,
+    },
+  });
+}
+
+function enqueuePendingChange(operation: Omit<SyncOperation, "operationId">) {
+  snapshot.pendingChanges = [
+    ...snapshot.pendingChanges,
+    {
+      ...operation,
+      operationId: createLocalOperationId(),
+      attempts: 0,
+      lastError: null,
+      syncedAt: null,
+    } as PendingChange & { syncedAt: number | null },
+  ];
 }
 
 export function getRides(): Ride[] {
@@ -94,6 +149,50 @@ export function getSamplesForRide(rideId: string): MeasurementSample[] {
     .filter((sample) => sample.rideId === rideId)
     .sort((left, right) => left.timestamp - right.timestamp)
     .map(({ rideId: _rideId, ...sample }) => sample);
+}
+
+export function getPendingChanges(limit = 50): PendingChange[] {
+  return snapshot.pendingChanges
+    .filter((change) => change.syncedAt === null)
+    .sort((left, right) => left.createdAt - right.createdAt)
+    .slice(0, limit)
+    .map(({ syncedAt: _syncedAt, ...change }) => change);
+}
+
+export function markPendingChangesSynced(results: SyncOperationResult[]) {
+  const syncedAt = Date.now();
+  const operationIds = new Set(results.map((result) => result.operationId));
+
+  snapshot.pendingChanges = snapshot.pendingChanges.map((change) =>
+    operationIds.has(change.operationId)
+      ? {
+          ...change,
+          syncedAt,
+          lastError: null,
+        }
+      : change
+  );
+  writeSnapshot();
+}
+
+export function markPendingChangesFailed(operationIds: string[], error: string) {
+  const operationIdSet = new Set(operationIds);
+
+  snapshot.pendingChanges = snapshot.pendingChanges.map((change) =>
+    operationIdSet.has(change.operationId) && change.syncedAt === null
+      ? {
+          ...change,
+          attempts: change.attempts + 1,
+          lastError: error,
+        }
+      : change
+  );
+  writeSnapshot();
+}
+
+export function getPendingChangeCount() {
+  return snapshot.pendingChanges.filter((change) => change.syncedAt === null)
+    .length;
 }
 
 export function getLatestSamples(limit = 20) {
@@ -140,10 +239,19 @@ function readSnapshot(): DatabaseSnapshot {
     return {
       rides: Array.isArray(parsed.rides) ? parsed.rides : [],
       samples: Array.isArray(parsed.samples) ? parsed.samples : [],
+      pendingChanges: Array.isArray(parsed.pendingChanges)
+        ? parsed.pendingChanges
+        : [],
     };
   } catch {
     return snapshot;
   }
+}
+
+function createLocalOperationId() {
+  const randomValue = Math.random().toString(36).slice(2);
+
+  return `op_${Date.now()}_${randomValue}`;
 }
 
 function writeSnapshot() {

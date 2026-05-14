@@ -50,6 +50,49 @@ export type RideFinishPayload = {
   endedAt: number;
 };
 
+export type SyncOperation =
+  | {
+      operationId: string;
+      type: "ride.start";
+      createdAt: number;
+      payload: RideStartPayload;
+    }
+  | {
+      operationId: string;
+      type: "ride.samples";
+      createdAt: number;
+      payload: {
+        rideId: string;
+        samples: MeasurementSample[];
+      };
+    }
+  | {
+      operationId: string;
+      type: "ride.finish";
+      createdAt: number;
+      payload: {
+        rideId: string;
+        endedAt: number;
+      };
+    };
+
+export type SyncRequest = {
+  operations: SyncOperation[];
+  since?: number | null | undefined;
+};
+
+export type SyncOperationResult = {
+  operationId: string;
+  status: "applied" | "duplicate";
+};
+
+export type SyncResponse = {
+  ok: true;
+  results: SyncOperationResult[];
+  serverTime: number;
+  serverChanges: [];
+};
+
 export type MobileDeviceIdentity = {
   clientId?: string | undefined;
   deviceModel?: string | undefined;

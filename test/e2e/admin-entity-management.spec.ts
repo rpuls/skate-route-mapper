@@ -35,6 +35,7 @@ test("admin can create and delete a ride entity record", async ({ page }) => {
   await expect(page.getByRole("cell", { name: rideId })).toBeVisible();
 
   await page.getByRole("cell", { name: rideId }).click();
+  await page.getByRole("button", { name: "Edit record" }).click();
   await expect(page.getByRole("heading", { name: "Edit ride" })).toBeVisible();
 
   page.once("dialog", async (dialog) => {
