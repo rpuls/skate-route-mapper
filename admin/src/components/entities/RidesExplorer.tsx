@@ -15,6 +15,7 @@ import { useAdminRideDetail } from "../../features/entities/entityQueries";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { AdminSession, EntityRecord } from "../../types";
 import { EntityTable } from "./EntityTable";
+import { RideAnalysisPanel } from "./RideAnalysisPanel";
 
 function stringValue(value: unknown) {
   return typeof value === "string" ? value : null;
@@ -163,6 +164,10 @@ export function RidesExplorer({
               <DetailItem label="Client ID" value={detail.clientId} />
               <DetailItem label="Device model" value={detail.deviceModel} />
             </Box>
+
+            <Divider />
+
+            <RideAnalysisPanel samples={rideDetailQuery.data?.samples ?? []} />
           </Stack>
         ) : (
           <Typography color="text.secondary" sx={{ fontWeight: 800 }}>
