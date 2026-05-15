@@ -19,7 +19,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { colors, space } from "@skate-route-mapper/shared/design";
+import { colors, shadows, space } from "@skate-route-mapper/shared/design";
 import type { PointerEvent as ReactPointerEvent, WheelEvent } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
@@ -29,6 +29,16 @@ const playbackSpeeds = [0.5, 1, 2, 5] as const;
 const playbackTickMs = 120;
 const mapTileSize = 256;
 const defaultMapWidth = 760;
+const chartColors = {
+  currentMarker: colors.text,
+  filtered: colors.shadow,
+  moderate: colors.accentStrong,
+  routeBase: colors.shadow,
+  severe: colors.danger,
+  smooth: colors.accent,
+  trusted: colors.success,
+  warning: colors.accent,
+} as const;
 
 type ChartSeries = "filtered" | "normalized" | "raw" | "smoothed";
 
@@ -294,18 +304,18 @@ function applyMapInteraction(
 
 function qualityColor(score: number) {
   if (score >= 0.8) {
-    return "#d7263d";
+    return chartColors.severe;
   }
 
   if (score >= 0.6) {
-    return "#f97316";
+    return chartColors.warning;
   }
 
   if (score >= 0.3) {
-    return "#facc15";
+    return chartColors.moderate;
   }
 
-  return "#16a34a";
+  return chartColors.trusted;
 }
 
 function toAnalysisSamples(
@@ -837,7 +847,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
                 return (
                   <line
                     key={`${sample.timestamp}-geo-${index}`}
-                    stroke="rgba(23, 17, 12, 0.18)"
+                    stroke={chartColors.routeBase}
                     strokeLinecap="round"
                     strokeWidth="9"
                     x1={previousPoint.x}
@@ -876,7 +886,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
                   fill={qualityColor(currentMapSample.score)}
                   opacity={currentMapSample.trusted ? 1 : 0.45}
                   r="9"
-                  stroke="#ffffff"
+                  stroke={colors.surface}
                   strokeWidth="4"
                 />
               ) : null}
@@ -886,9 +896,9 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
               onPointerDown={(event) => event.stopPropagation()}
               spacing={0.5}
               sx={{
-                bgcolor: "rgba(255, 255, 255, 0.9)",
+                bgcolor: colors.surface,
                 borderRadius: px(10),
-                boxShadow: "0 8px 20px rgba(23, 17, 12, 0.16)",
+                boxShadow: `0 8px 20px ${shadows.tile.shadowColor}`,
                 p: 0.5,
                 position: "absolute",
                 right: 8,
@@ -919,7 +929,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
             </Stack>
             <Typography
               sx={{
-                bgcolor: "rgba(255, 255, 255, 0.86)",
+                bgcolor: colors.surface,
                 borderRadius: px(8),
                 bottom: 8,
                 color: colors.textMuted,
@@ -1041,25 +1051,25 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
               />
               <SeriesToggle
                 checked={visibleSeries.normalized}
-                color="#d7263d"
+                color={chartColors.severe}
                 label="Normalized score"
                 onChange={() => toggleSeries("normalized")}
               />
               <SeriesToggle
                 checked={visibleSeries.filtered}
-                color="rgba(23, 17, 12, 0.28)"
+                color={chartColors.filtered}
                 label="Filtered out"
                 onChange={() => toggleSeries("filtered")}
               />
             </Stack>
           </Stack>
           <svg height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} width={chartWidth}>
-            <rect fill="#ffffff" height={chartHeight} width={chartWidth} />
+            <rect fill={colors.surface} height={chartHeight} width={chartWidth} />
             {visibleSeries.filtered
               ? analysisSamples.map((sample, index) =>
                   sample.trusted ? null : (
                     <rect
-                      fill="rgba(23, 17, 12, 0.08)"
+                      fill={chartColors.filtered}
                       height={chartHeight}
                       key={`${sample.timestamp}-untrusted-${index}`}
                       width={Math.max(1, chartWidth / Math.max(1, analysisSamples.length))}
@@ -1104,13 +1114,13 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
                   chartHeight,
                   (sample) => sample.score
                 )}
-                stroke="#d7263d"
+                stroke={chartColors.severe}
                 strokeWidth="2"
               />
             ) : null}
             {analysisSamples.length > 1 ? (
               <line
-                stroke="#111111"
+                stroke={chartColors.currentMarker}
                 strokeDasharray="4 4"
                 strokeWidth="2"
                 x1={(playbackIndex / (analysisSamples.length - 1)) * chartWidth}

@@ -10,7 +10,7 @@ The goal is to keep the first version very simple:
 4. Finish the ride
 
 Signup/sign-in is optional. The mobile app should still allow logged-out local
-recording; an account enables future upload/sync and recovery on a new or wiped
+recording; an account enables upload/sync and future recovery on a new or wiped
 device.
 
 ## Base URL
@@ -142,7 +142,6 @@ Use `MOBILE_INGESTION_API_KEY` for anonymous/trusted-client mobile ingestion:
 - `POST /v1/mobile/rides/start`
 - `POST /v1/mobile/rides/:rideId/samples`
 - `POST /v1/mobile/rides/:rideId/finish`
-- `POST /v1/mobile/sync`
 - `POST /v1/mobile/sync`
 
 Admin credentials can also authorize those same mobile ingestion endpoints for
@@ -332,6 +331,13 @@ Sensitive fields are filtered by the API policy layer. For example, `passwordHas
 ### `GET /v1/admin/entities/:resourceName`
 
 List records for a generated admin resource.
+
+Query params:
+
+- `page`: optional, default `1`
+- `pageSize`: optional, max `100`, default `25`
+
+Success responses include `items`, `total`, `page`, `pageSize`, and `pageCount`.
 
 Examples:
 
@@ -846,9 +852,16 @@ GET /v1/admin/rides?limit=20
 
 ### `GET /v1/admin/rides/:rideId`
 
-Fetch one ride and all of its stored samples.
+Fetch one ride and a limited window of its stored samples.
 
 This is mainly for admin tools, debugging, or later sync features.
+
+Query params:
+
+- `sampleLimit`: optional, max `5000`, default `5000`
+- `sampleOffset`: optional, default `0`
+
+The response includes `samplesTruncated` when more samples exist than were returned.
 
 Auth:
 

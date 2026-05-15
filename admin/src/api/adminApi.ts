@@ -1,6 +1,11 @@
 import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { apiBaseUrl } from "../config";
-import type { AdminSession, EntityPayload, EntityRecord } from "../types";
+import type {
+  AdminSession,
+  EntityPagination,
+  EntityPayload,
+  EntityRecord,
+} from "../types";
 
 type LoginResponse = AdminSession & {
   ok: boolean;
@@ -16,11 +21,19 @@ type EntityResponse = {
   items?: EntityRecord[];
   item?: EntityRecord;
   message?: string;
+  page?: number;
+  pageCount?: number;
+  pageSize?: number;
+  total?: number;
 };
 
 type AdminRideDetailResponse = {
   ride: EntityRecord;
   samples: EntityRecord[];
+  sampleLimit?: number;
+  sampleOffset?: number;
+  samplesReturned?: number;
+  samplesTruncated?: boolean;
   message?: string;
 };
 
@@ -65,13 +78,27 @@ export async function listAdminResources(session: AdminSession) {
   return body.resources ?? [];
 }
 
-export async function listEntityRecords(session: AdminSession, resource: AdminResource) {
-  const response = await fetch(`${apiBaseUrl}${resource.endpoint}`, {
+export async function listEntityRecords(
+  session: AdminSession,
+  resource: AdminResource,
+  pagination: Pick<EntityPagination, "page" | "pageSize">
+) {
+  const query = new URLSearchParams({
+    page: String(pagination.page),
+    pageSize: String(pagination.pageSize),
+  });
+  const response = await fetch(`${apiBaseUrl}${resource.endpoint}?${query}`, {
     headers: authHeaders(session),
   });
   const body = await parseJson<EntityResponse>(response);
 
-  return body.items ?? [];
+  return {
+    items: body.items ?? [],
+    page: body.page ?? pagination.page,
+    pageCount: body.pageCount ?? 1,
+    pageSize: body.pageSize ?? pagination.pageSize,
+    total: body.total ?? body.items?.length ?? 0,
+  };
 }
 
 export async function createEntityRecord(

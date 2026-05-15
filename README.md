@@ -388,20 +388,22 @@ What already works:
 
 - mobile ride recording
 - local SQLite persistence on device
+- optional mobile signup/sign-in
+- offline-first pending-change sync from mobile SQLite to the backend
 - mobile web layout preview with native fallbacks
 - ride replay on a map
-- backend API scaffolding for ride ingestion
+- backend ride ingestion and mobile sync APIs
 - Prisma-backed backend schema and migrations
+- protected admin dashboard entity views
+- admin ride detail analysis with route map and vibration charts
 - shared TypeScript contracts for mobile and backend
 - shared design tokens and design guide
 - Docker-based local stack for API, Postgres, and admin
 
 What is not wired up yet:
 
-- mobile-to-backend upload flow
-- admin dashboard data views
 - admin user management screens
-- end-user accounts
+- paginated/downsampled deep analysis for very large ride sample sets
 - advanced analytics or calibrated surface scoring
 
 ## Deployment Shape
@@ -420,7 +422,7 @@ That keeps responsibilities clean:
 
 ## Next Development Priorities
 
-1. Add mobile upload to the API with batched sample syncing.
-2. Add a protected dashboard ride list and ride detail view.
-3. Add admin user management.
+1. Harden admin ride analysis for large rides with pagination, downsampling, and backend summaries.
+2. Add admin user management.
+3. Improve mobile sync ergonomics, retries, and historical ride recovery.
 4. Add better route scoring and later geospatial features.

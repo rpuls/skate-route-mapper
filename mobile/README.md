@@ -12,8 +12,8 @@ The mobile app owns:
 - local ride/sample persistence
 - ride replay and basic ride inspection
 - future external sensor connection
-- future upload/sync to the backend
-- future app-user authentication
+- optional app-user authentication
+- upload/sync to the backend through a local pending-change queue
 
 The mobile app should not own:
 
@@ -184,8 +184,6 @@ Current visual direction:
 
 ## Roadmap
 
-- Upload locally recorded rides to the backend.
-- Add offline upload queue and retry handling.
-- Add app-user sign-up and authentication when the datamodel is ready.
+- Improve sync retries, status visibility, and historical ride recovery.
 - Add BLE sensor support after hardware is available.
 - Add finished-ride stats such as duration, average speed, max speed, and surface-quality summaries.

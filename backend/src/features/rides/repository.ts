@@ -163,7 +163,16 @@ export async function listRides(limit: number) {
   });
 }
 
-export async function getRide(rideId: string) {
+export async function getRide(
+  rideId: string,
+  options: {
+    sampleLimit: number;
+    sampleOffset: number;
+  } = {
+    sampleLimit: 5000,
+    sampleOffset: 0,
+  }
+) {
   const ride = await prisma.ride.findUnique({
     where: {
       id: rideId,
@@ -181,6 +190,8 @@ export async function getRide(rideId: string) {
     orderBy: {
       recordedAt: "asc",
     },
+    skip: options.sampleOffset,
+    take: options.sampleLimit,
     select: {
       recordedAt: true,
       ax: true,
@@ -201,6 +212,10 @@ export async function getRide(rideId: string) {
 
   return {
     ride,
+    sampleLimit: options.sampleLimit,
+    sampleOffset: options.sampleOffset,
+    samplesReturned: samples.length,
+    samplesTruncated: options.sampleOffset + samples.length < ride.sampleCount,
     samples: samples.map((sample) => ({
       timestamp: sample.recordedAt.getTime(),
       ax: sample.ax,

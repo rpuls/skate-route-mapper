@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Pagination,
   Paper,
   Stack,
   Tab,
@@ -26,8 +27,11 @@ import { SamplesExplorer } from "../components/entities/SamplesExplorer";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
 import type { AdminSession, EntityPayload, EntityRecord } from "../types";
 
+const entityPageSize = 25;
+
 export function EntityManagementPage({ session }: { session: AdminSession }) {
   const [resourceName, setResourceName] = useState<string | null>(null);
+  const [entityPage, setEntityPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(null);
   const [selectedSamplesRideId, setSelectedSamplesRideId] = useState<string | null>(null);
   const [upsertOpen, setUpsertOpen] = useState(false);
@@ -39,12 +43,17 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   const usesCustomWorkflow = resource?.name === "rides" || usesCustomSamplesView;
   const recordsQuery = useEntityRecords(
     session,
-    usesCustomSamplesView ? null : resource
+    usesCustomSamplesView ? null : resource,
+    {
+      page: entityPage,
+      pageSize: entityPageSize,
+    }
   );
   const createMutation = useCreateEntityRecord(session, resource);
   const deleteMutation = useDeleteEntityRecord(session, resource);
   const updateMutation = useUpdateEntityRecord(session, resource);
-  const records = recordsQuery.data ?? [];
+  const records = recordsQuery.data?.items ?? [];
+  const pagination = recordsQuery.data;
   const idField = resource?.idField ?? "id";
   const selectedRecordId = selectedRecord?.[idField];
   const error = resourcesQuery.error ?? recordsQuery.error ?? createMutation.error ?? deleteMutation.error ?? updateMutation.error;
@@ -92,6 +101,7 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
 
   function handleResourceChange(nextResourceName: string) {
     setResourceName(nextResourceName);
+    setEntityPage(1);
     setSelectedRecord(null);
     if (nextResourceName !== "samples") {
       setSelectedSamplesRideId(null);
@@ -109,6 +119,12 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
       setResourceName(resources[0].name);
     }
   }, [resourceName, resources]);
+
+  useEffect(() => {
+    if (pagination && entityPage > pagination.pageCount) {
+      setEntityPage(pagination.pageCount);
+    }
+  }, [entityPage, pagination]);
 
   return (
     <Paper
@@ -197,7 +213,7 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                         ? "Filter by user and ride"
                         : isLoading
                           ? "Loading"
-                          : `${records.length} total`}
+                          : `${pagination?.total ?? records.length} total`}
                     </Typography>
                     {resource.canCreate && !usesCustomSamplesView ? (
                       <Button
@@ -245,6 +261,29 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                     selectedRecord={selectedFreshRecord}
                   />
                 )}
+                {!usesCustomSamplesView && pagination && pagination.pageCount > 1 ? (
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    sx={{
+                      alignItems: { xs: "stretch", sm: "center" },
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
+                      Page {pagination.page} of {pagination.pageCount}
+                    </Typography>
+                    <Pagination
+                      color="primary"
+                      count={pagination.pageCount}
+                      onChange={(_, nextPage) => {
+                        setEntityPage(nextPage);
+                        setSelectedRecord(null);
+                      }}
+                      page={entityPage}
+                    />
+                  </Stack>
+                ) : null}
               </Stack>
             </Paper>
 

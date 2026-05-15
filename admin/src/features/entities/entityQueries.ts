@@ -19,17 +19,33 @@ export function useAdminResources(session: AdminSession) {
   });
 }
 
-export function useEntityRecords(session: AdminSession, resource: AdminResource | null) {
+export function useEntityRecords(
+  session: AdminSession,
+  resource: AdminResource | null,
+  pagination = {
+    page: 1,
+    pageSize: 25,
+  }
+) {
   return useQuery({
     enabled: Boolean(resource),
-    queryKey: resource ? queryKeys.entityRecords(resource.name) : queryKeys.entityRecords("none"),
+    queryKey: resource
+      ? queryKeys.entityRecords(resource.name, pagination.page, pagination.pageSize)
+      : queryKeys.entityRecords("none", pagination.page, pagination.pageSize),
     queryFn: () => {
       if (!resource) {
-        return [];
+        return {
+          items: [],
+          page: pagination.page,
+          pageCount: 1,
+          pageSize: pagination.pageSize,
+          total: 0,
+        };
       }
 
-      return listEntityRecords(session, resource);
+      return listEntityRecords(session, resource, pagination);
     },
+    placeholderData: (previousData) => previousData,
   });
 }
 

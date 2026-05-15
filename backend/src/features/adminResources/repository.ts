@@ -33,6 +33,7 @@ function getDelegate(delegate: string) {
   }
 
   return modelDelegate as {
+    count: () => Promise<number>;
     create: (args: unknown) => Promise<unknown>;
     delete: (args: unknown) => Promise<unknown>;
     findMany: (args: unknown) => Promise<unknown[]>;
@@ -113,16 +114,34 @@ function coerceEntityId(resource: AdminResource, rawId: string) {
   return rawId;
 }
 
-export async function listAdminEntity(resource: AdminResource, delegate: string) {
-  const items = await getDelegate(delegate).findMany({
+export async function listAdminEntity(
+  resource: AdminResource,
+  delegate: string,
+  pagination: {
+    page: number;
+    pageSize: number;
+  }
+) {
+  const modelDelegate = getDelegate(delegate);
+  const [items, total] = await Promise.all([
+    modelDelegate.findMany({
     orderBy: {
       [resource.idField]: "desc",
     },
     select: selectVisibleFields(resource),
-    take: 100,
-  });
+      skip: (pagination.page - 1) * pagination.pageSize,
+      take: pagination.pageSize,
+    }),
+    modelDelegate.count(),
+  ]);
 
-  return items.map((item) => serializeEntityValue(item));
+  return {
+    items: items.map((item) => serializeEntityValue(item)),
+    page: pagination.page,
+    pageCount: Math.max(1, Math.ceil(total / pagination.pageSize)),
+    pageSize: pagination.pageSize,
+    total,
+  };
 }
 
 export async function createAdminEntity(

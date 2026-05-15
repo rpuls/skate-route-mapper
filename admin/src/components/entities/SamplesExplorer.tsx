@@ -79,10 +79,16 @@ export function SamplesExplorer({
 }) {
   const usersResource = resources.find((resource) => resource.name === "users") ?? null;
   const ridesResource = resources.find((resource) => resource.name === "rides") ?? null;
-  const usersQuery = useEntityRecords(session, usersResource);
-  const ridesQuery = useEntityRecords(session, ridesResource);
-  const users = usersQuery.data ?? [];
-  const rides = ridesQuery.data ?? [];
+  const usersQuery = useEntityRecords(session, usersResource, {
+    page: 1,
+    pageSize: 100,
+  });
+  const ridesQuery = useEntityRecords(session, ridesResource, {
+    page: 1,
+    pageSize: 100,
+  });
+  const users = usersQuery.data?.items ?? [];
+  const rides = ridesQuery.data?.items ?? [];
 
   const [selectedUserId, setSelectedUserId] = useState(allUsersValue);
   const [selectedRideId, setSelectedRideId] = useState(initialRideId ?? "");

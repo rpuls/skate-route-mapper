@@ -14,6 +14,11 @@ const adminEntityItemParamsSchema = adminEntityParamsSchema.extend({
   entityId: z.string().min(1),
 });
 
+const adminEntityListQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(25),
+});
+
 const entityPayloadSchema = z.record(z.string(), z.unknown());
 
 const requireAdmin = async (
@@ -44,6 +49,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     preHandler: requireAdmin,
   }, async (request, reply) => {
     const { resourceName } = adminEntityParamsSchema.parse(request.params);
+    const pagination = adminEntityListQuerySchema.parse(request.query);
     const resourceContext = AdminResources.getAdminResource(resourceName);
 
     if (!resourceContext) {
@@ -53,9 +59,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       });
     }
 
-    return {
-      items: await AdminResources.listAdminEntity(resourceContext.resource, resourceContext.delegateName),
-    };
+    return AdminResources.listAdminEntity(
+      resourceContext.resource,
+      resourceContext.delegateName,
+      pagination
+    );
   });
 
   app.post("/v1/admin/entities/:resourceName", {
@@ -181,7 +189,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     preHandler: requireAdmin,
   }, async (request, reply) => {
     const { rideId } = Rides.rideParamsSchema.parse(request.params);
-    const ride = await Rides.getRide(rideId);
+    const query = Rides.rideDetailQuerySchema.parse(request.query);
+    const ride = await Rides.getRide(rideId, query);
 
     if (!ride) {
       return reply.code(404).send({

@@ -1,6 +1,7 @@
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import EditIcon from "@mui/icons-material/Edit";
 import {
+  Alert,
   Box,
   Button,
   Divider,
@@ -74,17 +75,22 @@ export function RidesExplorer({
   const rideDetailQuery = useAdminRideDetail(session, selectedRideId);
   const detail = rideDetailQuery.data?.ride ?? selectedRecord;
   const sampleCount = useMemo(
-    () => rideDetailQuery.data?.samples.length ?? detail?.sampleCount ?? 0,
+    () => detail?.sampleCount ?? rideDetailQuery.data?.samples.length ?? 0,
     [detail?.sampleCount, rideDetailQuery.data?.samples.length]
   );
 
   useEffect(() => {
-    if (selectedRecord) {
+    if (
+      selectedRecord &&
+      records.some(
+        (record) => record[resource.idField] === selectedRecord[resource.idField]
+      )
+    ) {
       return;
     }
 
     setSelectedRecord(records[0] ?? null);
-  }, [records, selectedRecord]);
+  }, [records, resource.idField, selectedRecord]);
 
   return (
     <Stack spacing={2} sx={{ minWidth: 0 }}>
@@ -168,6 +174,11 @@ export function RidesExplorer({
             <Divider />
 
             <RideAnalysisPanel samples={rideDetailQuery.data?.samples ?? []} />
+            {rideDetailQuery.data?.samplesTruncated ? (
+              <Alert severity="info">
+                Showing the first {rideDetailQuery.data.samplesReturned} samples for this ride.
+              </Alert>
+            ) : null}
           </Stack>
         ) : (
           <Typography color="text.secondary" sx={{ fontWeight: 800 }}>

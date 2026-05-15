@@ -48,3 +48,8 @@ export const rideFinishSchema = z.object({
 export const ridesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(25),
 });
+
+export const rideDetailQuerySchema = z.object({
+  sampleLimit: z.coerce.number().int().positive().max(5000).default(5000),
+  sampleOffset: z.coerce.number().int().nonnegative().default(0),
+});

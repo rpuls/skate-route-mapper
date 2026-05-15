@@ -52,6 +52,9 @@ export const queryKeys = {
 
 When a mutation changes server data, invalidate the specific affected query key.
 
+Generic entity list queries are paginated. Include `page` and `pageSize` in the
+query key so changing pages does not overwrite a different page in the cache.
+
 ## API Client Rules
 
 Raw API functions live in `admin/src/api/adminApi.ts`. These functions should:
@@ -104,6 +107,11 @@ When changing visual language:
 The entity viewer is generated from Prisma datamodel metadata returned by the API. Do not manually add entity tabs in the frontend.
 
 Create and edit flows should share `AddOrEditEntityDialog`, with page-level TanStack Query hooks providing create, update, and delete mutations. The table remains for browsing and selecting records; row selection opens the dialog for editable/deletable resources.
+
+Generic entity lists should use the API pagination metadata instead of assuming
+the first response contains every record. Keep large analysis payloads behind
+explicit limits or dedicated endpoints rather than loading entire tables into a
+component.
 
 Allowed custom policy belongs on the API side, for example:
 
