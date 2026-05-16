@@ -37,6 +37,7 @@ Project docs:
 - `docs/data-model.md` explains the Prisma datamodel.
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
+- `docs/vibration-roughness-plan.md` plans high-frequency sensor capture, compact vibration features, and route roughness segmentation.
 - `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
 - `firmware/nesso-n1/README.md` covers the Nesso N1 BLE IMU sketch and packet format.
 

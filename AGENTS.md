@@ -9,6 +9,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - API contract: `docs/api.md`
 - Data model: `docs/data-model.md`
 - Admin frontend architecture: `docs/admin-frontend.md`
+- Vibration roughness planning: `docs/vibration-roughness-plan.md`
 - Design system guide: `docs/design-guide.md`
 - Design tokens/source of truth: `shared/src/design.ts`
 
