@@ -21,7 +21,8 @@ import {
   stateStyles,
 } from "@skate-route-mapper/shared/design";
 import {
-  NESSO_BLE_DEVICE_NAME,
+  NESSO_GATE_A_BLE_DEVICE_NAME,
+  type NessoFeatureFrame,
   type NessoImuPacket,
 } from "@skate-route-mapper/shared/nessoBle";
 import * as NessoBle from "../native/NessoBle";
@@ -46,7 +47,7 @@ const sensorOptions: { label: string; value: SensorSource; description: string }
   {
     label: "Nesso N1 + phone GPS",
     value: "external",
-    description: `${NESSO_BLE_DEVICE_NAME} supplies accelerometer and gyroscope. GPS and camera stay on this phone.`,
+    description: `${NESSO_GATE_A_BLE_DEVICE_NAME} supplies compact surface-quality frames. GPS and camera stay on this phone.`,
   },
 ];
 
@@ -57,6 +58,7 @@ export default function HomeScreen() {
     status,
     setVehicleType,
     setSensorSource,
+    setLatestExternalFeatureFrame,
     setLatestExternalImuSample,
     startRecording,
   } = useMeasurementStore();
@@ -66,11 +68,13 @@ export default function HomeScreen() {
   );
   const [nessoMessage, setNessoMessage] = useState(
     NessoBle.isNessoBleSupported()
-      ? "Ready to pair with the Nesso N1."
+      ? "Ready to pair with the Nesso Gate A firmware."
       : "BLE sensor pairing requires a native mobile build."
   );
   const [latestNessoSample, setLatestNessoSample] =
     useState<NessoImuPacket | null>(null);
+  const [latestNessoFeatureFrame, setLatestNessoFeatureFrame] =
+    useState<NessoFeatureFrame | null>(null);
   const nessoConnection = useRef<NessoBleConnection | null>(null);
 
   const hasNessoConnection = nessoStatus === "connected";
@@ -85,6 +89,11 @@ export default function HomeScreen() {
           latestNessoSample.az * latestNessoSample.az
       )
     : null;
+  const nessoQualityLabel = latestNessoFeatureFrame
+    ? getRoughnessLabel(latestNessoFeatureFrame.roughnessLevel)
+    : latestNessoMagnitude != null
+    ? "Raw preview"
+    : "-";
 
   const navigation = useNavigation<any>();
 
@@ -92,29 +101,45 @@ export default function HomeScreen() {
     return () => {
       nessoConnection.current?.disconnect();
       setLatestExternalImuSample(null);
+      setLatestExternalFeatureFrame(null);
     };
-  }, [setLatestExternalImuSample]);
+  }, [setLatestExternalFeatureFrame, setLatestExternalImuSample]);
 
   const handleConnectNesso = async () => {
     if (nessoStatus === "connected") {
       await nessoConnection.current?.disconnect();
       nessoConnection.current = null;
       setLatestNessoSample(null);
+      setLatestNessoFeatureFrame(null);
       setLatestExternalImuSample(null);
+      setLatestExternalFeatureFrame(null);
       setNessoStatus("idle");
-      setNessoMessage("Ready to pair with the Nesso N1.");
+      setNessoMessage("Ready to pair with the Nesso Gate A firmware.");
       setSensorSource("phone");
       return;
     }
 
     setNessoStatus("scanning");
-    setNessoMessage(`Searching for ${NESSO_BLE_DEVICE_NAME}...`);
+    setNessoMessage(`Searching for ${NESSO_GATE_A_BLE_DEVICE_NAME}...`);
 
     try {
       const connection = await NessoBle.connectToNesso({
         onSample: (sample) => {
           setLatestNessoSample(sample);
           setLatestExternalImuSample(sample);
+          setNessoMessage("Raw packet received; flash the Gate A firmware for quality frames.");
+        },
+        onFeatureFrame: (frame) => {
+          setLatestNessoFeatureFrame(frame);
+          setLatestExternalFeatureFrame(frame);
+          setNessoMessage(
+            `Feature frame #${frame.sequence}: ${frame.rawSampleCount} samples, ${Math.round(
+              frame.confidence * 100
+            )}% confidence.`
+          );
+        },
+        onError: (message) => {
+          setNessoMessage(`Nesso packet error: ${message}`);
         },
       });
       await connection.setSampleInterval(200); //5 hz
@@ -137,10 +162,8 @@ export default function HomeScreen() {
       Platform.OS === "android" &&
       BackgroundRecorder.isAvailable()
     ) {
-      await nessoConnection.current?.disconnect();
-      nessoConnection.current = null;
       setNessoMessage(
-        "Nesso N1 will reconnect through the Android recording service."
+        "Nesso N1 stays linked here for compact quality frames."
       );
     }
 
@@ -209,7 +232,7 @@ export default function HomeScreen() {
                 <View style={styles.bleTitleRow}>
                   <View>
                     <Text style={styles.sensorTitle}>Skate IMU</Text>
-                    <Text style={styles.bleName}>Nesso N1 motion module</Text>
+                    <Text style={styles.bleName}>Nesso Gate A feature module</Text>
                   </View>
 
                   <View style={[styles.statusPill, getNessoPillStyle(nessoStatus)]}>
@@ -219,7 +242,7 @@ export default function HomeScreen() {
                 </View>
 
                 <Text style={styles.sensorDescription}>
-                  Connect the Nesso N1 for accelerometer and gyroscope data. Route GPS and camera stay on this phone.
+                  Connect the Nesso N1 for compact surface-quality frames. Route GPS and camera stay on this phone.
                 </Text>
                 <Text style={styles.bleStatus}>{nessoMessage}</Text>
               </View>
@@ -232,16 +255,20 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Sample</Text>
+                <Text style={styles.telemetryLabel}>Quality</Text>
                 <Text style={styles.telemetryValue}>
-                  {latestNessoSample ? `#${latestNessoSample.sequence}` : "-"}
+                  {nessoQualityLabel}
                 </Text>
               </View>
 
               <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Motion</Text>
+                <Text style={styles.telemetryLabel}>Window</Text>
                 <Text style={styles.telemetryValue}>
-                  {latestNessoMagnitude != null ? `${latestNessoMagnitude.toFixed(2)}g` : "-"}
+                  {latestNessoFeatureFrame
+                    ? `${latestNessoFeatureFrame.windowMs}ms`
+                    : latestNessoMagnitude != null
+                    ? `${latestNessoMagnitude.toFixed(2)}g`
+                    : "-"}
                 </Text>
               </View>
             </View>
@@ -378,6 +405,23 @@ function getSignalBarStyle(bar: number) {
       return styles.signalBar3;
     default:
       return styles.signalBar4;
+  }
+}
+
+function getRoughnessLabel(level: NessoFeatureFrame["roughnessLevel"]) {
+  switch (level) {
+    case 1:
+      return "Excellent";
+    case 2:
+      return "Good";
+    case 3:
+      return "Okay";
+    case 4:
+      return "Rough";
+    case 5:
+      return "Very rough";
+    case 6:
+      return "Unskatable";
   }
 }
 

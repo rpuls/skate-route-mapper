@@ -64,6 +64,32 @@ Continue with Nesso only if a focused firmware-only experiment shows:
 
 If Nesso cannot show meaningful separation within 1-2 focused experiments, stop Nesso-specific investment and evaluate alternative hardware.
 
+Current branch answer:
+
+- add an isolated Nesso Gate A feature-frame firmware in
+  `firmware/nesso-n1-new/SkateRouteNessoFeatureFrames`
+- use a separate Gate A BLE service UUID so testing cannot accidentally connect
+  to the legacy raw-stream firmware
+- sample the IMU internally as fast as the firmware loop can service it
+- accumulate a configurable short window, defaulting to `200ms`
+- emit one compact quality frame per window instead of streaming every raw IMU reading
+- include measured raw sample count, window length, high-pass vibration RMS, high-pass vibration peak-to-peak, roughness level, and confidence
+- show the mobile user a live surface-quality indicator instead of a raw sample graph
+- keep old raw packet parsing in shared/mobile code as a transition fallback, but do not make raw high-rate BLE the normal path
+
+This does not yet claim that Nesso has fully passed Gate A. It creates the branch needed to test the gate with real surfaces and inspect whether the compact feature output separates stillness, smooth asphalt, rough asphalt, paving stones, and bad surfaces.
+
+Current calibration note, `calibration v2`:
+
+- early magnitude-variance scoring was too sensitive because smooth arcs, gravity vector changes, leg swing, and normal skate movement still counted as roughness
+- the current firmware iteration uses a moving per-axis acceleration baseline and scores the high-pass vibration component instead of raw acceleration magnitude variation
+- serial output now reports both high-pass vibration fields (`vibRms`, `vibP2p`, `jerkRms`) and raw movement fields (`rawStd`, `rawP2p`) so tests can show whether false positives are coming from slow movement or real high-frequency vibration
+- the BLE packet shape is unchanged for this iteration; the existing `accelRms` and `accelPeakToPeak` fields now carry high-pass vibration RMS and high-pass vibration peak-to-peak values
+- `calibration v2` widens the `1-6` bucket thresholds and uses a smoothed roughness score for the reported level so brief impacts and mild vibration do not immediately pin the live quality indicator at level 6
+- indoor testing after `calibration v2` is promising: smooth hand movement is barely detected, low vibration no longer maxes out, and semi-rough indoor vibration reaches roughly level `3-4`
+- outdoor testing on real rough asphalt is still required before treating the level thresholds as product-calibrated
+- if live levels are still unstable, the next experiment should compare longer rolling averages, for example `2s`, `5s`, and distance-based windows, before adding more complex movement rejection
+
 ### Gate B: Feature-Frame Feasibility
 
 Continue to mobile/backend work only if Nesso can emit compact feature frames over BLE at `5Hz` or `10Hz` without losing the useful separation found in the firmware-only experiment.
@@ -76,11 +102,15 @@ Add Prisma models, sync operations, route segmentation, and map rendering only a
 
 ### Current Nesso Firmware
 
-The firmware lives in:
+The legacy raw-stream firmware lives in:
 
 - `firmware/nesso-n1/SkateRouteNessoImu/SkateRouteNessoImu.ino`
 
-Current BLE packet shape:
+The isolated Gate A feature-frame experiment lives in:
+
+- `firmware/nesso-n1-new/SkateRouteNessoFeatureFrames/SkateRouteNessoFeatureFrames.ino`
+
+Legacy raw BLE packet shape:
 
 ```text
 uint32 sequence
@@ -93,17 +123,37 @@ int16 gyMdps
 int16 gzMdps
 ```
 
+Gate A feature BLE packet shape:
+
+```text
+uint8  packetType                 // 0x02
+uint8  protocolVersion            // 1
+uint16 windowMs
+uint32 sequence
+uint32 uptimeMs
+uint16 rawSampleCount
+uint16 highPassVibrationRmsMg
+uint16 highPassVibrationPeakToPeakMg
+uint8  roughnessLevel             // 1 excellent, 6 unskatable
+uint8  confidencePercent
+```
+
 The shared parser lives in:
 
 - `shared/src/nessoBle.ts`
 
 Important details:
 
-- The current firmware default interval is `20ms`, or `50Hz`.
-- The current firmware minimum interval is `10ms`, or `100Hz`.
-- The mobile foreground Nesso preview currently requests `200ms`, or `5Hz`.
-- The Android background recorder also defaults to a `200ms` interval.
-- Reaching `800Hz` or `1000Hz` would require firmware and protocol changes, not just an app setting change.
+- The legacy firmware default interval is `20ms`, or `50Hz`.
+- The legacy firmware minimum interval is `10ms`, or `100Hz`.
+- The Gate A firmware default feature window is `200ms`, or `5Hz`.
+- The Gate A firmware minimum feature window is `100ms`, or `10Hz`.
+- The Gate A firmware advertises `Skate Nesso N1 Gate A` and service UUID
+  `7b32f8d0-5d0b-4f0e-a1f5-8f30c44c0001`.
+- The mobile foreground Nesso preview requests `200ms`, or `5Hz`.
+- Raw IMU samples are accumulated on-device during each Gate A feature window and are not sent over BLE by default.
+- Gate A `calibration v2` prints `score` and `smoothScore` over serial for threshold tuning, but those fields are not yet included in the 20-byte BLE packet.
+- Reaching a measured internal `800Hz` or `1000Hz` still has to be proven on hardware.
 
 ### Current Mobile Capture
 
@@ -573,6 +623,47 @@ Suggested debug capture strategy:
 - normal ride stores feature frames for the whole route
 - selected 5-15 second windows store raw data locally
 - raw windows can be uploaded manually for algorithm research
+
+### Current Gate A Test Plan
+
+Use the `calibration v2` firmware in
+`firmware/nesso-n1-new/SkateRouteNessoFeatureFrames`.
+
+Before collecting data, confirm serial monitor shows:
+
+```text
+Skate Nesso N1 Gate A feature firmware booting (calibration v2)
+feature calibration v2 ... score=... smoothScore=... level=...
+```
+
+If `calibration v2` is missing, the device is not running the current firmware.
+
+For each surface, collect at least `10-20` feature lines and write down the
+surface label, approximate speed, mounting position, and subjective quality:
+
+- table stillness
+- smooth hand movement
+- skate rolling on very smooth indoor wood
+- skate rolling on the indoor mat used during calibration
+- smooth asphalt
+- normal asphalt or bike path
+- rough asphalt
+- paving stones or cracked pavement
+- clearly bad or unskatable surface
+
+Use the serial fields this way:
+
+- `rawStd` and `rawP2p` describe broader movement/acceleration variation
+- `vibRms`, `vibP2p`, and `jerkRms` describe the filtered vibration signal
+- `score` is the instant roughness score for one feature window
+- `smoothScore` is the rolling score used for the live `1-6` level
+- `level` is useful for immediate UI feedback but should not be treated as final product truth yet
+
+If real rides show that skating stride creates a mostly stable baseline while
+surface changes still move `smoothScore`, continue with relative calibration and
+longer rolling averages. If stride/mounting dominates the signal, add explicit
+movement rejection using gyro, speed/contact gating, or short raw debug captures
+before building backend storage.
 
 ### Firmware-Only Feasibility Experiment
 

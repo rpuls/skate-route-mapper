@@ -3,6 +3,7 @@ import * as Crypto from "expo-crypto";
 import type {
   MeasurementSample,
   MeasurementStatus,
+  NessoFeatureFrame,
   NessoImuPacket,
   SensorSource,
   VehicleType,
@@ -23,10 +24,13 @@ type MeasurementState = {
   status: MeasurementStatus;
   samples: MeasurementSample[];
   latestExternalImuSample: NessoImuPacket | null;
+  latestExternalFeatureFrame: NessoFeatureFrame | null;
+  externalFeatureFrameCount: number;
 
   setVehicleType: (vehicleType: VehicleType) => void;
   setSensorSource: (sensorSource: SensorSource) => void;
   setLatestExternalImuSample: (sample: NessoImuPacket | null) => void;
+  setLatestExternalFeatureFrame: (frame: NessoFeatureFrame | null) => void;
 
   startRecording: () => string;
   stopRecording: () => void;
@@ -43,10 +47,17 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
   status: "ready",
   samples: [],
   latestExternalImuSample: null,
+  latestExternalFeatureFrame: null,
+  externalFeatureFrameCount: 0,
 
   setVehicleType: (vehicleType) => set({ vehicleType }),
   setSensorSource: (sensorSource) => set({ sensorSource }),
   setLatestExternalImuSample: (sample) => set({ latestExternalImuSample: sample }),
+  setLatestExternalFeatureFrame: (frame) =>
+    set((state) => ({
+      latestExternalFeatureFrame: frame,
+      externalFeatureFrameCount: frame ? state.externalFeatureFrameCount + 1 : 0,
+    })),
 
   startRecording: () => {
     const rideId = Crypto.randomUUID();
@@ -62,6 +73,8 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       currentRideId: rideId,
       status: "recording",
       samples: [],
+      latestExternalFeatureFrame: null,
+      externalFeatureFrameCount: 0,
     });
 
     return rideId;
@@ -85,6 +98,8 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       status: "ready",
       samples: [],
       currentRideId: null,
+      latestExternalFeatureFrame: null,
+      externalFeatureFrameCount: 0,
     }),
 
   addSample: (sample) => {

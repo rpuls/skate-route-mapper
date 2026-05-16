@@ -1,4 +1,7 @@
-import type { NessoImuPacket } from "@skate-route-mapper/shared/nessoBle";
+import type {
+  NessoFeatureFrame,
+  NessoImuPacket,
+} from "@skate-route-mapper/shared/nessoBle";
 
 export type NessoBleConnection = {
   deviceId: string;
@@ -10,6 +13,8 @@ export type NessoBleConnection = {
 type ConnectOptions = {
   timeoutMs?: number;
   onSample?: (sample: NessoImuPacket) => void;
+  onFeatureFrame?: (frame: NessoFeatureFrame) => void;
+  onError?: (message: string) => void;
 };
 
 export function isNessoBleSupported() {

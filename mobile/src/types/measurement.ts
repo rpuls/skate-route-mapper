@@ -6,4 +6,8 @@ export type {
   VehicleType,
 } from "@skate-route-mapper/shared/mobileContracts";
 
-export type { NessoImuPacket } from "@skate-route-mapper/shared/nessoBle";
+export type {
+  NessoFeatureFrame,
+  NessoImuPacket,
+  NessoMotionPacket,
+} from "@skate-route-mapper/shared/nessoBle";

@@ -1,11 +1,12 @@
 import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 import { BleManager, type Device, type Subscription } from "react-native-ble-plx";
 import {
-  NESSO_BLE_CONFIG_CHARACTERISTIC_UUID,
-  NESSO_BLE_DEVICE_NAME,
-  NESSO_BLE_IMU_CHARACTERISTIC_UUID,
-  NESSO_BLE_SERVICE_UUID,
-  parseNessoImuPacket,
+  NESSO_GATE_A_BLE_DEVICE_NAME,
+  NESSO_GATE_A_BLE_CONFIG_CHARACTERISTIC_UUID,
+  NESSO_GATE_A_BLE_FEATURE_CHARACTERISTIC_UUID,
+  NESSO_GATE_A_BLE_SERVICE_UUID,
+  parseNessoMotionPacket,
+  type NessoFeatureFrame,
   type NessoImuPacket,
 } from "@skate-route-mapper/shared/nessoBle";
 
@@ -19,6 +20,8 @@ export type NessoBleConnection = {
 type ConnectOptions = {
   timeoutMs?: number;
   onSample?: (sample: NessoImuPacket) => void;
+  onFeatureFrame?: (frame: NessoFeatureFrame) => void;
+  onError?: (message: string) => void;
 };
 
 let manager: BleManager | null = null;
@@ -96,7 +99,7 @@ export async function connectToNesso(
     };
 
     const timeout = setTimeout(() => {
-      finishWithError(new Error(`Could not find ${NESSO_BLE_DEVICE_NAME}.`));
+      finishWithError(new Error(`Could not find ${NESSO_GATE_A_BLE_DEVICE_NAME}.`));
     }, timeoutMs);
 
     const finishWithDevice = async (device: Device) => {
@@ -110,33 +113,51 @@ export async function connectToNesso(
         const readyDevice = await connectedDevice.discoverAllServicesAndCharacteristics();
 
         sampleSubscription = readyDevice.monitorCharacteristicForService(
-          NESSO_BLE_SERVICE_UUID,
-          NESSO_BLE_IMU_CHARACTERISTIC_UUID,
+          NESSO_GATE_A_BLE_SERVICE_UUID,
+          NESSO_GATE_A_BLE_FEATURE_CHARACTERISTIC_UUID,
           (error, characteristic) => {
             if (error) {
               console.log("Nesso BLE sample monitor error", error);
               return;
             }
 
-            if (!characteristic?.value || !options.onSample) {
+            if (!characteristic?.value) {
               return;
             }
 
-            options.onSample(parseNessoImuPacket(base64ToBytes(characteristic.value)));
+            let packet: NessoImuPacket | NessoFeatureFrame;
+
+            try {
+              packet = parseNessoMotionPacket(base64ToBytes(characteristic.value));
+            } catch (parseError) {
+              const message =
+                parseError instanceof Error
+                  ? parseError.message
+                  : "Unable to parse Nesso BLE packet.";
+              console.log("Nesso BLE packet parse error", message);
+              options.onError?.(message);
+              return;
+            }
+
+            if (packet.type === "feature") {
+              options.onFeatureFrame?.(packet);
+            } else {
+              options.onSample?.(packet);
+            }
           }
         );
 
         resolve({
           deviceId: readyDevice.id,
-          deviceName: readyDevice.name ?? readyDevice.localName ?? NESSO_BLE_DEVICE_NAME,
+          deviceName: readyDevice.name ?? readyDevice.localName ?? NESSO_GATE_A_BLE_DEVICE_NAME,
           disconnect: async () => {
             sampleSubscription?.remove();
             await bleManager.cancelDeviceConnection(readyDevice.id);
           },
           setSampleInterval: async (intervalMs: number) => {
             await readyDevice.writeCharacteristicWithResponseForService(
-              NESSO_BLE_SERVICE_UUID,
-              NESSO_BLE_CONFIG_CHARACTERISTIC_UUID,
+              NESSO_GATE_A_BLE_SERVICE_UUID,
+              NESSO_GATE_A_BLE_CONFIG_CHARACTERISTIC_UUID,
               uint16ToBase64(intervalMs)
             );
           },
@@ -147,7 +168,7 @@ export async function connectToNesso(
     };
 
     bleManager.startDeviceScan(
-      [NESSO_BLE_SERVICE_UUID],
+      [NESSO_GATE_A_BLE_SERVICE_UUID],
       { allowDuplicates: false },
       (error, device) => {
         if (error) {
@@ -162,9 +183,9 @@ export async function connectToNesso(
         const names = [device.name, device.localName].filter(Boolean).join(" ");
         const advertisedServiceUuids = device.serviceUUIDs ?? [];
         const isNesso =
-          names.includes("Nesso") ||
+          names.includes("Gate A") ||
           advertisedServiceUuids.some(
-            (uuid) => uuid.toLowerCase() === NESSO_BLE_SERVICE_UUID
+            (uuid) => uuid.toLowerCase() === NESSO_GATE_A_BLE_SERVICE_UUID
           );
 
         if (isNesso) {
@@ -199,7 +220,7 @@ function base64ToBytes(value: string) {
 }
 
 function uint16ToBase64(value: number) {
-  const clamped = Math.max(10, Math.min(1000, Math.round(value)));
+  const clamped = Math.max(100, Math.min(1000, Math.round(value)));
   const bytes = [clamped & 0xff, (clamped >> 8) & 0xff];
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   let output = "";

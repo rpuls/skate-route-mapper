@@ -39,7 +39,8 @@ Project docs:
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
 - `docs/vibration-roughness-plan.md` plans high-frequency sensor capture, compact vibration features, and route roughness segmentation.
 - `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
-- `firmware/nesso-n1/README.md` covers the Nesso N1 BLE IMU sketch and packet format.
+- `firmware/nesso-n1/README.md` covers the legacy Nesso N1 raw BLE IMU sketch.
+- `firmware/nesso-n1-new/README.md` covers the Gate A compact roughness feature-frame prototype.
 
 ## How The System Works
 
@@ -406,6 +407,19 @@ What is not wired up yet:
 - admin user management screens
 - paginated/downsampled deep analysis for very large ride sample sets
 - advanced analytics or calibrated surface scoring
+- production storage/sync for compact Nesso roughness feature frames
+
+Signal research in progress:
+
+- `docs/vibration-roughness-plan.md` is the canonical plan for high-frequency
+  vibration capture, feature frames, calibration, and eventual route roughness
+  segments.
+- `firmware/nesso-n1-new/` contains the current Gate A Nesso firmware prototype.
+- The current Gate A firmware label is `calibration v2`; it sends compact BLE
+  feature frames and prints serial fields for tuning (`vibRms`, `vibP2p`,
+  `jerkRms`, `rawStd`, `rawP2p`, `score`, `smoothScore`, `level`).
+- Indoor calibration is promising, but real asphalt testing is still required
+  before treating the `1-6` levels as product-calibrated.
 
 ## Deployment Shape
 

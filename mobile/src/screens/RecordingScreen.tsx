@@ -5,7 +5,6 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  Dimensions,
   ScrollView,
   Platform,
   PermissionsAndroid,
@@ -13,14 +12,12 @@ import {
 import { Accelerometer, Gyroscope } from "expo-sensors";
 import * as Location from "expo-location";
 import { useKeepAwake } from "expo-keep-awake";
-import { LineChart } from "react-native-chart-kit";
 import { useNavigation } from "@react-navigation/native";
 import { useMeasurementStore } from "../store/measurementStore";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";
 import type { BackgroundRecorderSample } from "../native/BackgroundRecorder";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const USE_ANDROID_BACKGROUND_RECORDER =
   Platform.OS === "android" && BackgroundRecorder.isAvailable();
 
@@ -95,10 +92,17 @@ export default function RecordingScreen() {
   const latestExternalImuSample = useMeasurementStore(
     (state) => state.latestExternalImuSample
   );
+  const latestExternalFeatureFrame = useMeasurementStore(
+    (state) => state.latestExternalFeatureFrame
+  );
+  const externalFeatureFrameCount = useMeasurementStore(
+    (state) => state.externalFeatureFrameCount
+  );
   const addSample = useMeasurementStore((state) => state.addSample);
   const addSamples = useMeasurementStore((state) => state.addSamples);
   const stopRecordingInStore = useMeasurementStore((state) => state.stopRecording);
-  const canUseAndroidBackgroundRecorder = USE_ANDROID_BACKGROUND_RECORDER;
+  const canUseAndroidBackgroundRecorder =
+    USE_ANDROID_BACKGROUND_RECORDER && sensorSource === "phone";
 
   const [accel, setAccel] = useState<AccelData>({ x: 0, y: 0, z: 0 });
   const [gyro, setGyro] = useState<GyroData>({ x: 0, y: 0, z: 0 });
@@ -308,25 +312,12 @@ export default function RecordingScreen() {
     };
   }, [canUseAndroidBackgroundRecorder, currentRideId, sensorSource]);
 
-  const latestSample = samples[samples.length - 1];
   const visibleSampleCount = canUseAndroidBackgroundRecorder
     ? nativeSampleCount
+    : sensorSource === "external"
+    ? externalFeatureFrameCount
     : samples.length;
-  const visibleLatestSample = canUseAndroidBackgroundRecorder
-    ? nativeLatestSample
-    : latestSample;
-
-  const chartData = useMemo(() => {
-    if (canUseAndroidBackgroundRecorder) {
-      return nativeChartData;
-    }
-
-    const latest = samples.slice(-40);
-    const values = latest.map((sample) => sample.vibrationMagnitude);
-
-    return values.length > 0 ? values : [0];
-  }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
-
+  const countLabel = sensorSource === "external" ? "Frames" : "Samples";
   const averageVibration = useMemo(() => {
     if (canUseAndroidBackgroundRecorder) {
       const visibleValues = nativeChartData.filter((value) => value > 0);
@@ -347,6 +338,14 @@ export default function RecordingScreen() {
 
     return total / latest.length;
   }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
+  const qualityLevel = latestExternalFeatureFrame?.roughnessLevel ?? getFallbackQualityLevel(averageVibration);
+  const qualityLabel = latestExternalFeatureFrame
+    ? getRoughnessLabel(latestExternalFeatureFrame.roughnessLevel)
+    : getRoughnessLabel(qualityLevel);
+  const qualityConfidence = latestExternalFeatureFrame?.confidence ?? 0.35;
+  const qualityDetail = latestExternalFeatureFrame
+    ? `${latestExternalFeatureFrame.rawSampleCount} onboard samples in ${latestExternalFeatureFrame.windowMs}ms`
+    : "Estimated from low-rate phone samples";
   const gpsStatus =
     latestLocation || nativeLatestSample?.latitude != null ? "OK" : "Waiting";
   const speedText =
@@ -380,8 +379,9 @@ export default function RecordingScreen() {
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
             Measuring vibration using {sensorSource === "external" ? "the Nesso N1 IMU" : "the phone accelerometer and gyroscope"}.
-            Android preview builds can keep recording from the foreground
-            service while the phone is locked.
+            {sensorSource === "external"
+              ? " Nesso feature-frame rides stay in the foreground while Gate A is tested."
+              : " Android preview builds can keep recording from the foreground service while the phone is locked."}
           </Text>
         </View>
 
@@ -392,22 +392,22 @@ export default function RecordingScreen() {
           </View>
 
           <View>
-            <Text style={styles.statusLabel}>Samples</Text>
+            <Text style={styles.statusLabel}>{countLabel}</Text>
             <Text style={styles.statusValue}>{visibleSampleCount}</Text>
           </View>
         </View>
 
         <View style={styles.metricGrid}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Vibration</Text>
+            <Text style={styles.metricLabel}>Surface quality</Text>
             <Text style={styles.metricValue}>
-              {visibleLatestSample?.vibrationMagnitude.toFixed(3) ?? "0.000"}
+              {qualityLabel}
             </Text>
           </View>
 
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Avg vibration</Text>
-            <Text style={styles.metricValue}>{averageVibration.toFixed(3)}</Text>
+            <Text style={styles.metricLabel}>Confidence</Text>
+            <Text style={styles.metricValue}>{Math.round(qualityConfidence * 100)}%</Text>
           </View>
         </View>
 
@@ -423,73 +423,94 @@ export default function RecordingScreen() {
           </View>
         </View>
 
-        <View style={styles.chartCard}>
-          <Text style={styles.sectionTitle}>Live vibration graph</Text>
+        <View style={styles.qualityCard}>
+          <View style={styles.qualityHeader}>
+            <Text style={styles.sectionTitle}>Live surface quality</Text>
+            <Text style={styles.qualityBadge}>Level {qualityLevel}</Text>
+          </View>
 
-          <LineChart
-            data={{
-              labels: [],
-              datasets: [{ data: chartData }],
-            }}
-            width={SCREEN_WIDTH - 56}
-            height={220}
-            withDots={false}
-            withInnerLines
-            withOuterLines={false}
-            withVerticalLabels={false}
-            withHorizontalLabels
-            chartConfig={{
-              backgroundGradientFrom: colors.surfaceMuted,
-              backgroundGradientTo: colors.surfaceMuted,
-              decimalPlaces: 2,
-              color: () => colors.accent,
-              labelColor: () => colors.textMuted,
-              propsForBackgroundLines: {
-                stroke: "#c8def5",
-              },
-            }}
-            bezier
-            style={styles.chart}
-          />
+          <View style={styles.qualityScale}>
+            {[1, 2, 3, 4, 5, 6].map((level) => (
+              <View
+                key={level}
+                style={[
+                  styles.qualityStep,
+                  level <= qualityLevel && styles.qualityStepActive,
+                  level === qualityLevel && styles.qualityStepCurrent,
+                ]}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.qualityDetail}>{qualityDetail}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Accelerometer</Text>
+        {sensorSource === "external" ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Feature frame</Text>
 
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>X</Text>
-            <Text style={styles.axisValue}>{accel.x.toFixed(4)}</Text>
+            <View style={styles.axisRow}>
+              <Text style={styles.axisLabel}>Accel RMS</Text>
+              <Text style={styles.axisValue}>
+                {latestExternalFeatureFrame?.accelRms.toFixed(3) ?? "-"}
+              </Text>
+            </View>
+
+            <View style={styles.axisRow}>
+              <Text style={styles.axisLabel}>Peak to peak</Text>
+              <Text style={styles.axisValue}>
+                {latestExternalFeatureFrame?.accelPeakToPeak.toFixed(3) ?? "-"}
+              </Text>
+            </View>
+
+            <View style={styles.axisRow}>
+              <Text style={styles.axisLabel}>Onboard samples</Text>
+              <Text style={styles.axisValue}>
+                {latestExternalFeatureFrame?.rawSampleCount ?? "-"}
+              </Text>
+            </View>
           </View>
+        ) : (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Accelerometer</Text>
 
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>Y</Text>
-            <Text style={styles.axisValue}>{accel.y.toFixed(4)}</Text>
-          </View>
+              <View style={styles.axisRow}>
+                <Text style={styles.axisLabel}>X</Text>
+                <Text style={styles.axisValue}>{accel.x.toFixed(4)}</Text>
+              </View>
 
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>Z</Text>
-            <Text style={styles.axisValue}>{accel.z.toFixed(4)}</Text>
-          </View>
-        </View>
+              <View style={styles.axisRow}>
+                <Text style={styles.axisLabel}>Y</Text>
+                <Text style={styles.axisValue}>{accel.y.toFixed(4)}</Text>
+              </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Gyroscope</Text>
+              <View style={styles.axisRow}>
+                <Text style={styles.axisLabel}>Z</Text>
+                <Text style={styles.axisValue}>{accel.z.toFixed(4)}</Text>
+              </View>
+            </View>
 
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>X</Text>
-            <Text style={styles.axisValue}>{gyro.x.toFixed(4)}</Text>
-          </View>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Gyroscope</Text>
 
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>Y</Text>
-            <Text style={styles.axisValue}>{gyro.y.toFixed(4)}</Text>
-          </View>
+              <View style={styles.axisRow}>
+                <Text style={styles.axisLabel}>X</Text>
+                <Text style={styles.axisValue}>{gyro.x.toFixed(4)}</Text>
+              </View>
 
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>Z</Text>
-            <Text style={styles.axisValue}>{gyro.z.toFixed(4)}</Text>
-          </View>
-        </View>
+              <View style={styles.axisRow}>
+                <Text style={styles.axisLabel}>Y</Text>
+                <Text style={styles.axisValue}>{gyro.y.toFixed(4)}</Text>
+              </View>
+
+              <View style={styles.axisRow}>
+                <Text style={styles.axisLabel}>Z</Text>
+                <Text style={styles.axisValue}>{gyro.z.toFixed(4)}</Text>
+              </View>
+            </View>
+          </>
+        )}
 
         <Pressable onPress={handleStop} style={styles.stopButton}>
           <Text style={styles.stopButtonText}>Stop recording</Text>
@@ -497,6 +518,32 @@ export default function RecordingScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function getFallbackQualityLevel(vibrationMagnitude: number): 1 | 2 | 3 | 4 | 5 | 6 {
+  if (vibrationMagnitude < 1.02) return 1;
+  if (vibrationMagnitude < 1.08) return 2;
+  if (vibrationMagnitude < 1.16) return 3;
+  if (vibrationMagnitude < 1.28) return 4;
+  if (vibrationMagnitude < 1.45) return 5;
+  return 6;
+}
+
+function getRoughnessLabel(level: 1 | 2 | 3 | 4 | 5 | 6) {
+  switch (level) {
+    case 1:
+      return "Excellent";
+    case 2:
+      return "Good";
+    case 3:
+      return "Okay";
+    case 4:
+      return "Rough";
+    case 5:
+      return "Very rough";
+    case 6:
+      return "Unskatable";
+  }
 }
 
 const styles = StyleSheet.create({
@@ -582,22 +629,56 @@ const styles = StyleSheet.create({
     padding: space.lg,
     ...shadows.tile,
   },
-  chartCard: {
+  qualityCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     padding: space.lg,
-    overflow: "hidden",
     ...shadows.tile,
+  },
+  qualityHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  qualityBadge: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  qualityScale: {
+    flexDirection: "row",
+    gap: 7,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  qualityStep: {
+    flex: 1,
+    height: 18,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+  },
+  qualityStepActive: {
+    backgroundColor: colors.accent,
+  },
+  qualityStepCurrent: {
+    borderWidth: 2,
+    borderColor: colors.text,
+  },
+  qualityDetail: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "700",
   },
   sectionTitle: {
     color: colors.text,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 12,
-  },
-  chart: {
-    borderRadius: radius.lg,
-    marginLeft: -12,
   },
   axisRow: {
     flexDirection: "row",

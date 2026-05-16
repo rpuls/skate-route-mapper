@@ -88,17 +88,35 @@ the Nesso BLE stream, then persist the same `MeasurementSample` shape.
 
 ## Nesso N1 BLE IMU
 
-The Nesso N1 firmware lives in `../firmware/nesso-n1/`.
+There are currently two Nesso firmware paths:
 
-The initial sketch advertises `Skate Nesso N1`, streams accelerometer and
-gyroscope packets over a custom BLE service, and leaves GPS/camera ownership in
-the mobile app. The shared BLE UUIDs and binary packet parser live in
-`../shared/src/nessoBle.ts`.
+- `../firmware/nesso-n1/` is the legacy raw IMU stream.
+- `../firmware/nesso-n1-new/` is the isolated Gate A feature-frame prototype.
+
+The current mobile foreground pairing flow targets the Gate A firmware,
+advertised as `Skate Nesso N1 Gate A`. That firmware sends compact BLE feature
+frames at about `5Hz` instead of raw per-sample IMU packets. GPS and camera
+ownership stay in the mobile app.
+
+The shared BLE UUIDs and binary packet parser live in
+`../shared/src/nessoBle.ts`. For the Gate A prototype, the parser exposes the
+high-pass vibration fields as `accelRms` and `accelPeakToPeak` to keep the BLE
+packet shape stable while calibration is still moving.
+
+Gate A status:
+
+- `calibration v2` firmware is the current test build.
+- smooth hand movement is now barely detected in indoor testing.
+- low vibration no longer immediately maxes out the `1-6` level scale.
+- semi-rough indoor vibration reaches roughly level `3-4`.
+- real asphalt, paving stones, and unskatable surfaces still need outdoor
+  calibration before the levels are product-ready.
 
 Home screen pairing uses `react-native-ble-plx` for a foreground connection
-preview. On Android native builds, starting a Nesso ride disconnects that
-preview connection so the foreground recording service can reconnect to the
-Nesso while the phone is locked.
+preview. Gate A feature-frame rides currently stay in the foreground while this
+signal work is being validated; do not build backend/product storage on top of
+the feature frames until `docs/vibration-roughness-plan.md` marks the signal
+gate as passed.
 
 BLE pairing is not available in Expo Go. After changing BLE dependencies or
 Expo native config, rebuild the iOS development app so the `react-native-ble-plx`
@@ -185,5 +203,6 @@ Current visual direction:
 ## Roadmap
 
 - Improve sync retries, status visibility, and historical ride recovery.
-- Add BLE sensor support after hardware is available.
+- Continue Gate A Nesso feature-frame calibration on real surfaces before
+  promoting it to production ride storage.
 - Add finished-ride stats such as duration, average speed, max speed, and surface-quality summaries.
