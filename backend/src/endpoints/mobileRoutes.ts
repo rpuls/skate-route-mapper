@@ -6,6 +6,7 @@ import {
   type MobileAuthContext,
 } from "../auth/index.js";
 import { env } from "../config/env.js";
+import * as ExperimentalCaptures from "../features/experimentalCaptures/index.js";
 import * as MobileUsers from "../features/mobileUsers/index.js";
 import * as Rides from "../features/rides/index.js";
 import * as Sync from "../features/sync/index.js";
@@ -160,5 +161,19 @@ export async function registerMobileRoutes(app: FastifyInstance) {
     });
 
     return reply.code(200).send(syncResult);
+  });
+
+  app.post("/v1/mobile/experimental-captures", {
+    preHandler: requireMobileUser,
+  }, async (request, reply) => {
+    const payload = ExperimentalCaptures.experimentalCaptureSchema.parse(request.body);
+    const capture = await ExperimentalCaptures.createExperimentalCapture(payload, {
+      userId: getMobileUserId(request),
+    });
+
+    return reply.code(201).send({
+      ok: true,
+      captureId: capture.id,
+    });
   });
 }

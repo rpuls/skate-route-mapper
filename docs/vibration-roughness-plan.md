@@ -665,6 +665,26 @@ longer rolling averages. If stride/mounting dominates the signal, add explicit
 movement rejection using gyro, speed/contact gating, or short raw debug captures
 before building backend storage.
 
+The mobile Gate A recording UI now includes a first-pass contact tile:
+
+- `Asphalt`, grey, means the current feature frame looks like skate-ground contact
+- `Sky`, blue, means the current feature frame looks airborne
+- `Check` means the current feature frame is between the first-pass thresholds
+
+This is intentionally a visible diagnostic only. Do not filter frames based on
+it until a field ride confirms that the tile tracks real skate contact reliably.
+Below about `5km/h`, the mobile UI does not evaluate `Asphalt`/`Sky`; future
+persistence should mark frames as stopped/paused or avoid treating them as
+road-surface measurements.
+
+The mobile Calibration screen is an experimental data collection tool. In the
+first version it captures `10s` of received Gate A feature frames, lets the
+tester add notes and an optional subjective `1-6` roughness feeling, and uploads
+a generic JSON payload to `POST /v1/mobile/experimental-captures`. The same page
+and backend table should later accept a true firmware raw-burst payload after
+Nesso can capture high-rate IMU data locally and transfer it to the phone after
+the capture window.
+
 ### Firmware-Only Feasibility Experiment
 
 Before mobile/backend development, create a tiny Nesso firmware experiment that does not depend on the app.

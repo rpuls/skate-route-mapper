@@ -418,6 +418,8 @@ Signal research in progress:
 - The current Gate A firmware label is `calibration v2`; it sends compact BLE
   feature frames and prints serial fields for tuning (`vibRms`, `vibP2p`,
   `jerkRms`, `rawStd`, `rawP2p`, `score`, `smoothScore`, `level`).
+- The mobile Calibration screen can upload short labeled experimental JSON
+  captures to `POST /v1/mobile/experimental-captures`.
 - Indoor calibration is promising, but real asphalt testing is still required
   before treating the `1-6` levels as product-calibrated.
 

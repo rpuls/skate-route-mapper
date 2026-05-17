@@ -60,6 +60,7 @@ export default function HomeScreen() {
     setSensorSource,
     setLatestExternalFeatureFrame,
     setLatestExternalImuSample,
+    setExternalSensorConnected,
     startRecording,
   } = useMeasurementStore();
 
@@ -102,8 +103,13 @@ export default function HomeScreen() {
       nessoConnection.current?.disconnect();
       setLatestExternalImuSample(null);
       setLatestExternalFeatureFrame(null);
+      setExternalSensorConnected(false);
     };
-  }, [setLatestExternalFeatureFrame, setLatestExternalImuSample]);
+  }, [
+    setExternalSensorConnected,
+    setLatestExternalFeatureFrame,
+    setLatestExternalImuSample,
+  ]);
 
   const handleConnectNesso = async () => {
     if (nessoStatus === "connected") {
@@ -113,6 +119,7 @@ export default function HomeScreen() {
       setLatestNessoFeatureFrame(null);
       setLatestExternalImuSample(null);
       setLatestExternalFeatureFrame(null);
+      setExternalSensorConnected(false);
       setNessoStatus("idle");
       setNessoMessage("Ready to pair with the Nesso Gate A firmware.");
       setSensorSource("phone");
@@ -146,11 +153,13 @@ export default function HomeScreen() {
 
       nessoConnection.current = connection;
       setNessoStatus("connected");
+      setExternalSensorConnected(true);
       setNessoMessage(`${connection.deviceName} connected. GPS remains on this phone.`);
       setSensorSource("external");
     } catch (error) {
       nessoConnection.current = null;
       setNessoStatus("error");
+      setExternalSensorConnected(false);
       setNessoMessage(error instanceof Error ? error.message : "Unable to connect.");
       setSensorSource("phone");
     }

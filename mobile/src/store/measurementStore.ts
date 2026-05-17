@@ -26,11 +26,13 @@ type MeasurementState = {
   latestExternalImuSample: NessoImuPacket | null;
   latestExternalFeatureFrame: NessoFeatureFrame | null;
   externalFeatureFrameCount: number;
+  externalSensorConnected: boolean;
 
   setVehicleType: (vehicleType: VehicleType) => void;
   setSensorSource: (sensorSource: SensorSource) => void;
   setLatestExternalImuSample: (sample: NessoImuPacket | null) => void;
   setLatestExternalFeatureFrame: (frame: NessoFeatureFrame | null) => void;
+  setExternalSensorConnected: (connected: boolean) => void;
 
   startRecording: () => string;
   stopRecording: () => void;
@@ -49,6 +51,7 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
   latestExternalImuSample: null,
   latestExternalFeatureFrame: null,
   externalFeatureFrameCount: 0,
+  externalSensorConnected: false,
 
   setVehicleType: (vehicleType) => set({ vehicleType }),
   setSensorSource: (sensorSource) => set({ sensorSource }),
@@ -58,6 +61,7 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       latestExternalFeatureFrame: frame,
       externalFeatureFrameCount: frame ? state.externalFeatureFrameCount + 1 : 0,
     })),
+  setExternalSensorConnected: (connected) => set({ externalSensorConnected: connected }),
 
   startRecording: () => {
     const rideId = Crypto.randomUUID();
@@ -100,6 +104,7 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       currentRideId: null,
       latestExternalFeatureFrame: null,
       externalFeatureFrameCount: 0,
+      externalSensorConnected: false,
     }),
 
   addSample: (sample) => {

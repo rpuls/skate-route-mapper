@@ -56,6 +56,16 @@ Run the browser target for UI/layout checks:
 npm run dev:web
 ```
 
+Mobile API calls use `EXPO_PUBLIC_API_BASE_URL`. The default development and
+EAS build configuration points to:
+
+```text
+https://skate-route-mapper-api.up.railway.app
+```
+
+Override this only when intentionally testing against a local API. A physical
+phone cannot reach a desktop API through `localhost`.
+
 ## Android Background Recording Builds
 
 Android background recording uses a native foreground service for GPS,
@@ -102,6 +112,25 @@ The shared BLE UUIDs and binary packet parser live in
 `../shared/src/nessoBle.ts`. For the Gate A prototype, the parser exposes the
 high-pass vibration fields as `accelRms` and `accelPeakToPeak` to keep the BLE
 packet shape stable while calibration is still moving.
+
+The recording screen includes a Gate A contact indicator for field testing:
+
+- `Asphalt` uses a grey tile and means the current feature frame looks like
+  skate-ground contact.
+- `Sky` uses a blue tile and means the current feature frame looks airborne.
+- `Check` means the frame is between the first-pass thresholds.
+
+This tile is only a diagnostic indicator for now. Do not filter out airborne
+frames until real rides show the detector is reliable. The tile stays in
+`Check` below `5km/h` because stopped/starting motion is not useful road-surface
+data.
+
+The Calibration screen is enabled when Nesso Gate A is connected. It currently
+captures `10s` of received Gate A feature frames, lets the tester add notes and
+an optional subjective `1-6` roughness feeling, and uploads the result to
+`POST /v1/mobile/experimental-captures`.
+That backend endpoint stores generic JSON on purpose so this experimental data
+shape can change while firmware raw-burst capture is still being designed.
 
 Gate A status:
 

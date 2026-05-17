@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://skate-route-mapper-api.up.railway.app"
+      },
       "android": {
         "buildType": "apk"
       }

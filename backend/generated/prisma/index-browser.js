@@ -210,9 +210,29 @@ exports.Prisma.SampleScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.SyncOperationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  operationType: 'operationType',
+  createdAtMs: 'createdAtMs',
+  processedAt: 'processedAt',
+  payload: 'payload'
+};
+
+exports.Prisma.ExperimentalCaptureScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  payload: 'payload',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -223,6 +243,12 @@ exports.Prisma.QueryMode = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 exports.VehicleType = exports.$Enums.VehicleType = {
   skates: 'skates',
@@ -242,7 +268,9 @@ exports.Prisma.ModelName = {
   UserSession: 'UserSession',
   Device: 'Device',
   Ride: 'Ride',
-  Sample: 'Sample'
+  Sample: 'Sample',
+  SyncOperation: 'SyncOperation',
+  ExperimentalCapture: 'ExperimentalCapture'
 };
 
 /**

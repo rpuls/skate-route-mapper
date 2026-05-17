@@ -17,6 +17,7 @@ import { useMeasurementStore } from "../store/measurementStore";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
 import * as BackgroundRecorder from "../native/BackgroundRecorder";
 import type { BackgroundRecorderSample } from "../native/BackgroundRecorder";
+import type { NessoFeatureFrame } from "../types/measurement";
 
 const USE_ANDROID_BACKGROUND_RECORDER =
   Platform.OS === "android" && BackgroundRecorder.isAvailable();
@@ -32,6 +33,11 @@ type GyroData = {
   y: number;
   z: number;
 };
+
+type ContactState = "grounded" | "airborne" | "unknown";
+
+const MIN_TRACKING_SPEED_KMH = 5;
+const LOCATION_STALE_MS = 5000;
 
 async function requestAndroidRecordingPermissions(sensorSource: "phone" | "external") {
   if (Platform.OS !== "android") {
@@ -245,8 +251,8 @@ export default function RecordingScreen() {
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 2000,
-          distanceInterval: 3,
+          timeInterval: 1000,
+          distanceInterval: 1,
         },
         (location) => {
           latestLocationRef.current = location;
@@ -348,12 +354,16 @@ export default function RecordingScreen() {
     : "Estimated from low-rate phone samples";
   const gpsStatus =
     latestLocation || nativeLatestSample?.latitude != null ? "OK" : "Waiting";
-  const speedText =
-    latestLocation?.coords.speed != null
-      ? `${latestLocation.coords.speed.toFixed(1)} m/s`
-      : nativeLatestSample?.speed != null
-      ? `${nativeLatestSample.speed.toFixed(1)} m/s`
-      : "-";
+  const speedKmh = getFreshSpeedKmh(latestLocation, nativeLatestSample);
+  const speedText = speedKmh == null ? "-" : `${speedKmh.toFixed(1)} km/h`;
+  const trackingStatus =
+    speedKmh == null
+      ? "Waiting"
+      : speedKmh >= MIN_TRACKING_SPEED_KMH
+      ? "Skating"
+      : "Paused";
+  const contactState = getContactState(latestExternalFeatureFrame, speedKmh);
+  const contactLabel = getContactLabel(contactState);
 
   const handleStop = async () => {
     if (canUseAndroidBackgroundRecorder && currentRideId) {
@@ -420,6 +430,28 @@ export default function RecordingScreen() {
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Speed</Text>
             <Text style={styles.metricValue}>{speedText}</Text>
+          </View>
+        </View>
+
+        <View style={styles.metricGrid}>
+          <View
+            style={[
+              styles.metricCard,
+              styles.contactCard,
+              getContactCardStyle(contactState),
+            ]}
+          >
+            <Text style={[styles.metricLabel, styles.contactLabel]}>
+              Skate contact
+            </Text>
+            <Text style={[styles.metricValue, styles.contactValue]}>
+              {contactLabel}
+            </Text>
+          </View>
+
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Tracking</Text>
+            <Text style={styles.metricValue}>{trackingStatus}</Text>
           </View>
         </View>
 
@@ -546,6 +578,71 @@ function getRoughnessLabel(level: 1 | 2 | 3 | 4 | 5 | 6) {
   }
 }
 
+function getFreshSpeedKmh(
+  latestLocation: Location.LocationObject | null,
+  nativeLatestSample: BackgroundRecorderSample | null
+) {
+  const now = Date.now();
+  const locationAgeMs = latestLocation ? now - latestLocation.timestamp : Infinity;
+
+  if (
+    latestLocation?.coords.speed != null &&
+    latestLocation.coords.speed >= 0 &&
+    locationAgeMs <= LOCATION_STALE_MS
+  ) {
+    return latestLocation.coords.speed * 3.6;
+  }
+
+  if (nativeLatestSample?.speed != null && nativeLatestSample.speed >= 0) {
+    return nativeLatestSample.speed * 3.6;
+  }
+
+  return null;
+}
+
+function getContactState(
+  frame: NessoFeatureFrame | null,
+  speedKmh: number | null
+): ContactState {
+  if (speedKmh == null || speedKmh < MIN_TRACKING_SPEED_KMH) {
+    return "unknown";
+  }
+
+  if (!frame) return "unknown";
+
+  if (frame.accelRms >= 0.035 || frame.accelPeakToPeak >= 0.12) {
+    return "grounded";
+  }
+
+  if (frame.accelRms <= 0.018 && frame.accelPeakToPeak <= 0.07) {
+    return "airborne";
+  }
+
+  return "unknown";
+}
+
+function getContactLabel(state: ContactState) {
+  switch (state) {
+    case "grounded":
+      return "Asphalt";
+    case "airborne":
+      return "Sky";
+    default:
+      return "Check";
+  }
+}
+
+function getContactCardStyle(state: ContactState) {
+  switch (state) {
+    case "grounded":
+      return styles.contactCardGrounded;
+    case "airborne":
+      return styles.contactCardAirborne;
+    default:
+      return styles.contactCardUnknown;
+  }
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -622,6 +719,24 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 24,
     fontWeight: "900",
+  },
+  contactCard: {
+    minHeight: 88,
+  },
+  contactCardGrounded: {
+    backgroundColor: colors.textMuted,
+  },
+  contactCardAirborne: {
+    backgroundColor: colors.link,
+  },
+  contactCardUnknown: {
+    backgroundColor: colors.accent,
+  },
+  contactLabel: {
+    color: colors.textOnOrange,
+  },
+  contactValue: {
+    color: colors.textOnOrange,
   },
   card: {
     backgroundColor: colors.surface,

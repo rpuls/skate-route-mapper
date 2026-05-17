@@ -86,6 +86,7 @@ backend/src/
     rides/                   Ride contracts, index export, and reusable ride logic
     sync/                    Mobile sync contracts and operation processing
     mobileUsers/             Mobile user auth contracts and reusable account logic
+    experimentalCaptures/    Experimental calibration/debug JSON capture storage
     adminUsers/              Admin user contracts, index export, and reusable admin user logic
     adminResources/          Generated admin metadata, index export, and reusable entity logic
 ```
@@ -134,6 +135,7 @@ Use a mobile user session token for:
 
 - `GET /v1/mobile/me`
 - `POST /v1/mobile/auth/logout`
+- `POST /v1/mobile/experimental-captures`
 - optionally, mobile ride ingestion endpoints when the uploaded ride should be
   attached to that user
 
@@ -156,6 +158,8 @@ Use `ADMIN_API_KEY` or an admin session token for:
 - `DELETE /v1/admin/entities/:resourceName/:entityId`
 - `GET /v1/admin/rides`
 - `GET /v1/admin/rides/:rideId`
+- `GET /v1/admin/experimental-captures`
+- `GET /v1/admin/experimental-captures/:captureId`
 - `POST /v1/admin/mobile/rides/start`
 - `POST /v1/admin/mobile/rides/:rideId/samples`
 - `POST /v1/admin/mobile/rides/:rideId/finish`
@@ -826,6 +830,60 @@ Success response:
 }
 ```
 
+### `POST /v1/mobile/experimental-captures`
+
+Store an experimental JSON capture from the mobile app. This endpoint is for
+sensor research and calibration data, not the production ride pipeline.
+
+Auth:
+
+```http
+Authorization: Bearer <mobile-user-session-token>
+```
+
+Request body:
+
+```json
+{
+  "payload": {
+    "label": "Calibration capture level 1",
+    "notes": "Skate on smooth road",
+    "source": "nesso-gate-a",
+    "captureType": "feature_frames_5hz",
+    "durationMs": 10000,
+    "sampleCount": 50,
+    "firmwareLabel": "calibration v2",
+    "appCaptureVersion": 1,
+    "subjectiveRoughnessLevel": 1,
+    "frames": []
+  }
+}
+```
+
+Rules:
+
+- `payload` is required JSON. Put experiment-specific fields inside it so
+  firmware/mobile capture formats can evolve without a migration for every
+  iteration.
+- Do not use this endpoint for normal long ride capture.
+
+Success response:
+
+Status:
+
+```text
+201 Created
+```
+
+Body:
+
+```json
+{
+  "ok": true,
+  "captureId": "clx_example"
+}
+```
+
 ## Admin API
 
 ### `GET /v1/admin/rides`
@@ -862,6 +920,30 @@ Query params:
 - `sampleOffset`: optional, default `0`
 
 The response includes `samplesTruncated` when more samples exist than were returned.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `GET /v1/admin/experimental-captures`
+
+List recent experimental calibration/debug captures without the `payload` field.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+Query params:
+
+- `limit`: optional, max `100`, default `25`
+
+### `GET /v1/admin/experimental-captures/:captureId`
+
+Fetch one experimental capture including its generic JSON `payload`.
 
 Auth:
 

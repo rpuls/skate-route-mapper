@@ -123,3 +123,12 @@ export type MobileAuthResponse = {
   user: CurrentMobileUser;
   deviceId: string | null;
 };
+
+export type ExperimentalCapturePayload = {
+  payload: unknown;
+};
+
+export type ExperimentalCaptureResponse = {
+  ok: true;
+  captureId: string;
+};

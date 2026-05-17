@@ -10,7 +10,8 @@ const configuredApiBaseUrl = (globalThis as {
   };
 }).process?.env?.EXPO_PUBLIC_API_BASE_URL;
 
-export const mobileApiBaseUrl = configuredApiBaseUrl ?? "http://localhost:3001";
+export const mobileApiBaseUrl =
+  configuredApiBaseUrl?.trim() || "https://skate-route-mapper-api.up.railway.app";
 
 function getFriendlyAuthErrorMessage(message: string) {
   switch (message) {

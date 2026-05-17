@@ -21,6 +21,7 @@ type RuntimeModel = {
 const hiddenFieldsByModel: Record<string, string[]> = {
   AdminSession: ["tokenHash"],
   AdminUser: ["passwordHash"],
+  ExperimentalCapture: ["payload"],
   User: ["passwordHash"],
   UserSession: ["tokenHash"],
 };

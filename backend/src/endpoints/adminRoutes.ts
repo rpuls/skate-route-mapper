@@ -4,6 +4,7 @@ import { requireAdminAuth } from "../auth/index.js";
 import { env } from "../config/env.js";
 import * as AdminResources from "../features/adminResources/index.js";
 import * as AdminUsers from "../features/adminUsers/index.js";
+import * as ExperimentalCaptures from "../features/experimentalCaptures/index.js";
 import * as Rides from "../features/rides/index.js";
 
 const adminEntityParamsSchema = z.object({
@@ -200,6 +201,34 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
 
     return ride;
+  });
+
+  app.get("/v1/admin/experimental-captures", {
+    preHandler: requireAdmin,
+  }, async (request) => {
+    const { limit } = ExperimentalCaptures.experimentalCapturesQuerySchema.parse(request.query);
+
+    return {
+      captures: await ExperimentalCaptures.listExperimentalCaptures(limit),
+    };
+  });
+
+  app.get("/v1/admin/experimental-captures/:captureId", {
+    preHandler: requireAdmin,
+  }, async (request, reply) => {
+    const { captureId } = ExperimentalCaptures.experimentalCaptureParamsSchema.parse(request.params);
+    const capture = await ExperimentalCaptures.getExperimentalCapture(captureId);
+
+    if (!capture) {
+      return reply.code(404).send({
+        ok: false,
+        message: "Experimental capture not found",
+      });
+    }
+
+    return {
+      capture,
+    };
   });
 
   app.post("/v1/admin/mobile/rides/start", {

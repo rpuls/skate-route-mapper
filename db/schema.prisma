@@ -60,6 +60,7 @@ model User {
   devices        Device[]
   rides          Ride[]
   syncOperations SyncOperation[]
+  experimentalCaptures ExperimentalCapture[]
 
   @@map("users")
 }
@@ -157,4 +158,16 @@ model SyncOperation {
   @@index([userId])
   @@index([processedAt])
   @@map("sync_operations")
+}
+
+model ExperimentalCapture {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("experimental_captures")
 }

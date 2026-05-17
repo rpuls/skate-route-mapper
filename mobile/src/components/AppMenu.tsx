@@ -17,12 +17,17 @@ import {
 } from "@skate-route-mapper/shared/design";
 import { useMobileAuth } from "../auth/MobileAuthContext";
 import type { RootStackParamList } from "../navigation/AppNavigator";
+import { useMeasurementStore } from "../store/measurementStore";
 
-type AppRouteName = keyof Pick<RootStackParamList, "Home" | "Rides" | "Auth">;
+type AppRouteName = keyof Pick<
+  RootStackParamList,
+  "Home" | "Rides" | "Calibration" | "Auth"
+>;
 
 const menuItems: { label: string; routeName: AppRouteName }[] = [
   { label: "Start a Ride", routeName: "Home" },
   { label: "Saved Rides", routeName: "Rides" },
+  { label: "Calibration", routeName: "Calibration" },
   { label: "Sign in/up", routeName: "Auth" },
 ];
 
@@ -30,6 +35,9 @@ export function AppMenuButton() {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { user } = useMobileAuth();
+  const externalSensorConnected = useMeasurementStore(
+    (state) => state.externalSensorConnected
+  );
   const [open, setOpen] = useState(false);
 
   const navigateTo = (routeName: AppRouteName) => {
@@ -73,17 +81,25 @@ export function AppMenuButton() {
               <View style={styles.menuList}>
                 {menuItems.map((item) => {
                   const selected = route.name === item.routeName;
+                  const disabled =
+                    item.routeName === "Calibration" && !externalSensorConnected;
 
                   return (
                     <Pressable
+                      disabled={disabled}
                       key={item.routeName}
                       onPress={() => navigateTo(item.routeName)}
-                      style={[styles.menuItem, selected && styles.menuItemSelected]}
+                      style={[
+                        styles.menuItem,
+                        selected && styles.menuItemSelected,
+                        disabled && styles.menuItemDisabled,
+                      ]}
                     >
                       <Text
                         style={[
                           styles.menuItemText,
                           selected && styles.menuItemTextSelected,
+                          disabled && styles.menuItemTextDisabled,
                         ]}
                       >
                         {item.label}
@@ -235,6 +251,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.surface,
   },
+  menuItemDisabled: {
+    opacity: 0.42,
+  },
   menuItemText: {
     color: colors.textOnOrange,
     fontSize: 18,
@@ -242,6 +261,9 @@ const styles = StyleSheet.create({
   },
   menuItemTextSelected: {
     color: colors.accent,
+  },
+  menuItemTextDisabled: {
+    color: colors.textOnOrange,
   },
   accountPanel: {
     backgroundColor: colors.surface,

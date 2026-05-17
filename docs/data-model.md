@@ -179,6 +179,20 @@ Main fields:
 - `processedAt`
 - `payload`
 
+### ExperimentalCapture
+
+One experimental JSON capture uploaded from mobile calibration/debug tooling.
+This is intentionally generic storage for signal research, not the normal ride
+surface-quality pipeline. Experiment-specific fields such as labels, notes,
+durations, counts, firmware versions, and frames belong inside `payload`.
+
+Main fields:
+
+- `id`
+- `userId`
+- `payload`
+- `createdAt`
+
 ## Enums
 
 ### VehicleType
@@ -198,13 +212,16 @@ Main fields:
 - each `Sample` belongs to one `Ride`
 - one `AdminUser` has many `AdminSession` rows
 - each `AdminSession` belongs to one `AdminUser`
-- one `User` has many `UserSession`, `Device`, and `Ride` rows
+- one `User` has many `UserSession`, `Device`, `Ride`, and
+  `ExperimentalCapture` rows
 - one `User` can have many `SyncOperation` rows
 - one `Device` can have many `Ride` rows
 - `Ride.userId` and `Ride.deviceId` are nullable so anonymous and existing
   ride data remains valid
 - `SyncOperation.userId` is nullable so trusted ingestion/admin syncs can also
   be idempotent
+- `ExperimentalCapture.userId` is nullable so experimental data can survive
+  user deletion while keeping normal account ownership when available
 
 ## Auth And User Model Direction
 

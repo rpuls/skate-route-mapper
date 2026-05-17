@@ -49,16 +49,18 @@ model AdminSession {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  passwordHash String        @map("password_hash")
-  name         String?
-  lastLoginAt  DateTime?     @map("last_login_at")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  sessions     UserSession[]
-  devices      Device[]
-  rides        Ride[]
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  passwordHash         String                @map("password_hash")
+  name                 String?
+  lastLoginAt          DateTime?             @map("last_login_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  sessions             UserSession[]
+  devices              Device[]
+  rides                Ride[]
+  syncOperations       SyncOperation[]
+  experimentalCaptures ExperimentalCapture[]
 
   @@map("users")
 }
@@ -142,4 +144,30 @@ model Sample {
 
   @@index([rideId, recordedAt])
   @@map("samples")
+}
+
+model SyncOperation {
+  id            String   @id @map("id")
+  userId        String?  @map("user_id")
+  operationType String   @map("operation_type")
+  createdAtMs   BigInt   @map("created_at_ms")
+  processedAt   DateTime @default(now()) @map("processed_at")
+  payload       Json
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([processedAt])
+  @@map("sync_operations")
+}
+
+model ExperimentalCapture {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("experimental_captures")
 }
