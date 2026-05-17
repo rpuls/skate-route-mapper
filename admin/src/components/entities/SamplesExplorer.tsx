@@ -1,5 +1,7 @@
+import DownloadIcon from "@mui/icons-material/Download";
 import {
   Box,
+  Button,
   FormControl,
   InputLabel,
   MenuItem,
@@ -22,6 +24,7 @@ import {
 } from "../../features/entities/entityQueries";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { AdminSession, EntityRecord } from "../../types";
+import { downloadEntityRecordsCsv } from "./entityCsvExport";
 
 const allUsersValue = "__all__";
 const anonymousUserValue = "__anonymous__";
@@ -123,6 +126,7 @@ export function SamplesExplorer({
 
   const rideDetailQuery = useAdminRideDetail(session, selectedRideId || null);
   const samples = rideDetailQuery.data?.samples ?? [];
+  const samplesResource = resources.find((resource) => resource.name === "samples");
 
   return (
     <Stack spacing={2} sx={{ minWidth: 0 }}>
@@ -177,12 +181,34 @@ export function SamplesExplorer({
       </Stack>
 
       <Box>
-        <Typography variant="h3">Samples</Typography>
-        <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
-          {selectedRideId
-            ? `${samples.length} samples for selected ride`
-            : "Choose a ride to view its samples"}
-        </Typography>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          sx={{ alignItems: { xs: "stretch", sm: "center" }, justifyContent: "space-between" }}
+        >
+          <Box>
+            <Typography variant="h3">Samples</Typography>
+            <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+              {selectedRideId
+                ? `${samples.length} samples for selected ride`
+                : "Choose a ride to view its samples"}
+            </Typography>
+          </Box>
+          <Button
+            disabled={samples.length === 0}
+            onClick={() =>
+              downloadEntityRecordsCsv({
+                filenamePrefix: selectedRideId ? `samples-${selectedRideId}` : "samples",
+                records: samples,
+                ...(samplesResource ? { resource: samplesResource } : {}),
+              })
+            }
+            startIcon={<DownloadIcon />}
+            variant="outlined"
+          >
+            Export CSV
+          </Button>
+        </Stack>
       </Box>
 
       {selectedRideId ? (

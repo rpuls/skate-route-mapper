@@ -1,7 +1,7 @@
 export type AdminResourceField = {
   name: string;
   label: string;
-  type: "bigint" | "boolean" | "datetime" | "email" | "enum" | "number" | "password" | "string";
+  type: "bigint" | "boolean" | "datetime" | "email" | "enum" | "json" | "number" | "password" | "string";
   create?: boolean;
   edit?: boolean;
   list?: boolean;

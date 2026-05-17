@@ -164,11 +164,39 @@ Expo Go is the easiest path from Windows because it does not require Xcode.
 
 Use an EAS development build when Expo Go is not enough, especially for custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account. Rebuild the development app after native dependency or config-plugin changes; reloading JavaScript is not enough for BLE module changes.
 
-The repo already has `mobile/eas.json` with a `development` profile. When ready for a development build, run from `mobile/`:
+## Build to iOS
+
+Requirements:
+
+- global EAS CLI installed as `eas`
+- Expo account login
+- paid Apple Developer account for physical-device builds
+
+Build an iOS development client:
 
 ```bash
-npx expo install expo-dev-client
+cd mobile
+eas login
 eas build --platform ios --profile development
+```
+
+The QR code printed by `eas build` installs the app. It does not launch the app
+with JavaScript by itself. If the installed app asks for a development server
+URL, start the development server and scan the new QR code printed by Expo:
+
+```bash
+cd mobile
+npm run start -- --dev-client
+```
+
+Keep that terminal running while testing. Scan the Expo development-server QR
+code with the installed development client, not Expo Go.
+
+Build a production iOS app:
+
+```bash
+cd mobile
+eas build --platform ios --profile production
 ```
 
 ## Web Target

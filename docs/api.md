@@ -328,9 +328,9 @@ Authorization: Bearer <session-token>
 
 ### `GET /v1/admin/resources`
 
-Return generic admin entity metadata generated from the Prisma datamodel. The admin app uses this to render entity tabs, tables, and forms without manually adding every model.
+Return generic admin entity metadata generated from the Prisma datamodel. The admin app uses this to render entity tabs, tables, forms, and current-page CSV exports without manually adding every model.
 
-Sensitive fields are filtered by the API policy layer. For example, `passwordHash` and session token hashes are not exposed.
+Sensitive fields are filtered by the API policy layer. For example, `passwordHash` and session token hashes are not exposed. Large JSON fields are included in resource metadata as read-only fields and may be marked `list: false` so tables stay compact while exports can still include the full current row payload.
 
 ### `GET /v1/admin/entities/:resourceName`
 
@@ -341,7 +341,7 @@ Query params:
 - `page`: optional, default `1`
 - `pageSize`: optional, max `100`, default `25`
 
-Success responses include `items`, `total`, `page`, `pageSize`, and `pageCount`.
+Success responses include `items`, `total`, `page`, `pageSize`, and `pageCount`. Each item includes all non-sensitive scalar fields for the returned page, including read-only JSON fields. Fields with `list: false` are available to admin tooling such as CSV export even when the entity table does not render them as visible columns.
 
 Examples:
 

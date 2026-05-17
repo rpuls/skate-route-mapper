@@ -41,10 +41,10 @@ function getDelegate(delegate: string) {
   };
 }
 
-function selectVisibleFields(resource: AdminResource) {
+function selectEntityFields(resource: AdminResource) {
   return Object.fromEntries(
     resource.fields
-      .filter((field) => field.list && field.name !== "password")
+      .filter((field) => field.name !== "password" && field.type !== "password")
       .map((field) => [field.name, true])
   );
 }
@@ -125,10 +125,10 @@ export async function listAdminEntity(
   const modelDelegate = getDelegate(delegate);
   const [items, total] = await Promise.all([
     modelDelegate.findMany({
-    orderBy: {
-      [resource.idField]: "desc",
-    },
-    select: selectVisibleFields(resource),
+      orderBy: {
+        [resource.idField]: "desc",
+      },
+      select: selectEntityFields(resource),
       skip: (pagination.page - 1) * pagination.pageSize,
       take: pagination.pageSize,
     }),
@@ -151,7 +151,7 @@ export async function createAdminEntity(
 ) {
   const item = await getDelegate(delegate).create({
     data: buildEntityData(resource, payload, "create"),
-    select: selectVisibleFields(resource),
+    select: selectEntityFields(resource),
   });
 
   return serializeEntityValue(item);
@@ -168,7 +168,7 @@ export async function updateAdminEntity(
       [resource.idField]: coerceEntityId(resource, rawId),
     },
     data: buildEntityData(resource, payload, "edit"),
-    select: selectVisibleFields(resource),
+    select: selectEntityFields(resource),
   });
 
   return serializeEntityValue(item);

@@ -113,6 +113,11 @@ the first response contains every record. Keep large analysis payloads behind
 explicit limits or dedicated endpoints rather than loading entire tables into a
 component.
 
+CSV export should use the already-loaded rows for the current page or filtered
+custom view. Export all fields present on those row objects, including fields
+marked `list: false`, so large JSON values can be downloaded without expanding
+the on-screen table.
+
 Allowed custom policy belongs on the API side, for example:
 
 - hiding `passwordHash`

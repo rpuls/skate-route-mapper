@@ -1,4 +1,5 @@
 import AddIcon from "@mui/icons-material/Add";
+import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
@@ -24,6 +25,7 @@ import { AddOrEditEntityDialog } from "../components/entities/AddOrEditEntityDia
 import { EntityTable } from "../components/entities/EntityTable";
 import { RidesExplorer } from "../components/entities/RidesExplorer";
 import { SamplesExplorer } from "../components/entities/SamplesExplorer";
+import { downloadEntityRecordsCsv } from "../components/entities/entityCsvExport";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
 import type { AdminSession, EntityPayload, EntityRecord } from "../types";
 
@@ -112,6 +114,18 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   function closeUpsertDialog() {
     setUpsertOpen(false);
     setSelectedRecord(null);
+  }
+
+  function exportVisibleRecords() {
+    if (!resource || records.length === 0) {
+      return;
+    }
+
+    downloadEntityRecordsCsv({
+      filenamePrefix: resource.name,
+      records,
+      resource,
+    });
   }
 
   useEffect(() => {
@@ -205,9 +219,20 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
               }}
             >
               <Stack spacing={2} sx={{ minWidth: 0 }}>
-                <Stack direction="row" spacing={2} sx={{ justifyContent: "space-between" }}>
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={2}
+                  sx={{
+                    alignItems: { xs: "stretch", md: "center" },
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Typography variant="h3">{resource.labelPlural}</Typography>
-                  <Stack direction="row" spacing={1}>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    sx={{ alignItems: { xs: "stretch", sm: "center" } }}
+                  >
                     <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
                       {usesCustomSamplesView
                         ? "Filter by user and ride"
@@ -215,6 +240,17 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                           ? "Loading"
                           : `${pagination?.total ?? records.length} total`}
                     </Typography>
+                    {!usesCustomSamplesView ? (
+                      <Button
+                        disabled={records.length === 0}
+                        onClick={exportVisibleRecords}
+                        startIcon={<DownloadIcon />}
+                        sx={{ borderRadius: controlRadiusPx(radiusLevel.embedded) }}
+                        variant="outlined"
+                      >
+                        Export CSV
+                      </Button>
+                    ) : null}
                     {resource.canCreate && !usesCustomSamplesView ? (
                       <Button
                         onClick={() => {

@@ -193,6 +193,8 @@ export async function getRide(
     skip: options.sampleOffset,
     take: options.sampleLimit,
     select: {
+      id: true,
+      rideId: true,
       recordedAt: true,
       ax: true,
       ay: true,
@@ -207,6 +209,7 @@ export async function getRide(
       locationTimestamp: true,
       locationAccuracy: true,
       locationAgeMs: true,
+      createdAt: true,
     },
   });
 
@@ -217,6 +220,9 @@ export async function getRide(
     samplesReturned: samples.length,
     samplesTruncated: options.sampleOffset + samples.length < ride.sampleCount,
     samples: samples.map((sample) => ({
+      id: sample.id.toString(),
+      rideId: sample.rideId,
+      recordedAt: sample.recordedAt.toISOString(),
       timestamp: sample.recordedAt.getTime(),
       ax: sample.ax,
       ay: sample.ay,
@@ -231,6 +237,7 @@ export async function getRide(
       locationTimestamp: sample.locationTimestamp?.getTime() ?? null,
       locationAccuracy: sample.locationAccuracy,
       locationAgeMs: sample.locationAgeMs,
+      createdAt: sample.createdAt.toISOString(),
     })),
   };
 }

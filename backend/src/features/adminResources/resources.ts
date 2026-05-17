@@ -21,7 +21,6 @@ type RuntimeModel = {
 const hiddenFieldsByModel: Record<string, string[]> = {
   AdminSession: ["tokenHash"],
   AdminUser: ["passwordHash"],
-  ExperimentalCapture: ["payload"],
   User: ["passwordHash"],
   UserSession: ["tokenHash"],
 };
@@ -82,6 +81,10 @@ function fieldType(field: RuntimeField): AdminResourceField["type"] {
     return "bigint";
   }
 
+  if (field.type === "Json") {
+    return "json";
+  }
+
   return "string";
 }
 
@@ -90,11 +93,19 @@ function isFieldWritable(model: RuntimeModel, field: RuntimeField) {
     return false;
   }
 
+  if (field.type === "Json") {
+    return false;
+  }
+
   return !field.isId && !field.isReadOnly && !field.isUpdatedAt;
 }
 
 function isFieldCreatable(model: RuntimeModel, field: RuntimeField) {
   if (readOnlyModels.has(model.name) || field.isReadOnly || field.isUpdatedAt) {
+    return false;
+  }
+
+  if (field.type === "Json") {
     return false;
   }
 
@@ -113,7 +124,7 @@ function toResourceField(model: RuntimeModel, field: RuntimeField): AdminResourc
   const type = fieldType(field);
   const writable = isFieldWritable(model, field);
 
-  const list = !(model.name === "SyncOperation" && field.name === "payload");
+  const list = field.type !== "Json";
 
   const resourceField: AdminResourceField = {
     name: field.name,
