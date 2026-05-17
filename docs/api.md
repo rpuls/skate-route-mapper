@@ -852,7 +852,7 @@ Request body:
     "captureType": "feature_frames_5hz",
     "durationMs": 10000,
     "sampleCount": 50,
-    "firmwareLabel": "calibration v2",
+    "firmwareLabel": "calibration v3",
     "appCaptureVersion": 1,
     "subjectiveRoughnessLevel": 1,
     "frames": []
@@ -865,6 +865,9 @@ Rules:
 - `payload` is required JSON. Put experiment-specific fields inside it so
   firmware/mobile capture formats can evolve without a migration for every
   iteration.
+- High-data-rate Nesso captures use the same endpoint with
+  `captureType: "raw_burst_ble_packets"` and store raw-burst samples inside the
+  generic `payload` field.
 - Do not use this endpoint for normal long ride capture.
 
 Success response:

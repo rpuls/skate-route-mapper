@@ -1,6 +1,8 @@
 import type {
   NessoFeatureFrame,
   NessoImuPacket,
+  NessoRawBurstSample,
+  NessoRawBurstStatus,
 } from "@skate-route-mapper/shared/nessoBle";
 
 export type NessoBleConnection = {
@@ -8,12 +10,15 @@ export type NessoBleConnection = {
   deviceName: string;
   disconnect: () => Promise<void>;
   setSampleInterval: (intervalMs: number) => Promise<void>;
+  startRawBurstCapture: (durationMs: number) => Promise<void>;
 };
 
 type ConnectOptions = {
   timeoutMs?: number;
   onSample?: (sample: NessoImuPacket) => void;
   onFeatureFrame?: (frame: NessoFeatureFrame) => void;
+  onRawBurstSample?: (sample: NessoRawBurstSample, packetBase64: string) => void;
+  onRawBurstStatus?: (status: NessoRawBurstStatus) => void;
   onError?: (message: string) => void;
 };
 

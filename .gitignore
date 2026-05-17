@@ -71,6 +71,7 @@ playwright-report/
 .idea/
 
 # Temporary files
+.tmp/
 *.tmp
 *.temp
 *.swp

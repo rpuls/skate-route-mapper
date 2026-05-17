@@ -14,7 +14,11 @@ export const NESSO_GATE_A_BLE_CONFIG_CHARACTERISTIC_UUID =
 
 export const NESSO_BLE_IMU_PACKET_SIZE = 20;
 export const NESSO_BLE_FEATURE_PACKET_TYPE = 0x02;
+export const NESSO_BLE_RAW_BURST_SAMPLE_PACKET_TYPE = 0x03;
+export const NESSO_BLE_RAW_BURST_STATUS_PACKET_TYPE = 0x04;
 export const NESSO_BLE_FEATURE_PROTOCOL_VERSION = 1;
+export const NESSO_BLE_RAW_BURST_PROTOCOL_VERSION = 1;
+export const NESSO_BLE_COMMAND_RAW_BURST_CAPTURE = 0xa0;
 
 export type NessoImuPacket = {
   type: "raw";
@@ -41,7 +45,41 @@ export type NessoFeatureFrame = {
   confidence: number;
 };
 
-export type NessoMotionPacket = NessoImuPacket | NessoFeatureFrame;
+export type NessoRawBurstStatus = {
+  type: "rawBurstStatus";
+  protocolVersion: number;
+  status:
+    | "started"
+    | "capturing"
+    | "complete"
+    | "transferComplete"
+    | "overflow"
+    | "error";
+  captureId: number;
+  sampleCount: number;
+  capacity: number;
+  durationMs: number;
+};
+
+export type NessoRawBurstSample = {
+  type: "rawBurstSample";
+  protocolVersion: number;
+  captureId: number;
+  sampleIndex: number;
+  offsetUs: number;
+  ax: number;
+  ay: number;
+  az: number;
+  gx: number;
+  gy: number;
+  gz: number;
+};
+
+export type NessoMotionPacket =
+  | NessoImuPacket
+  | NessoFeatureFrame
+  | NessoRawBurstStatus
+  | NessoRawBurstSample;
 
 export function parseNessoMotionPacket(bytes: Uint8Array): NessoMotionPacket {
   if (
@@ -53,6 +91,22 @@ export function parseNessoMotionPacket(bytes: Uint8Array): NessoMotionPacket {
     bytes[19] <= 100
   ) {
     return parseNessoFeatureFrame(bytes);
+  }
+
+  if (
+    bytes.byteLength === NESSO_BLE_IMU_PACKET_SIZE &&
+    bytes[0] === NESSO_BLE_RAW_BURST_SAMPLE_PACKET_TYPE &&
+    bytes[1] === NESSO_BLE_RAW_BURST_PROTOCOL_VERSION
+  ) {
+    return parseNessoRawBurstSample(bytes);
+  }
+
+  if (
+    bytes.byteLength === NESSO_BLE_IMU_PACKET_SIZE &&
+    bytes[0] === NESSO_BLE_RAW_BURST_STATUS_PACKET_TYPE &&
+    bytes[1] === NESSO_BLE_RAW_BURST_PROTOCOL_VERSION
+  ) {
+    return parseNessoRawBurstStatus(bytes);
   }
 
   return parseNessoImuPacket(bytes);
@@ -114,5 +168,80 @@ function clampRoughnessLevel(value: number): 1 | 2 | 3 | 4 | 5 | 6 {
   if (value <= 1) return 1;
   if (value >= 6) return 6;
   return value as 1 | 2 | 3 | 4 | 5 | 6;
+}
+
+export function parseNessoRawBurstStatus(bytes: Uint8Array): NessoRawBurstStatus {
+  if (bytes.byteLength !== NESSO_BLE_IMU_PACKET_SIZE) {
+    throw new Error(
+      `Expected ${NESSO_BLE_IMU_PACKET_SIZE} bytes, received ${bytes.byteLength}`
+    );
+  }
+
+  const packet = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const packetType = packet.getUint8(0);
+
+  if (packetType !== NESSO_BLE_RAW_BURST_STATUS_PACKET_TYPE) {
+    throw new Error(
+      `Expected Nesso raw burst status packet type ${NESSO_BLE_RAW_BURST_STATUS_PACKET_TYPE}`
+    );
+  }
+
+  return {
+    type: "rawBurstStatus",
+    protocolVersion: packet.getUint8(1),
+    status: getRawBurstStatusLabel(packet.getUint8(2)),
+    captureId: packet.getUint8(3),
+    sampleCount: packet.getUint16(4, true),
+    capacity: packet.getUint16(6, true),
+    durationMs: packet.getUint16(8, true),
+  };
+}
+
+export function parseNessoRawBurstSample(bytes: Uint8Array): NessoRawBurstSample {
+  if (bytes.byteLength !== NESSO_BLE_IMU_PACKET_SIZE) {
+    throw new Error(
+      `Expected ${NESSO_BLE_IMU_PACKET_SIZE} bytes, received ${bytes.byteLength}`
+    );
+  }
+
+  const packet = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const packetType = packet.getUint8(0);
+
+  if (packetType !== NESSO_BLE_RAW_BURST_SAMPLE_PACKET_TYPE) {
+    throw new Error(
+      `Expected Nesso raw burst sample packet type ${NESSO_BLE_RAW_BURST_SAMPLE_PACKET_TYPE}`
+    );
+  }
+
+  return {
+    type: "rawBurstSample",
+    protocolVersion: packet.getUint8(1),
+    captureId: packet.getUint8(2),
+    sampleIndex: packet.getUint16(3, true),
+    offsetUs: packet.getUint8(5) | (packet.getUint8(6) << 8) | (packet.getUint8(7) << 16),
+    ax: packet.getInt16(8, true) / 1000,
+    ay: packet.getInt16(10, true) / 1000,
+    az: packet.getInt16(12, true) / 1000,
+    gx: (packet.getInt16(14, true) / 1000) * (Math.PI / 180),
+    gy: (packet.getInt16(16, true) / 1000) * (Math.PI / 180),
+    gz: (packet.getInt16(18, true) / 1000) * (Math.PI / 180),
+  };
+}
+
+function getRawBurstStatusLabel(value: number): NessoRawBurstStatus["status"] {
+  switch (value) {
+    case 1:
+      return "started";
+    case 2:
+      return "capturing";
+    case 3:
+      return "complete";
+    case 4:
+      return "transferComplete";
+    case 5:
+      return "overflow";
+    default:
+      return "error";
+  }
 }
 

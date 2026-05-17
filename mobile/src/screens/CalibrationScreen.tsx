@@ -6,6 +6,7 @@ import {
   Text,
   TextInput,
   Pressable,
+  Switch,
   View,
 } from "react-native";
 import { colors, radius, shadows, space, stateStyles } from "@skate-route-mapper/shared/design";
@@ -32,10 +33,21 @@ export default function CalibrationScreen() {
   const externalFeatureFrameCount = useMeasurementStore(
     (state) => state.externalFeatureFrameCount
   );
+  const externalSensorConnection = useMeasurementStore(
+    (state) => state.externalSensorConnection
+  );
+  const latestRawBurstStatus = useMeasurementStore(
+    (state) => state.latestRawBurstStatus
+  );
+  const rawBurstSamples = useMeasurementStore((state) => state.rawBurstSamples);
+  const clearRawBurstCapture = useMeasurementStore(
+    (state) => state.clearRawBurstCapture
+  );
 
   const [notes, setNotes] = useState("");
   const [subjectiveRoughnessLevel, setSubjectiveRoughnessLevel] =
     useState<number | null>(null);
+  const [highDataRate, setHighDataRate] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [captureStartedAt, setCaptureStartedAt] = useState<number | null>(null);
   const [captureEndedAt, setCaptureEndedAt] = useState<number | null>(null);
@@ -45,18 +57,23 @@ export default function CalibrationScreen() {
   const lastSequenceRef = useRef<number | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const canCapture = externalSensorConnected && latestFrame != null && !capturing;
-  const canUpload = Boolean(token) && frames.length > 0 && !capturing && !uploading;
+  const canCapture =
+    externalSensorConnected &&
+    !capturing &&
+    (highDataRate ? externalSensorConnection != null : latestFrame != null);
+  const capturedSampleCount = highDataRate ? rawBurstSamples.length : frames.length;
+  const canUpload =
+    Boolean(token) && capturedSampleCount > 0 && !capturing && !uploading;
   const progress = useMemo(() => {
     if (!capturing || captureStartedAt == null) {
-      return frames.length > 0 ? 1 : 0;
+      return capturedSampleCount > 0 ? 1 : 0;
     }
 
     return Math.min(1, (Date.now() - captureStartedAt) / CAPTURE_DURATION_MS);
-  }, [captureStartedAt, capturing, frames.length]);
+  }, [capturedSampleCount, captureStartedAt, capturing]);
 
   useEffect(() => {
-    if (!capturing || !latestFrame) {
+    if (!capturing || highDataRate || !latestFrame) {
       return;
     }
 
@@ -72,7 +89,30 @@ export default function CalibrationScreen() {
         capturedAt: Date.now(),
       },
     ]);
-  }, [capturing, latestFrame]);
+  }, [capturing, highDataRate, latestFrame]);
+
+  useEffect(() => {
+    if (!capturing || !highDataRate || !latestRawBurstStatus) {
+      return;
+    }
+
+    if (latestRawBurstStatus.status === "transferComplete") {
+      setCapturing(false);
+      setCaptureEndedAt(Date.now());
+      setMessage(`Hi-fi capture received: ${rawBurstSamples.length} raw samples.`);
+    }
+
+    if (
+      latestRawBurstStatus.status === "overflow" ||
+      latestRawBurstStatus.status === "error"
+    ) {
+      setCapturing(false);
+      setCaptureEndedAt(Date.now());
+      setMessage(
+        `Hi-fi capture ${latestRawBurstStatus.status}: ${latestRawBurstStatus.sampleCount} samples.`
+      );
+    }
+  }, [capturing, highDataRate, latestRawBurstStatus, rawBurstSamples.length]);
 
   useEffect(() => {
     return () => {
@@ -82,7 +122,7 @@ export default function CalibrationScreen() {
     };
   }, []);
 
-  const startCapture = () => {
+  const startCapture = async () => {
     if (!canCapture) {
       return;
     }
@@ -90,10 +130,27 @@ export default function CalibrationScreen() {
     const now = Date.now();
     lastSequenceRef.current = null;
     setFrames([]);
+    clearRawBurstCapture();
     setCaptureStartedAt(now);
     setCaptureEndedAt(null);
     setCapturing(true);
-    setMessage("Capturing 10 seconds...");
+    setMessage(
+      highDataRate
+        ? "Capturing hi-fi data on Nesso, then transferring..."
+        : "Capturing 10 seconds..."
+    );
+
+    if (highDataRate) {
+      try {
+        await externalSensorConnection?.startRawBurstCapture(CAPTURE_DURATION_MS);
+      } catch (error) {
+        setCapturing(false);
+        setMessage(
+          error instanceof Error ? error.message : "Unable to start hi-fi capture."
+        );
+      }
+      return;
+    }
 
     timeoutRef.current = setTimeout(() => {
       setCapturing(false);
@@ -103,30 +160,46 @@ export default function CalibrationScreen() {
   };
 
   const uploadCapture = async () => {
-    if (!token || frames.length === 0) {
+    if (!token || capturedSampleCount === 0) {
       setMessage(token ? "Capture data first." : "Sign in before uploading captures.");
       return;
     }
 
-    const startedAt = captureStartedAt ?? frames[0]?.capturedAt ?? Date.now();
+    const startedAt =
+      captureStartedAt ?? frames[0]?.capturedAt ?? rawBurstSamples[0]?.offsetUs ?? Date.now();
     const endedAt = captureEndedAt ?? frames[frames.length - 1]?.capturedAt ?? Date.now();
     const capture: ExperimentalCapturePayload = {
       payload: {
         label:
           subjectiveRoughnessLevel == null
-            ? "Calibration capture"
+            ? highDataRate
+              ? "Hi-fi calibration capture"
+              : "Calibration capture"
+            : highDataRate
+            ? `Hi-fi calibration capture level ${subjectiveRoughnessLevel}`
             : `Calibration capture level ${subjectiveRoughnessLevel}`,
         notes: notes.trim() || null,
         source: "nesso-gate-a",
-        captureType: "feature_frames_5hz",
+        captureType: highDataRate ? "raw_burst_ble_packets" : "feature_frames_5hz",
         durationMs: Math.max(0, endedAt - startedAt),
-        sampleCount: frames.length,
-        firmwareLabel: "calibration v2",
+        sampleCount: capturedSampleCount,
+        firmwareLabel: "calibration v3",
         requestedDurationMs: CAPTURE_DURATION_MS,
-        appCaptureVersion: 1,
+        appCaptureVersion: highDataRate ? 2 : 1,
         externalFeatureFrameCount,
         subjectiveRoughnessLevel,
-        frames,
+        ...(highDataRate
+          ? {
+              rawBurst: {
+                status: latestRawBurstStatus,
+                encoding: "decoded-json-with-original-ble-packet-base64",
+                packetSizeBytes: 20,
+                samples: rawBurstSamples,
+              },
+            }
+          : {
+              frames,
+            }),
       },
     };
 
@@ -164,22 +237,42 @@ export default function CalibrationScreen() {
             {externalSensorConnected ? "Connected" : "Connect Nesso first"}
           </Text>
           <Text style={styles.statusMeta}>
-            {latestFrame
+            {highDataRate && latestRawBurstStatus
+              ? `Hi-fi ${latestRawBurstStatus.status}, ${rawBurstSamples.length} samples`
+              : latestFrame
               ? `Latest frame #${latestFrame.sequence}, level ${latestFrame.roughnessLevel}`
               : "Waiting for feature frames"}
           </Text>
         </View>
 
         <View style={styles.card}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleCopy}>
+              <Text style={styles.sectionTitle}>High data rate</Text>
+              <Text style={styles.detailText}>
+                Capture raw IMU on Nesso first, then transfer it after the
+                window.
+              </Text>
+            </View>
+            <Switch
+              disabled={capturing}
+              onValueChange={setHighDataRate}
+              thumbColor={highDataRate ? colors.accent : colors.surface}
+              trackColor={{ false: colors.surfaceMuted, true: colors.surfaceWarm }}
+              value={highDataRate}
+            />
+          </View>
+
           <View style={styles.captureHeader}>
             <View>
               <Text style={styles.sectionTitle}>10 second capture</Text>
               <Text style={styles.detailText}>
-                Current mode stores received Gate A feature frames. Raw IMU burst
-                transfer will use this same upload lane later.
+                {highDataRate
+                  ? "Hi-fi mode stores decoded raw BLE packets in the same experimental upload lane."
+                  : "Current mode stores received Gate A feature frames."}
               </Text>
             </View>
-            <Text style={styles.frameCount}>{frames.length}</Text>
+            <Text style={styles.frameCount}>{capturedSampleCount}</Text>
           </View>
 
           <View style={styles.progressTrack}>
@@ -211,7 +304,7 @@ export default function CalibrationScreen() {
           {message ? <Text style={styles.message}>{message}</Text> : null}
         </View>
 
-        <View style={[styles.card, frames.length === 0 && styles.ghosted]}>
+        <View style={[styles.card, capturedSampleCount === 0 && styles.ghosted]}>
           <Text style={styles.sectionTitle}>After capture</Text>
           <Text style={styles.detailText}>
             Add notes and an optional subjective rating once the capture is
@@ -220,7 +313,7 @@ export default function CalibrationScreen() {
 
           <TextInput
             multiline
-            editable={frames.length > 0}
+            editable={capturedSampleCount > 0}
             onChangeText={setNotes}
             placeholder="Notes, e.g. skate on smooth road"
             placeholderTextColor={colors.textMuted}
@@ -235,7 +328,7 @@ export default function CalibrationScreen() {
 
               return (
                 <Pressable
-                  disabled={frames.length === 0}
+                  disabled={capturedSampleCount === 0}
                   key={level}
                   onPress={() =>
                     setSubjectiveRoughnessLevel((currentLevel) =>
@@ -370,6 +463,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 16,
     justifyContent: "space-between",
+  },
+  toggleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 16,
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+  toggleCopy: {
+    flex: 1,
   },
   detailText: {
     color: colors.textMuted,

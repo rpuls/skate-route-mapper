@@ -5,9 +5,12 @@ import {
   NESSO_GATE_A_BLE_CONFIG_CHARACTERISTIC_UUID,
   NESSO_GATE_A_BLE_FEATURE_CHARACTERISTIC_UUID,
   NESSO_GATE_A_BLE_SERVICE_UUID,
+  NESSO_BLE_COMMAND_RAW_BURST_CAPTURE,
   parseNessoMotionPacket,
   type NessoFeatureFrame,
   type NessoImuPacket,
+  type NessoRawBurstSample,
+  type NessoRawBurstStatus,
 } from "@skate-route-mapper/shared/nessoBle";
 
 export type NessoBleConnection = {
@@ -15,12 +18,15 @@ export type NessoBleConnection = {
   deviceName: string;
   disconnect: () => Promise<void>;
   setSampleInterval: (intervalMs: number) => Promise<void>;
+  startRawBurstCapture: (durationMs: number) => Promise<void>;
 };
 
 type ConnectOptions = {
   timeoutMs?: number;
   onSample?: (sample: NessoImuPacket) => void;
   onFeatureFrame?: (frame: NessoFeatureFrame) => void;
+  onRawBurstSample?: (sample: NessoRawBurstSample, packetBase64: string) => void;
+  onRawBurstStatus?: (status: NessoRawBurstStatus) => void;
   onError?: (message: string) => void;
 };
 
@@ -141,8 +147,12 @@ export async function connectToNesso(
 
             if (packet.type === "feature") {
               options.onFeatureFrame?.(packet);
-            } else {
+            } else if (packet.type === "raw") {
               options.onSample?.(packet);
+            } else if (packet.type === "rawBurstSample") {
+              options.onRawBurstSample?.(packet, characteristic.value);
+            } else {
+              options.onRawBurstStatus?.(packet);
             }
           }
         );
@@ -159,6 +169,13 @@ export async function connectToNesso(
               NESSO_GATE_A_BLE_SERVICE_UUID,
               NESSO_GATE_A_BLE_CONFIG_CHARACTERISTIC_UUID,
               uint16ToBase64(intervalMs)
+            );
+          },
+          startRawBurstCapture: async (durationMs: number) => {
+            await readyDevice.writeCharacteristicWithResponseForService(
+              NESSO_GATE_A_BLE_SERVICE_UUID,
+              NESSO_GATE_A_BLE_CONFIG_CHARACTERISTIC_UUID,
+              rawBurstCommandToBase64(durationMs)
             );
           },
         });
@@ -230,6 +247,34 @@ function uint16ToBase64(value: number) {
   output += chars[(triplet >> 12) & 0x3f];
   output += chars[(triplet >> 6) & 0x3f];
   output += "=";
+
+  return output;
+}
+
+function rawBurstCommandToBase64(durationMs: number) {
+  const clamped = Math.max(1000, Math.min(10000, Math.round(durationMs)));
+  return bytesToBase64([
+    NESSO_BLE_COMMAND_RAW_BURST_CAPTURE,
+    clamped & 0xff,
+    (clamped >> 8) & 0xff,
+  ]);
+}
+
+function bytesToBase64(bytes: number[]) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let output = "";
+
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index] ?? 0;
+    const second = bytes[index + 1] ?? 0;
+    const third = bytes[index + 2] ?? 0;
+    const triplet = (first << 16) | (second << 8) | third;
+
+    output += chars[(triplet >> 18) & 0x3f];
+    output += chars[(triplet >> 12) & 0x3f];
+    output += index + 1 < bytes.length ? chars[(triplet >> 6) & 0x3f] : "=";
+    output += index + 2 < bytes.length ? chars[triplet & 0x3f] : "=";
+  }
 
   return output;
 }

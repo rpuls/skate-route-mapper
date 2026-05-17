@@ -61,6 +61,9 @@ export default function HomeScreen() {
     setLatestExternalFeatureFrame,
     setLatestExternalImuSample,
     setExternalSensorConnected,
+    setExternalSensorConnection,
+    setLatestRawBurstStatus,
+    addRawBurstSample,
     startRecording,
   } = useMeasurementStore();
 
@@ -104,9 +107,11 @@ export default function HomeScreen() {
       setLatestExternalImuSample(null);
       setLatestExternalFeatureFrame(null);
       setExternalSensorConnected(false);
+      setExternalSensorConnection(null);
     };
   }, [
     setExternalSensorConnected,
+    setExternalSensorConnection,
     setLatestExternalFeatureFrame,
     setLatestExternalImuSample,
   ]);
@@ -120,6 +125,7 @@ export default function HomeScreen() {
       setLatestExternalImuSample(null);
       setLatestExternalFeatureFrame(null);
       setExternalSensorConnected(false);
+      setExternalSensorConnection(null);
       setNessoStatus("idle");
       setNessoMessage("Ready to pair with the Nesso Gate A firmware.");
       setSensorSource("phone");
@@ -148,18 +154,29 @@ export default function HomeScreen() {
         onError: (message) => {
           setNessoMessage(`Nesso packet error: ${message}`);
         },
+        onRawBurstStatus: (rawBurstStatus) => {
+          setLatestRawBurstStatus(rawBurstStatus);
+          setNessoMessage(
+            `Hi-fi capture ${rawBurstStatus.status}: ${rawBurstStatus.sampleCount}/${rawBurstStatus.capacity} samples.`
+          );
+        },
+        onRawBurstSample: (sample, packetBase64) => {
+          addRawBurstSample(sample, packetBase64);
+        },
       });
       await connection.setSampleInterval(200); //5 hz
 
       nessoConnection.current = connection;
       setNessoStatus("connected");
       setExternalSensorConnected(true);
+      setExternalSensorConnection(connection);
       setNessoMessage(`${connection.deviceName} connected. GPS remains on this phone.`);
       setSensorSource("external");
     } catch (error) {
       nessoConnection.current = null;
       setNessoStatus("error");
       setExternalSensorConnected(false);
+      setExternalSensorConnection(null);
       setNessoMessage(error instanceof Error ? error.message : "Unable to connect.");
       setSensorSource("phone");
     }

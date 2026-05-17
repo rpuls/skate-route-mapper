@@ -125,16 +125,19 @@ frames until real rides show the detector is reliable. The tile stays in
 `Check` below `5km/h` because stopped/starting motion is not useful road-surface
 data.
 
-The Calibration screen is enabled when Nesso Gate A is connected. It currently
-captures `10s` of received Gate A feature frames, lets the tester add notes and
-an optional subjective `1-6` roughness feeling, and uploads the result to
+The Calibration screen is enabled when Nesso Gate A is connected. It captures
+`10s` of received Gate A feature frames by default, lets the tester add notes
+and an optional subjective `1-6` roughness feeling, and uploads the result to
 `POST /v1/mobile/experimental-captures`.
 That backend endpoint stores generic JSON on purpose so this experimental data
-shape can change while firmware raw-burst capture is still being designed.
+shape can change while firmware raw-burst capture is being tested. Turning on
+`High data rate` sends a raw-burst command to Nesso; the device captures raw IMU
+samples locally, transfers them after the capture window, and uploads them
+through the same endpoint as `captureType: "raw_burst_ble_packets"`.
 
 Gate A status:
 
-- `calibration v2` firmware is the current test build.
+- `calibration v3` firmware is the current test build.
 - smooth hand movement is now barely detected in indoor testing.
 - low vibration no longer immediately maxes out the `1-6` level scale.
 - semi-rough indoor vibration reaches roughly level `3-4`.

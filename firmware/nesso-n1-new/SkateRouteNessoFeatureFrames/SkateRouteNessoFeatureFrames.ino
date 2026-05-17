@@ -10,13 +10,24 @@ const char *DEVICE_NAME = "Skate Nesso N1 Gate A";
 const char *SERVICE_UUID = "7b32f8d0-5d0b-4f0e-a1f5-8f30c44c0001";
 const char *FEATURE_CHARACTERISTIC_UUID = "7b32f8d1-5d0b-4f0e-a1f5-8f30c44c0001";
 const char *CONFIG_CHARACTERISTIC_UUID = "7b32f8d2-5d0b-4f0e-a1f5-8f30c44c0001";
-const char *FIRMWARE_LABEL = "calibration v2";
+const char *FIRMWARE_LABEL = "calibration v3";
 
 const uint16_t DEFAULT_SAMPLE_INTERVAL_MS = 200;
 const uint16_t MIN_SAMPLE_INTERVAL_MS = 100;
 const uint16_t MAX_SAMPLE_INTERVAL_MS = 1000;
 const uint8_t FEATURE_PACKET_TYPE = 0x02;
+const uint8_t RAW_BURST_SAMPLE_PACKET_TYPE = 0x03;
+const uint8_t RAW_BURST_STATUS_PACKET_TYPE = 0x04;
 const uint8_t FEATURE_PROTOCOL_VERSION = 1;
+const uint8_t RAW_BURST_PROTOCOL_VERSION = 1;
+const uint8_t RAW_BURST_CAPTURE_COMMAND = 0xa0;
+const uint8_t RAW_BURST_STATUS_STARTED = 1;
+const uint8_t RAW_BURST_STATUS_COMPLETE = 3;
+const uint8_t RAW_BURST_STATUS_TRANSFER_COMPLETE = 4;
+const uint8_t RAW_BURST_STATUS_OVERFLOW = 5;
+const uint16_t RAW_BURST_MAX_SAMPLES = 2500;
+const uint16_t RAW_BURST_DEFAULT_DURATION_MS = 10000;
+const uint16_t RAW_BURST_MAX_DURATION_MS = 10000;
 const uint32_t BATTERY_REFRESH_MS = 30000;
 const uint32_t CHARGE_STATE_REFRESH_MS = 1000;
 const uint32_t BOOT_SPLASH_MS = 1600;
@@ -42,6 +53,18 @@ const int FEATURE_STATE_Y = 112;
 BLEServer *server = nullptr;
 BLECharacteristic *imuCharacteristic = nullptr;
 BLECharacteristic *configCharacteristic = nullptr;
+
+struct RawBurstSample {
+  uint32_t offsetUs;
+  int16_t axMg;
+  int16_t ayMg;
+  int16_t azMg;
+  int16_t gxMdps;
+  int16_t gyMdps;
+  int16_t gzMdps;
+};
+
+RawBurstSample rawBurstSamples[RAW_BURST_MAX_SAMPLES];
 
 uint32_t sequence = 0;
 uint32_t featureWindowStartedAtMs = 0;
@@ -85,6 +108,15 @@ float vibrationBaselineZ = 0.0f;
 float smoothedRoughnessScore = 0.0f;
 bool vibrationFilterInitialized = false;
 bool roughnessScoreInitialized = false;
+bool rawBurstRecording = false;
+bool rawBurstTransferring = false;
+bool rawBurstOverflowed = false;
+uint8_t rawBurstCaptureId = 0;
+uint16_t rawBurstRequestedDurationMs = RAW_BURST_DEFAULT_DURATION_MS;
+uint16_t rawBurstSampleCount = 0;
+uint16_t rawBurstTransferIndex = 0;
+uint32_t rawBurstStartedAtMs = 0;
+uint32_t rawBurstStartedAtUs = 0;
 
 void writeUint32Le(uint8_t *buffer, size_t offset, uint32_t value) {
   buffer[offset] = value & 0xff;
@@ -103,6 +135,12 @@ void writeUint16Le(uint8_t *buffer, size_t offset, uint16_t value) {
   buffer[offset + 1] = (value >> 8) & 0xff;
 }
 
+void writeUint24Le(uint8_t *buffer, size_t offset, uint32_t value) {
+  buffer[offset] = value & 0xff;
+  buffer[offset + 1] = (value >> 8) & 0xff;
+  buffer[offset + 2] = (value >> 16) & 0xff;
+}
+
 int16_t clampInt16(float value) {
   if (value > 32767.0f) return 32767;
   if (value < -32768.0f) return -32768;
@@ -113,6 +151,134 @@ uint16_t clampUint16(float value) {
   if (value > 65535.0f) return 65535;
   if (value < 0.0f) return 0;
   return static_cast<uint16_t>(value);
+}
+
+void notifyRawBurstStatus(uint8_t status) {
+  if (!deviceConnected || imuCharacteristic == nullptr) {
+    return;
+  }
+
+  uint8_t packet[20] = {0};
+  packet[0] = RAW_BURST_STATUS_PACKET_TYPE;
+  packet[1] = RAW_BURST_PROTOCOL_VERSION;
+  packet[2] = status;
+  packet[3] = rawBurstCaptureId;
+  writeUint16Le(packet, 4, rawBurstSampleCount);
+  writeUint16Le(packet, 6, RAW_BURST_MAX_SAMPLES);
+  writeUint16Le(packet, 8, rawBurstRequestedDurationMs);
+
+  imuCharacteristic->setValue(packet, sizeof(packet));
+  imuCharacteristic->notify();
+}
+
+void startRawBurstCapture(uint16_t durationMs) {
+  rawBurstCaptureId++;
+  if (rawBurstCaptureId == 0) {
+    rawBurstCaptureId = 1;
+  }
+
+  rawBurstRequestedDurationMs = constrain(
+    durationMs == 0 ? RAW_BURST_DEFAULT_DURATION_MS : durationMs,
+    static_cast<uint16_t>(1000),
+    RAW_BURST_MAX_DURATION_MS
+  );
+  rawBurstSampleCount = 0;
+  rawBurstTransferIndex = 0;
+  rawBurstOverflowed = false;
+  rawBurstTransferring = false;
+  rawBurstRecording = true;
+  rawBurstStartedAtMs = millis();
+  rawBurstStartedAtUs = micros();
+
+  Serial.printf(
+    "rawBurst %s captureId=%u started durationMs=%u capacity=%u\n",
+    FIRMWARE_LABEL,
+    rawBurstCaptureId,
+    rawBurstRequestedDurationMs,
+    RAW_BURST_MAX_SAMPLES
+  );
+  notifyRawBurstStatus(RAW_BURST_STATUS_STARTED);
+}
+
+void finishRawBurstCapture() {
+  rawBurstRecording = false;
+  rawBurstTransferring = true;
+  rawBurstTransferIndex = 0;
+
+  Serial.printf(
+    "rawBurst %s captureId=%u complete samples=%u overflow=%u durationMs=%lu\n",
+    FIRMWARE_LABEL,
+    rawBurstCaptureId,
+    rawBurstSampleCount,
+    rawBurstOverflowed ? 1 : 0,
+    millis() - rawBurstStartedAtMs
+  );
+  notifyRawBurstStatus(
+    rawBurstOverflowed ? RAW_BURST_STATUS_OVERFLOW : RAW_BURST_STATUS_COMPLETE
+  );
+}
+
+template <typename ImuData>
+void addRawBurstSample(const ImuData &data, uint32_t nowUs) {
+  if (!rawBurstRecording) {
+    return;
+  }
+
+  if (rawBurstSampleCount >= RAW_BURST_MAX_SAMPLES) {
+    rawBurstOverflowed = true;
+    finishRawBurstCapture();
+    return;
+  }
+
+  const uint32_t offsetUs = nowUs - rawBurstStartedAtUs;
+  RawBurstSample &sample = rawBurstSamples[rawBurstSampleCount++];
+  sample.offsetUs = min(offsetUs, 0x00ffffffUL);
+  sample.axMg = clampInt16(data.accel.x * 1000.0f);
+  sample.ayMg = clampInt16(data.accel.y * 1000.0f);
+  sample.azMg = clampInt16(data.accel.z * 1000.0f);
+  sample.gxMdps = clampInt16(data.gyro.x * 1000.0f);
+  sample.gyMdps = clampInt16(data.gyro.y * 1000.0f);
+  sample.gzMdps = clampInt16(data.gyro.z * 1000.0f);
+
+  if (millis() - rawBurstStartedAtMs >= rawBurstRequestedDurationMs) {
+    finishRawBurstCapture();
+  }
+}
+
+void sendNextRawBurstSample() {
+  if (!rawBurstTransferring || !deviceConnected || imuCharacteristic == nullptr) {
+    return;
+  }
+
+  if (rawBurstTransferIndex >= rawBurstSampleCount) {
+    rawBurstTransferring = false;
+    notifyRawBurstStatus(RAW_BURST_STATUS_TRANSFER_COMPLETE);
+    Serial.printf(
+      "rawBurst %s captureId=%u transferComplete samples=%u\n",
+      FIRMWARE_LABEL,
+      rawBurstCaptureId,
+      rawBurstSampleCount
+    );
+    return;
+  }
+
+  const RawBurstSample &sample = rawBurstSamples[rawBurstTransferIndex];
+  uint8_t packet[20] = {0};
+  packet[0] = RAW_BURST_SAMPLE_PACKET_TYPE;
+  packet[1] = RAW_BURST_PROTOCOL_VERSION;
+  packet[2] = rawBurstCaptureId;
+  writeUint16Le(packet, 3, rawBurstTransferIndex);
+  writeUint24Le(packet, 5, sample.offsetUs);
+  writeInt16Le(packet, 8, sample.axMg);
+  writeInt16Le(packet, 10, sample.ayMg);
+  writeInt16Le(packet, 12, sample.azMg);
+  writeInt16Le(packet, 14, sample.gxMdps);
+  writeInt16Le(packet, 16, sample.gyMdps);
+  writeInt16Le(packet, 18, sample.gzMdps);
+
+  imuCharacteristic->setValue(packet, sizeof(packet));
+  imuCharacteristic->notify();
+  rawBurstTransferIndex++;
 }
 
 float roughnessScoreFor(float vibrationRms, float vibrationPeakToPeak, float jerkRms) {
@@ -126,11 +292,11 @@ float roughnessScoreFor(float vibrationRms, float vibrationPeakToPeak, float jer
 }
 
 uint8_t roughnessLevelFor(float score) {
-  if (score < 0.10f) return 1;
-  if (score < 0.22f) return 2;
-  if (score < 0.42f) return 3;
-  if (score < 0.75f) return 4;
-  if (score < 1.20f) return 5;
+  if (score < 0.22f) return 1;
+  if (score < 0.55f) return 2;
+  if (score < 0.85f) return 3;
+  if (score < 1.20f) return 4;
+  if (score < 1.55f) return 5;
   return 6;
 }
 
@@ -442,6 +608,8 @@ void addFeatureSample() {
   lastFeatureSampleAtUs = nowUs;
 
   auto data = M5.Imu.getImuData();
+  addRawBurstSample(data, nowUs);
+
   if (!vibrationFilterInitialized) {
     vibrationBaselineX = data.accel.x;
     vibrationBaselineY = data.accel.y;
@@ -529,7 +697,8 @@ void sendFeaturePacket() {
   }
   const uint8_t roughnessLevel = roughnessLevelFor(smoothedRoughnessScore);
   const uint8_t confidence = confidenceFor(featureSampleCount, lateSampleCount, windowMs);
-  const bool canNotify = deviceConnected && imuCharacteristic != nullptr;
+  const bool canNotify =
+    deviceConnected && imuCharacteristic != nullptr && !rawBurstTransferring;
 
   packet[0] = FEATURE_PACKET_TYPE;
   packet[1] = FEATURE_PROTOCOL_VERSION;
@@ -588,6 +757,15 @@ class ConfigCallbacks : public BLECharacteristicCallbacks {
     String value = characteristic->getValue();
 
     if (value.length() < 2) {
+      return;
+    }
+
+    if (static_cast<uint8_t>(value[0]) == RAW_BURST_CAPTURE_COMMAND) {
+      const uint16_t requestedDurationMs = value.length() >= 3
+        ? static_cast<uint8_t>(value[1]) |
+          (static_cast<uint8_t>(value[2]) << 8)
+        : RAW_BURST_DEFAULT_DURATION_MS;
+      startRawBurstCapture(requestedDurationMs);
       return;
     }
 
@@ -667,6 +845,7 @@ void loop() {
   }
 
   addFeatureSample();
+  sendNextRawBurstSample();
 
   const uint32_t nowMs = millis();
   if (nowMs - featureWindowStartedAtMs >= sampleIntervalMs) {

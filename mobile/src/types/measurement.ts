@@ -10,4 +10,6 @@ export type {
   NessoFeatureFrame,
   NessoImuPacket,
   NessoMotionPacket,
+  NessoRawBurstSample,
+  NessoRawBurstStatus,
 } from "@skate-route-mapper/shared/nessoBle";

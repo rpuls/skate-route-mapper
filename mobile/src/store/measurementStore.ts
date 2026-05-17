@@ -5,9 +5,12 @@ import type {
   MeasurementStatus,
   NessoFeatureFrame,
   NessoImuPacket,
+  NessoRawBurstSample,
+  NessoRawBurstStatus,
   SensorSource,
   VehicleType,
 } from "../types/measurement";
+import type { NessoBleConnection } from "../native/NessoBle";
 import {
   createRide,
   finishRide,
@@ -27,12 +30,22 @@ type MeasurementState = {
   latestExternalFeatureFrame: NessoFeatureFrame | null;
   externalFeatureFrameCount: number;
   externalSensorConnected: boolean;
+  externalSensorConnection: NessoBleConnection | null;
+  latestRawBurstStatus: NessoRawBurstStatus | null;
+  rawBurstSamples: Array<NessoRawBurstSample & { packetBase64: string }>;
 
   setVehicleType: (vehicleType: VehicleType) => void;
   setSensorSource: (sensorSource: SensorSource) => void;
   setLatestExternalImuSample: (sample: NessoImuPacket | null) => void;
   setLatestExternalFeatureFrame: (frame: NessoFeatureFrame | null) => void;
   setExternalSensorConnected: (connected: boolean) => void;
+  setExternalSensorConnection: (connection: NessoBleConnection | null) => void;
+  setLatestRawBurstStatus: (status: NessoRawBurstStatus | null) => void;
+  addRawBurstSample: (
+    sample: NessoRawBurstSample,
+    packetBase64: string
+  ) => void;
+  clearRawBurstCapture: () => void;
 
   startRecording: () => string;
   stopRecording: () => void;
@@ -52,6 +65,9 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
   latestExternalFeatureFrame: null,
   externalFeatureFrameCount: 0,
   externalSensorConnected: false,
+  externalSensorConnection: null,
+  latestRawBurstStatus: null,
+  rawBurstSamples: [],
 
   setVehicleType: (vehicleType) => set({ vehicleType }),
   setSensorSource: (sensorSource) => set({ sensorSource }),
@@ -62,6 +78,18 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       externalFeatureFrameCount: frame ? state.externalFeatureFrameCount + 1 : 0,
     })),
   setExternalSensorConnected: (connected) => set({ externalSensorConnected: connected }),
+  setExternalSensorConnection: (connection) =>
+    set({ externalSensorConnection: connection }),
+  setLatestRawBurstStatus: (status) => set({ latestRawBurstStatus: status }),
+  addRawBurstSample: (sample, packetBase64) =>
+    set((state) => ({
+      rawBurstSamples: [...state.rawBurstSamples, { ...sample, packetBase64 }],
+    })),
+  clearRawBurstCapture: () =>
+    set({
+      latestRawBurstStatus: null,
+      rawBurstSamples: [],
+    }),
 
   startRecording: () => {
     const rideId = Crypto.randomUUID();
@@ -79,6 +107,8 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       samples: [],
       latestExternalFeatureFrame: null,
       externalFeatureFrameCount: 0,
+      latestRawBurstStatus: null,
+      rawBurstSamples: [],
     });
 
     return rideId;
@@ -105,6 +135,9 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       latestExternalFeatureFrame: null,
       externalFeatureFrameCount: 0,
       externalSensorConnected: false,
+      externalSensorConnection: null,
+      latestRawBurstStatus: null,
+      rawBurstSamples: [],
     }),
 
   addSample: (sample) => {

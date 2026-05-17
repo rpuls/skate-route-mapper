@@ -11,17 +11,26 @@ mobile app.
 ## Current Status
 
 This branch is a Gate A signal prototype, not the production storage pipeline.
-The current firmware label is `calibration v2`.
+The current firmware label is `calibration v3`.
 
-Observed bench/indoor behavior after `calibration v2`:
+Observed bench/indoor behavior after `calibration v2`, before the `v3`
+threshold pass:
 
 - smooth hand movement is barely detected
 - low vibration no longer immediately maxes out the `1-6` scale
 - semi-rough indoor vibration reaches roughly level `3-4`
 - higher levels still need outdoor testing on real rough asphalt
 
-The next test should record serial output on real surfaces, especially smooth
-asphalt, normal asphalt, bad asphalt, paving stones, and unskatable surfaces.
+High-data-rate raw-burst exports from `calibration v3` currently measure about
+`192-196Hz` over `10s` captures. Ridged-surface bench tests show clear contact
+vibration and a roughly `2s` pass over a `27` groove / `28` ridge object can
+plausibly recover the repeated pattern. A roughly `1s` pass still shows strong
+contact vibration, but exact ridge counting becomes fragile.
+
+The next test should capture a real skate-mounted `10s` high-data-rate burst to
+compare rolling asphalt contact against airborne intervals. After that, collect
+real surfaces, especially smooth asphalt, normal asphalt, bad asphalt, paving
+stones, and unskatable surfaces.
 
 ## Sketch
 
@@ -39,13 +48,15 @@ Differences from the legacy sketch:
 - roughness scoring uses a moving per-axis acceleration baseline, then scores
   the high-pass vibration component rather than raw acceleration magnitude
   variation
-- `calibration v2` widens the roughness level thresholds and reports the live
+- `calibration v3` widens the roughness level thresholds and reports the live
   `1-6` level from a smoothed roughness score so brief impacts and mild
   vibration do not instantly pin the UI at level `6`
 - the default feature window is `200ms`, or `5Hz`
 - the minimum feature window is `100ms`, or `10Hz`
 - normal BLE notifications are compact feature frames, not raw per-sample IMU
   readings
+- high-data-rate calibration mode can capture up to `2500` raw IMU samples
+  locally, then transfer them over BLE as 20-byte debug packets after capture
 - mobile UI should show surface quality and confidence instead of a sample graph
 
 ## BLE Feature Frame
@@ -65,10 +76,16 @@ uint8  roughnessLevel      // 1 excellent, 6 unskatable
 uint8  confidencePercent
 ```
 
-The BLE packet shape intentionally stayed stable during calibration v2. In the
+The BLE feature packet shape intentionally stayed stable during calibration v3. In the
 shared parser, these high-pass vibration fields are still exposed as
 `accelRms` and `accelPeakToPeak` for now. Rename them only when the feature-frame
 contract graduates beyond the Gate A prototype.
+
+High-data-rate calibration mode writes command `0xa0` plus a little-endian
+`uint16` duration in milliseconds to the config characteristic. The firmware
+captures raw samples locally first, then emits status packets (`0x04`) and raw
+sample packets (`0x03`) on the feature characteristic. This mode is for short
+debug captures only.
 
 The shared parser for this packet lives in `shared/src/nessoBle.ts`.
 
@@ -93,13 +110,13 @@ Replace `COM3` with the port from `arduino-cli board list`.
 Expected output while the firmware is working:
 
 ```text
-Skate Nesso N1 Gate A feature firmware booting (calibration v2)
-feature calibration v2 seq=12 notified=1 connected=1 windowMs=200 samples=130 late=0 vibRms=0.0123 vibP2p=0.0550 jerkRms=0.0040 rawStd=0.0100 rawP2p=0.0500 score=0.0117 smoothScore=0.0108 level=1 confidence=100
+Skate Nesso N1 Gate A feature firmware booting (calibration v3)
+feature calibration v3 seq=12 notified=1 connected=1 windowMs=200 samples=130 late=0 vibRms=0.0123 vibP2p=0.0550 jerkRms=0.0040 rawStd=0.0100 rawP2p=0.0500 score=0.0117 smoothScore=0.0108 level=1 confidence=100
 ```
 
 Useful interpretation:
 
-- If serial output does not include `calibration v2`, the Nesso is not running
+- If serial output does not include `calibration v3`, the Nesso is not running
   the current branch firmware.
 - `samples=0` means the firmware is not getting IMU readings.
 - `samples>0` and `notified=0` means the firmware is computing frames but no

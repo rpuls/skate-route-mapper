@@ -79,15 +79,19 @@ Current branch answer:
 
 This does not yet claim that Nesso has fully passed Gate A. It creates the branch needed to test the gate with real surfaces and inspect whether the compact feature output separates stillness, smooth asphalt, rough asphalt, paving stones, and bad surfaces.
 
-Current calibration note, `calibration v2`:
+Current calibration note, `calibration v3`:
 
 - early magnitude-variance scoring was too sensitive because smooth arcs, gravity vector changes, leg swing, and normal skate movement still counted as roughness
 - the current firmware iteration uses a moving per-axis acceleration baseline and scores the high-pass vibration component instead of raw acceleration magnitude variation
 - serial output now reports both high-pass vibration fields (`vibRms`, `vibP2p`, `jerkRms`) and raw movement fields (`rawStd`, `rawP2p`) so tests can show whether false positives are coming from slow movement or real high-frequency vibration
 - the BLE packet shape is unchanged for this iteration; the existing `accelRms` and `accelPeakToPeak` fields now carry high-pass vibration RMS and high-pass vibration peak-to-peak values
-- `calibration v2` widens the `1-6` bucket thresholds and uses a smoothed roughness score for the reported level so brief impacts and mild vibration do not immediately pin the live quality indicator at level 6
-- indoor testing after `calibration v2` is promising: smooth hand movement is barely detected, low vibration no longer maxes out, and semi-rough indoor vibration reaches roughly level `3-4`
-- outdoor testing on real rough asphalt is still required before treating the level thresholds as product-calibrated
+- `calibration v3` widens the `1-6` bucket thresholds again after the first 8 mobile captures showed smooth/good skating surfaces reporting around level `3-4`
+- the `v3` threshold pass keeps the score formula unchanged, so it is a bucket calibration rather than a new signal algorithm
+- the first mobile capture export showed usable separation between subjective levels in `accelRms` and `accelPeakToPeak`, but the simple mobile `Asphalt`/`Sky` contact tile classified nearly every skating frame as ground contact
+- high-data-rate calibration mode is now opt-in on the mobile Calibration screen; it asks Nesso to capture raw IMU samples locally and transfer them after the capture window through the same experimental upload endpoint
+- first high-data-rate exports measured about `192-196Hz` raw IMU sampling over `10s`, not the hoped-for `800-1000Hz`; timing is usually close to `5ms` between samples, with occasional gaps
+- ridged-surface bench tests with a `27` groove / `28` ridge object showed that contact vibration is clearly visible; a roughly `2s` pass can plausibly recover about `28` repeated events, while a roughly `1s` pass still shows strong contact vibration but ridge-by-ridge counting becomes fragile
+- the next most useful test is a real skate-mounted `10s` high-data-rate capture to compare rolling contact against airborne intervals before promoting the diagnostic contact tile into filtering logic
 - if live levels are still unstable, the next experiment should compare longer rolling averages, for example `2s`, `5s`, and distance-based windows, before adding more complex movement rejection
 
 ### Gate B: Feature-Frame Feasibility
@@ -138,6 +142,32 @@ uint8  roughnessLevel             // 1 excellent, 6 unskatable
 uint8  confidencePercent
 ```
 
+Gate A high-data-rate debug packet families:
+
+```text
+0x03 raw_burst_sample
+  uint8  packetType
+  uint8  protocolVersion
+  uint8  captureId
+  uint16 sampleIndex
+  uint24 offsetUs
+  int16  axMg
+  int16  ayMg
+  int16  azMg
+  int16  gxMdps
+  int16  gyMdps
+  int16  gzMdps
+
+0x04 raw_burst_status
+  uint8  packetType
+  uint8  protocolVersion
+  uint8  status
+  uint8  captureId
+  uint16 sampleCount
+  uint16 capacity
+  uint16 durationMs
+```
+
 The shared parser lives in:
 
 - `shared/src/nessoBle.ts`
@@ -152,8 +182,9 @@ Important details:
   `7b32f8d0-5d0b-4f0e-a1f5-8f30c44c0001`.
 - The mobile foreground Nesso preview requests `200ms`, or `5Hz`.
 - Raw IMU samples are accumulated on-device during each Gate A feature window and are not sent over BLE by default.
-- Gate A `calibration v2` prints `score` and `smoothScore` over serial for threshold tuning, but those fields are not yet included in the 20-byte BLE packet.
-- Reaching a measured internal `800Hz` or `1000Hz` still has to be proven on hardware.
+- Gate A `calibration v3` prints `score` and `smoothScore` over serial for threshold tuning, but those fields are not yet included in the 20-byte BLE packet.
+- Opt-in high-data-rate captures currently buffer up to `2500` packed raw samples on Nesso and then transfer one 20-byte sample packet per BLE notification after recording.
+- Current exported high-data-rate captures measure roughly `192-196Hz`; reaching `800Hz` or `1000Hz` still has to be proven on hardware or with a more focused firmware sampler.
 
 ### Current Mobile Capture
 
@@ -626,17 +657,17 @@ Suggested debug capture strategy:
 
 ### Current Gate A Test Plan
 
-Use the `calibration v2` firmware in
+Use the `calibration v3` firmware in
 `firmware/nesso-n1-new/SkateRouteNessoFeatureFrames`.
 
 Before collecting data, confirm serial monitor shows:
 
 ```text
-Skate Nesso N1 Gate A feature firmware booting (calibration v2)
-feature calibration v2 ... score=... smoothScore=... level=...
+Skate Nesso N1 Gate A feature firmware booting (calibration v3)
+feature calibration v3 ... score=... smoothScore=... level=...
 ```
 
-If `calibration v2` is missing, the device is not running the current firmware.
+If `calibration v3` is missing, the device is not running the current firmware.
 
 For each surface, collect at least `10-20` feature lines and write down the
 surface label, approximate speed, mounting position, and subjective quality:
@@ -677,13 +708,23 @@ Below about `5km/h`, the mobile UI does not evaluate `Asphalt`/`Sky`; future
 persistence should mark frames as stopped/paused or avoid treating them as
 road-surface measurements.
 
-The mobile Calibration screen is an experimental data collection tool. In the
-first version it captures `10s` of received Gate A feature frames, lets the
-tester add notes and an optional subjective `1-6` roughness feeling, and uploads
-a generic JSON payload to `POST /v1/mobile/experimental-captures`. The same page
-and backend table should later accept a true firmware raw-burst payload after
-Nesso can capture high-rate IMU data locally and transfer it to the phone after
-the capture window.
+The mobile Calibration screen is an experimental data collection tool. It
+captures `10s` of received Gate A feature frames by default, lets the tester add
+notes and an optional subjective `1-6` roughness feeling, and uploads a generic
+JSON payload to `POST /v1/mobile/experimental-captures`. Its opt-in high-data-rate
+mode uses the same endpoint with `captureType: "raw_burst_ble_packets"` and
+stores decoded raw samples plus the original BLE packet base64 for each sample.
+
+For raw-burst CSV exports, use:
+
+```bash
+node scripts/analyze-experimental-captures.mjs <csv-file>
+```
+
+The analyzer reports measured sample rate, timing gaps, acceleration magnitude,
+high-pass activity windows, and simple high-pass peak counts. Treat peak counts
+as calibration hints rather than ground truth unless the capture has one clean,
+well-bounded event.
 
 ### Firmware-Only Feasibility Experiment
 
