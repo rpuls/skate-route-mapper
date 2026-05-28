@@ -20,7 +20,11 @@ import {
   Typography,
 } from "@mui/material";
 import { colors, shadows, space } from "@skate-route-mapper/shared/design";
-import type { PointerEvent as ReactPointerEvent, WheelEvent } from "react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+  WheelEvent,
+} from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";
@@ -464,6 +468,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
   const [mapWidth, setMapWidth] = useState(defaultMapWidth);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const chartDragPointerIdRef = useRef<number | null>(null);
   const mapDragRef = useRef<{
     panX: number;
     panY: number;
@@ -630,6 +635,65 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
   function resetPlayback() {
     setPlaybackIndex(0);
     setIsPlaying(false);
+  }
+
+  function seekChartToIndex(index: number) {
+    setIsPlaying(false);
+    setPlaybackIndex(clamp(index, 0, Math.max(0, analysisSamples.length - 1)));
+  }
+
+  function seekChartToClientX(clientX: number, element: SVGSVGElement) {
+    if (analysisSamples.length === 0) {
+      return;
+    }
+
+    const bounds = element.getBoundingClientRect();
+    const ratio = bounds.width === 0 ? 0 : (clientX - bounds.left) / bounds.width;
+    const nextIndex = Math.round(
+      clamp(ratio, 0, 1) * Math.max(0, analysisSamples.length - 1)
+    );
+
+    seekChartToIndex(nextIndex);
+  }
+
+  function handleChartPointerDown(event: ReactPointerEvent<SVGSVGElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    chartDragPointerIdRef.current = event.pointerId;
+    seekChartToClientX(event.clientX, event.currentTarget);
+  }
+
+  function handleChartPointerMove(event: ReactPointerEvent<SVGSVGElement>) {
+    if (chartDragPointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    seekChartToClientX(event.clientX, event.currentTarget);
+  }
+
+  function handleChartPointerUp(event: ReactPointerEvent<SVGSVGElement>) {
+    if (chartDragPointerIdRef.current === event.pointerId) {
+      chartDragPointerIdRef.current = null;
+    }
+  }
+
+  function handleChartKeyDown(event: ReactKeyboardEvent<SVGSVGElement>) {
+    if (analysisSamples.length === 0) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+      event.preventDefault();
+      seekChartToIndex(playbackIndex - 1);
+    } else if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+      event.preventDefault();
+      seekChartToIndex(playbackIndex + 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      seekChartToIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      seekChartToIndex(analysisSamples.length - 1);
+    }
   }
 
   function toggleSeries(series: ChartSeries) {
@@ -1063,7 +1127,29 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
               />
             </Stack>
           </Stack>
-          <svg height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} width={chartWidth}>
+          <svg
+            aria-label="Signal chart replay scrubber"
+            aria-valuemax={Math.max(0, analysisSamples.length - 1)}
+            aria-valuemin={0}
+            aria-valuenow={playbackIndex}
+            aria-valuetext={`${formatDuration(elapsedMs)} of ${formatDuration(totalMs)}`}
+            height={chartHeight}
+            onKeyDown={handleChartKeyDown}
+            onPointerCancel={handleChartPointerUp}
+            onPointerDown={handleChartPointerDown}
+            onPointerMove={handleChartPointerMove}
+            onPointerUp={handleChartPointerUp}
+            role="slider"
+            style={{
+              cursor: "ew-resize",
+              display: "block",
+              touchAction: "none",
+              userSelect: "none",
+            }}
+            tabIndex={0}
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            width={chartWidth}
+          >
             <rect fill={colors.surface} height={chartHeight} width={chartWidth} />
             {visibleSeries.filtered
               ? analysisSamples.map((sample, index) =>
