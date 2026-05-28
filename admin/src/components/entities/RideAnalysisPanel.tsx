@@ -38,13 +38,14 @@ const chartColors = {
   filtered: colors.shadow,
   moderate: colors.accentStrong,
   routeBase: colors.shadow,
+  roughness: colors.link,
   severe: colors.danger,
   smooth: colors.accent,
   trusted: colors.success,
   warning: colors.accent,
 } as const;
 
-type ChartSeries = "filtered" | "normalized" | "raw" | "smoothed";
+type ChartSeries = "filtered" | "normalized" | "raw" | "roughness" | "smoothed";
 
 type MapViewState = {
   centerX: number;
@@ -74,6 +75,7 @@ type AnalysisSample = {
   normalizedVibration: number;
   rawVibration: number;
   score: number;
+  skateRoughnessScore: number;
   smoothedVibration: number;
   speed: number | null;
   timestamp: number;
@@ -87,6 +89,8 @@ type AnalysisSettings = {
   maxLocationAgeMs: number;
   minSpeed: number;
   normalization: "raw" | "baseline" | "speed";
+  roughnessPeakThreshold: number;
+  roughnessPeakWeight: number;
   smoothingWindow: number;
   upperClipPercentile: number;
 };
@@ -96,6 +100,8 @@ const defaultSettings: AnalysisSettings = {
   maxLocationAgeMs: 2500,
   minSpeed: 0,
   normalization: "baseline",
+  roughnessPeakThreshold: 2,
+  roughnessPeakWeight: 0.5,
   smoothingWindow: 5,
   upperClipPercentile: 98,
 };
@@ -149,6 +155,42 @@ function rollingAverage(values: number[], index: number, windowSize: number) {
   );
 }
 
+function windowValues(values: number[], index: number, windowSize: number) {
+  const halfWindow = Math.floor(windowSize / 2);
+  const start = Math.max(0, index - halfWindow);
+  const end = Math.min(values.length, index + halfWindow + 1);
+
+  return values.slice(start, end);
+}
+
+function skateRoughnessScore(
+  values: number[],
+  index: number,
+  windowSize: number,
+  peakWeight: number,
+  peakThreshold: number
+) {
+  const visibleValues = windowValues(values, index, windowSize);
+
+  if (visibleValues.length === 0) {
+    return 0;
+  }
+
+  const mean =
+    visibleValues.reduce((sum, value) => sum + value, 0) / visibleValues.length;
+  const meanRemoved = visibleValues.map((value) => value - mean);
+  const verticalRms = Math.sqrt(
+    meanRemoved.reduce((sum, value) => sum + value ** 2, 0) /
+      meanRemoved.length
+  );
+  const peak95 = percentile(
+    meanRemoved.map((value) => Math.abs(value)),
+    95
+  );
+
+  return verticalRms + peakWeight * Math.max(0, peak95 - peakThreshold);
+}
+
 function formatDuration(ms: number) {
   const safeMs = Math.max(0, ms);
   const totalSeconds = Math.floor(safeMs / 1000);
@@ -164,6 +206,30 @@ function formatNumber(value: number | null | undefined, decimals = 3) {
   }
 
   return value.toFixed(decimals);
+}
+
+function roughnessInterpretation(score: number | null | undefined) {
+  if (score === null || score === undefined || !Number.isFinite(score)) {
+    return "Not set";
+  }
+
+  if (score < 0.3) {
+    return "Very smooth";
+  }
+
+  if (score < 0.7) {
+    return "Good skating asphalt";
+  }
+
+  if (score < 1.2) {
+    return "Noticeably rough";
+  }
+
+  if (score < 2) {
+    return "Poor skating surface";
+  }
+
+  return "Very rough / unpleasant";
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -364,6 +430,16 @@ function toAnalysisSamples(
   const smoothedRawValues = rawValues.map((_, index) =>
     rollingAverage(rawValues, index, settings.smoothingWindow)
   );
+  const azValues = parsed.map((sample) => sample.az);
+  const roughnessValues = azValues.map((_, index) =>
+    skateRoughnessScore(
+      azValues,
+      index,
+      settings.smoothingWindow,
+      settings.roughnessPeakWeight,
+      settings.roughnessPeakThreshold
+    )
+  );
 
   return parsed.map<AnalysisSample>((sample, index) => {
     const clipped = Math.min(sample.rawVibration, clipValue);
@@ -405,6 +481,7 @@ function toAnalysisSamples(
       ...sample,
       normalizedVibration,
       score,
+      skateRoughnessScore: roughnessValues[index] ?? 0,
       smoothedVibration: smoothedRawValues[index] ?? sample.rawVibration,
       trusted: hasTrustedLocation && hasTrustedSpeed,
       x,
@@ -458,6 +535,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
     filtered: true,
     normalized: true,
     raw: true,
+    roughness: true,
     smoothed: true,
   });
   const [mapInteraction, setMapInteraction] = useState<MapInteraction>({
@@ -1082,6 +1160,22 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
                 step={1}
                 value={settings.upperClipPercentile}
               />
+              <ControlSlider
+                label="Peak penalty k"
+                max={2}
+                min={0}
+                onChange={(value) => updateSetting("roughnessPeakWeight", value)}
+                step={0.1}
+                value={settings.roughnessPeakWeight}
+              />
+              <ControlSlider
+                label="Peak threshold g"
+                max={5}
+                min={0}
+                onChange={(value) => updateSetting("roughnessPeakThreshold", value)}
+                step={0.1}
+                value={settings.roughnessPeakThreshold}
+              />
               <FormControl>
                 <InputLabel>Normalization</InputLabel>
                 <Select
@@ -1118,6 +1212,12 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
                 color={chartColors.severe}
                 label="Normalized score"
                 onChange={() => toggleSeries("normalized")}
+              />
+              <SeriesToggle
+                checked={visibleSeries.roughness}
+                color={chartColors.roughness}
+                label="Skate roughness"
+                onChange={() => toggleSeries("roughness")}
               />
               <SeriesToggle
                 checked={visibleSeries.filtered}
@@ -1204,6 +1304,19 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
                 strokeWidth="2"
               />
             ) : null}
+            {visibleSeries.roughness ? (
+              <polyline
+                fill="none"
+                points={pointsForSeries(
+                  analysisSamples,
+                  chartWidth,
+                  chartHeight,
+                  (sample) => sample.skateRoughnessScore
+                )}
+                stroke={chartColors.roughness}
+                strokeWidth="3"
+              />
+            ) : null}
             {analysisSamples.length > 1 ? (
               <line
                 stroke={chartColors.currentMarker}
@@ -1237,6 +1350,14 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
             <Metric label="Raw vibration" value={formatNumber(currentSample.rawVibration)} />
             <Metric label="Smoothed" value={formatNumber(currentSample.smoothedVibration)} />
             <Metric label="Normalized" value={formatNumber(currentSample.normalizedVibration)} />
+            <Metric
+              label="Skate roughness"
+              value={formatNumber(currentSample.skateRoughnessScore)}
+            />
+            <Metric
+              label="Roughness band"
+              value={roughnessInterpretation(currentSample.skateRoughnessScore)}
+            />
             <Metric label="Speed" value={formatNumber(currentSample.speed)} />
             <Metric
               label="GPS accuracy"
