@@ -161,7 +161,7 @@ export async function getAdminRideDetail(session: AdminSession, rideId: string) 
   return parseJson<AdminRideDetailResponse>(response);
 }
 
-export async function downloadResearchCaptureAsset(
+async function researchCaptureAsset(
   session: AdminSession,
   researchCaptureId: string,
   asset: "recording" | "photo"
@@ -174,6 +174,24 @@ export async function downloadResearchCaptureAsset(
     const body = await response.json().catch(() => ({}));
     throw new Error(body.message ?? `Unable to download research ${asset}.`);
   }
+  return response;
+}
+
+export async function getResearchCaptureRecording(
+  session: AdminSession,
+  researchCaptureId: string
+) {
+  const response = await researchCaptureAsset(session, researchCaptureId, "recording");
+
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+export async function downloadResearchCaptureAsset(
+  session: AdminSession,
+  researchCaptureId: string,
+  asset: "recording" | "photo"
+) {
+  const response = await researchCaptureAsset(session, researchCaptureId, asset);
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition");
   const filename = disposition?.match(/filename="([^"]+)"/)?.[1]

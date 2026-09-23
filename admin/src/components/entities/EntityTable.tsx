@@ -15,7 +15,10 @@ import { space } from "@skate-route-mapper/shared/design";
 import { radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";
 
-const idFields = new Set(["id", "rideId", "userId", "deviceId", "adminUserId"]);
+/** Identifier columns hold opaque keys, so they get a narrower minimum width. */
+function isIdentifierField(field: AdminResourceField, resource: AdminResource) {
+  return field.name === resource.idField || /Id$/.test(field.name);
+}
 
 function formatString(value: string, field: AdminResourceField) {
   if (field.type === "datetime") {
@@ -91,7 +94,7 @@ export function EntityTable({
                   color: "text.secondary",
                   fontWeight: 900,
                   maxWidth: 180,
-                  minWidth: idFields.has(field.name) ? 96 : 112,
+                  minWidth: isIdentifierField(field, resource) ? 96 : 112,
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",
                 }}
