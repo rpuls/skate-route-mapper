@@ -237,13 +237,13 @@ endpoint.
 ```ts
 type MeasurementSample = {
   timestamp: number;
-  ax: number;
-  ay: number;
-  az: number;
-  gx: number;
-  gy: number;
-  gz: number;
-  vibrationMagnitude: number;
+  ax: number | null;
+  ay: number | null;
+  az: number | null;
+  gx: number | null;
+  gy: number | null;
+  gz: number | null;
+  vibrationMagnitude: number | null;
   latitude: number | null;
   longitude: number | null;
   speed: number | null;
@@ -255,7 +255,13 @@ type MeasurementSample = {
 
 Notes:
 
-- `vibrationMagnitude` must already be calculated by the mobile app.
+- `vibrationMagnitude` must already be calculated by the mobile app when
+  motion data is present.
+- `ax`, `ay`, `az`, `gx`, `gy`, `gz` and `vibrationMagnitude` may all be `null`.
+  A phone-only ride is a GPS route with no motion data at all: the phone owns
+  the route and the external XIAO board owns vibration. Ride-level
+  `avgVibration` and `maxVibration` are computed only over the samples that
+  carry a reading, so a GPS-only batch leaves them untouched.
 - `latitude`, `longitude`, and `speed` may be `null`.
 - `speed` should be meters per second if provided by the mobile app.
 - `locationTimestamp`, `locationAccuracy`, and `locationAgeMs` are optional
@@ -899,6 +905,35 @@ Query params:
 - `sampleOffset`: optional, default `0`
 
 The response includes `samplesTruncated` when more samples exist than were returned.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `GET /v1/admin/research-captures/:researchCaptureId/recording`
+
+Download the original uploaded `.skateresearch` file for laptop analysis.
+
+Responds with `Content-Type: application/octet-stream` and a
+`Content-Disposition` attachment named `skate-research-<captureId>.skateresearch`.
+
+Returns `404` when the capture does not exist.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `GET /v1/admin/research-captures/:researchCaptureId/photo`
+
+Download the context photograph attached to a research capture.
+
+Responds with the stored photo content type, defaulting to `image/jpeg`.
+
+Returns `404` when the capture does not exist or has no photo.
 
 Auth:
 

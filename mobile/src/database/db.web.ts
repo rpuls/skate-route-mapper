@@ -210,33 +210,6 @@ export function getResearchCollections(): ResearchCollection[] {
   return [...snapshot.researchCollections].sort((left, right) => right.createdAt - left.createdAt);
 }
 
-export function getLatestSamples(limit = 20) {
-  return [...snapshot.samples]
-    .sort((left, right) => right.timestamp - left.timestamp)
-    .slice(0, limit);
-}
-
-export function getLatestRideWithSamples(limit = 20) {
-  return [...snapshot.samples]
-    .sort((left, right) => right.timestamp - left.timestamp)
-    .slice(0, limit)
-    .map((sample) => {
-      const ride = getRide(sample.rideId);
-
-      return {
-        rideId: sample.rideId,
-        startedAt: ride?.startedAt ?? null,
-        endedAt: ride?.endedAt ?? null,
-        vehicleType: ride?.vehicleType ?? null,
-        timestamp: sample.timestamp,
-        vibrationMagnitude: sample.vibrationMagnitude,
-        latitude: sample.latitude,
-        longitude: sample.longitude,
-        speed: sample.speed,
-      };
-    });
-}
-
 function readSnapshot(): DatabaseSnapshot {
   if (typeof window === "undefined") {
     return snapshot;

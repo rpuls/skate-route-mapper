@@ -324,7 +324,7 @@ export default function RecordingScreen() {
     }
 
     const latest = samples.slice(-40);
-    const values = latest.map((sample) => sample.vibrationMagnitude);
+    const values = latest.map((sample) => sample.vibrationMagnitude ?? 0);
 
     return values.length > 0 ? values : [0];
   }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
@@ -339,13 +339,14 @@ export default function RecordingScreen() {
       return total / visibleValues.length;
     }
 
-    if (samples.length === 0) return 0;
+    const latest = samples
+      .slice(-40)
+      .map((sample) => sample.vibrationMagnitude)
+      .filter((value): value is number => value !== null);
 
-    const latest = samples.slice(-40);
-    const total = latest.reduce(
-      (sum, sample) => sum + sample.vibrationMagnitude,
-      0
-    );
+    if (latest.length === 0) return 0;
+
+    const total = latest.reduce((sum, value) => sum + value, 0);
 
     return total / latest.length;
   }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
@@ -403,7 +404,7 @@ export default function RecordingScreen() {
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Vibration</Text>
             <Text style={styles.metricValue}>
-              {visibleLatestSample?.vibrationMagnitude.toFixed(3) ?? "0.000"}
+              {visibleLatestSample?.vibrationMagnitude?.toFixed(3) ?? "0.000"}
             </Text>
           </View>
 

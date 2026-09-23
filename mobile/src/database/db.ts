@@ -343,36 +343,3 @@ function createLocalOperationId() {
   return `op_${Date.now()}_${randomValue}`;
 }
 
-// For debugging
-export function getLatestSamples(limit = 20) {
-    return db.getAllSync(
-      `SELECT *
-       FROM samples
-       ORDER BY timestamp DESC
-       LIMIT ?;`,
-      limit
-    );
-  }
-  
-  export function getLatestRideWithSamples(limit = 20) {
-    return db.getAllSync(
-      `SELECT
-         r.id as rideId,
-         r.startedAt,
-         r.endedAt,
-         r.vehicleType,
-         s.timestamp,
-         s.vibrationMagnitude,
-         s.latitude,
-         s.longitude,
-         s.speed,
-         s.locationTimestamp,
-         s.locationAccuracy,
-         s.locationAgeMs
-       FROM rides r
-       JOIN samples s ON s.rideId = r.id
-       ORDER BY s.timestamp DESC
-       LIMIT ?;`,
-      limit
-    );
-  }

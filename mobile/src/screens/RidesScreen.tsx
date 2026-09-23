@@ -11,8 +11,6 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import dayjs from "dayjs";
 import { getPendingChangeCount, getRides } from "../database/db";
 import type { Ride } from "../types/measurement";
-//For debugging
-import { getLatestRideWithSamples } from "../database/db";
 import {
   buttonVariants,
   colors,
@@ -41,10 +39,6 @@ export default function RidesScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshLocalState();
-      
-      //For debugging
-      const debugRows = getLatestRideWithSamples(20);
-      console.log("LATEST GPS SAMPLES", JSON.stringify(debugRows, null, 2));
     }, [refreshLocalState])
   );
 

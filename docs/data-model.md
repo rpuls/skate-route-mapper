@@ -165,6 +165,11 @@ Main fields:
 - `locationAgeMs`
 - `createdAt`
 
+The six motion fields and `vibrationMagnitude` are nullable. A phone-only ride
+is a GPS route with no motion data: the phone owns the route and the external
+XIAO board owns vibration. Ride-level `avgVibration` and `maxVibration` are
+therefore aggregated only over the samples that carry a reading.
+
 ### SyncOperation
 
 One idempotency record for an offline-first mobile sync operation that has

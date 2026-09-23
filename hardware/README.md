@@ -23,7 +23,7 @@ Existing software:
 - `../firmware/xiao-lsm6dsox/SkateRouteXiaoImu/SkateRouteXiaoImu.ino`:
   BLE IMU notifications (50/s default), USB text status every three seconds.
   This sketch does **not** stream acceleration over USB.
-- `../shared/src/xiaoBle.ts`: existing BLE parser reused by the dashboard.
+- `../shared/src/xiaoBle.ts`: existing BLE parser reused by the admin hardware bench.
 - Mobile XIAO BLE integration exists in the working tree, but physical-device
   operation has not been reverified during this resumption.
 

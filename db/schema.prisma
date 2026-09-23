@@ -150,13 +150,13 @@ model Sample {
   id                 BigInt    @id @default(autoincrement())
   rideId             String    @map("ride_id")
   recordedAt         DateTime  @map("recorded_at")
-  ax                 Float
-  ay                 Float
-  az                 Float
-  gx                 Float
-  gy                 Float
-  gz                 Float
-  vibrationMagnitude Float     @map("vibration_magnitude")
+  ax                 Float?
+  ay                 Float?
+  az                 Float?
+  gx                 Float?
+  gy                 Float?
+  gz                 Float?
+  vibrationMagnitude Float?    @map("vibration_magnitude")
   latitude           Float?
   longitude          Float?
   speed              Float?

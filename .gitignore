@@ -79,7 +79,7 @@ playwright-report/
 *.zip
 *.tar
 *.gz
-backend/generated/prisma/
+backend/generated/
 
 # Fastlane
 fastlane/report.xml
@@ -90,3 +90,15 @@ fastlane/test_output/
 # Misc
 Thumbs.db
 results.bin
+
+# Design system sync tooling and generated bundle
+.ds-sync/
+.design-sync/
+ds-bundle/
+
+# Playwright MCP session dumps
+.playwright-mcp/
+
+# Python analysis artifacts
+__pycache__/
+*.pyc

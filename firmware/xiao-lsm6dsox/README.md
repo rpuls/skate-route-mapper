@@ -29,11 +29,12 @@ XIAO D4/SDA -> LSM6DSOX SDA
 
 For the first tests, power the XIAO from USB-C and leave the LiPo disconnected.
 
-For the local USB/BLE dashboard and the staged battery hookup guide, see
-[`hardware/README.md`](../../hardware/README.md). Run `npm run hardware:ui`
-from the repo root. This BLE sketch prints USB status messages; use the
-dashboard's BLE connection for its sensor readings. The separate USB-only
-proof-of-concept sketch supports the dashboard's serial charts.
+For the USB/BLE hardware bench and the staged battery hookup guide, see
+[`hardware/README.md`](../../hardware/README.md). The bench is a page inside the
+admin app: run `npm run app` and open **Hardware bench** in desktop Chrome or
+Edge. This BLE sketch prints USB status messages only; use the bench's BLE
+connection for its sensor readings. The separate USB-only proof-of-concept
+sketch is what feeds the bench's serial charts.
 
 ## BLE Service
 

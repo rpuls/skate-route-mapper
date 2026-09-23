@@ -10,6 +10,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Data model: `docs/data-model.md`
 - Admin frontend architecture: `docs/admin-frontend.md`
 - Vibration roughness planning: `docs/vibration-roughness-plan.md`
+- Current development plan and known gaps: `docs/development-plan.md`
 - Design system guide: `docs/design-guide.md`
 - Design tokens/source of truth: `shared/src/design.ts`
 

@@ -97,13 +97,7 @@ export async function appendSamples(
     const gpsPointCount = samples.filter(
       (sample) => sample.latitude !== null && sample.longitude !== null
     ).length;
-    const batchMax = Math.max(...samples.map((sample) => sample.vibrationMagnitude));
-    const batchSum = samples.reduce((sum, sample) => sum + sample.vibrationMagnitude, 0);
-    const nextSampleCount = ride.sampleCount + sampleCount;
-    const nextAverage =
-      nextSampleCount === 0
-        ? null
-        : ((ride.avgVibration ?? 0) * ride.sampleCount + batchSum) / nextSampleCount;
+    const vibration = nextVibrationAggregate(ride, samples);
 
     await tx.ride.update({
       where: { id: rideId },
@@ -114,11 +108,8 @@ export async function appendSamples(
         gpsPointCount: {
           increment: gpsPointCount,
         },
-        avgVibration: nextAverage,
-        maxVibration:
-          ride.maxVibration === null
-            ? batchMax
-            : Math.max(ride.maxVibration, batchMax),
+        avgVibration: vibration.avgVibration,
+        maxVibration: vibration.maxVibration,
       },
     });
   });
@@ -232,5 +223,35 @@ export async function getRide(
       locationAccuracy: sample.locationAccuracy,
       locationAgeMs: sample.locationAgeMs,
     })),
+  };
+}
+
+// A sample may carry only a GPS fix: phone-tracked rides have no IMU data, and
+// vibration arrives from the external XIAO board. Aggregate over the readings
+// that exist so a GPS-only batch leaves the ride's vibration figures untouched
+// instead of dragging the average toward zero.
+export function nextVibrationAggregate(
+  ride: { sampleCount: number; avgVibration: number | null; maxVibration: number | null },
+  samples: { vibrationMagnitude: number | null }[]
+) {
+  const readings = samples
+    .map((sample) => sample.vibrationMagnitude)
+    .filter((value): value is number => value !== null);
+
+  if (readings.length === 0) {
+    return {
+      avgVibration: ride.avgVibration,
+      maxVibration: ride.maxVibration,
+    };
+  }
+
+  const batchSum = readings.reduce((sum, value) => sum + value, 0);
+  const batchMax = Math.max(...readings);
+  const nextCount = ride.sampleCount + readings.length;
+
+  return {
+    avgVibration: ((ride.avgVibration ?? 0) * ride.sampleCount + batchSum) / nextCount,
+    maxVibration:
+      ride.maxVibration === null ? batchMax : Math.max(ride.maxVibration, batchMax),
   };
 }
