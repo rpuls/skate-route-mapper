@@ -94,6 +94,32 @@ TypeScript before removing the module**, so both platforms keep it.
 Open question for the two of you: does the Android app need anything else the
 foreground service provides that `expo-location` does not?
 
+### The module's BLE path targets obsolete hardware
+
+Separately from the location question: the service's external-sensor path scans
+for a **Nesso** device, not the XIAO. The identifiers were never updated when the
+project changed hardware.
+
+| | Service UUID | Characteristic | Device name |
+| --- | --- | --- | --- |
+| `BackgroundRecorderService.kt` | `7b32f8c0-5d0b-4f0e-a1f5-8f30c44c0001` | `7b32f8c1-...` | name contains `Nesso` |
+| `shared/src/xiaoBle.ts` | `7b32f8d0-5d0b-4f0e-a1f5-8f30c44c0001` | `7b32f8d1-...` | `Skate XIAO IMU` |
+
+The UUIDs differ by one hex digit — the scheme was bumped for the new board, and
+the Kotlin kept the old value. On Android, choosing the external sensor scans for
+a device that does not exist in this project and never connects to the XIAO.
+
+Roughly 120 lines are dead as a result: the BLE scan and connect callbacks,
+`handleNessoPacket`, `sampleFromNessoPacket`, and `NESSO_PACKET_SIZE`.
+
+This changes the module decision. It is not only that the phone-IMU half is
+legacy — the external-sensor half points at the wrong hardware and would have to
+be rewritten against the XIAO protocol regardless. If the module is retired in
+favour of `expo-location`, external-sensor recording on Android should use the
+same `react-native-ble-plx` path the iPhone already uses, driven from JavaScript,
+rather than a second Kotlin BLE implementation that has to be kept in sync with
+`shared/src/xiaoBle.ts`.
+
 ### Unrelated but adjacent
 
 The Android package is `com.timmosquadros.skateroutemapper`; the iOS bundle is
