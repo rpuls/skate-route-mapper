@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   FormControl,
   FormControlLabel,
@@ -67,12 +68,16 @@ export function EntityForm({
 
   return (
     <Stack component="form" onSubmit={handleSubmit} spacing={2}>
-      <Stack
-        direction={{ xs: "column", lg: "row" }}
+      <Box
         sx={{
-          flexWrap: "wrap",
+          display: "grid",
           gap: px(space.lg),
-          "& > *": { flex: "1 1 220px" },
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            md: "repeat(2, minmax(0, 1fr))",
+          },
+          minWidth: 0,
+          "& > *": { minWidth: 0 },
         }}
       >
         {fields.map((field) => {
@@ -143,11 +148,18 @@ export function EntityForm({
             />
           );
         })}
-      </Stack>
+      </Box>
 
       {error ? <Alert severity="error">{error}</Alert> : null}
 
-      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+      <Stack
+        direction={{ xs: "column-reverse", sm: "row" }}
+        spacing={1}
+        sx={{
+          justifyContent: "flex-end",
+          "& .MuiButton-root": { width: { xs: "100%", sm: "auto" } },
+        }}
+      >
         {onCancel ? (
           <Button
             onClick={onCancel}

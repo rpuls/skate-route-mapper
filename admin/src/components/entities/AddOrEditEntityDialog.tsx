@@ -7,7 +7,9 @@ import {
   DialogTitle,
   Stack,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { useEffect, useState } from "react";
 import { controlRadiusPx, radiusLevel } from "../../theme/adminTheme";
@@ -33,6 +35,8 @@ export function AddOrEditEntityDialog({
   record?: EntityRecord | null;
   resource: AdminResource;
 }) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const mode = record ? "edit" : "create";
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -67,9 +71,16 @@ export function AddOrEditEntityDialog({
   }
 
   return (
-    <Dialog fullWidth maxWidth="sm" onClose={onClose} open={open}>
+    <Dialog
+      fullScreen={fullScreen}
+      fullWidth
+      maxWidth="md"
+      onClose={onClose}
+      open={open}
+      scroll="paper"
+    >
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent>
+      <DialogContent sx={{ overflowX: "hidden" }}>
         <Stack spacing={2}>
           {record ? (
             <Typography color="text.secondary" sx={{ fontWeight: 800, overflowWrap: "anywhere" }} variant="body2">
@@ -96,13 +107,16 @@ export function AddOrEditEntityDialog({
           {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
 
           {canDelete ? (
-            <Stack direction="row" sx={{ justifyContent: "flex-start" }}>
+            <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "flex-start" }}>
               <Button
                 color="error"
                 disabled={isDeleting}
                 onClick={handleDelete}
                 startIcon={<DeleteIcon />}
-                sx={{ borderRadius: controlRadiusPx(radiusLevel.inner) }}
+                sx={{
+                  borderRadius: controlRadiusPx(radiusLevel.inner),
+                  width: { xs: "100%", sm: "auto" },
+                }}
                 variant="outlined"
               >
                 {isDeleting ? "Deleting..." : "Delete"}

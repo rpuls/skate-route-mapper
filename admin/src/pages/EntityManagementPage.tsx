@@ -1,5 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import DownloadIcon from "@mui/icons-material/Download";
 import {
   Alert,
   Box,
@@ -26,6 +27,7 @@ import { RidesExplorer } from "../components/entities/RidesExplorer";
 import { SamplesExplorer } from "../components/entities/SamplesExplorer";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
 import type { AdminSession, EntityPayload, EntityRecord } from "../types";
+import { downloadResearchCaptureAsset } from "../api/adminApi";
 
 const entityPageSize = 25;
 
@@ -35,6 +37,7 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(null);
   const [selectedSamplesRideId, setSelectedSamplesRideId] = useState<string | null>(null);
   const [upsertOpen, setUpsertOpen] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const resourcesQuery = useAdminResources(session);
   const resources = resourcesQuery.data ?? [];
@@ -112,6 +115,16 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   function closeUpsertDialog() {
     setUpsertOpen(false);
     setSelectedRecord(null);
+  }
+
+  async function downloadResearchAsset(asset: "recording" | "photo") {
+    if (!selectedFreshRecord?.id) return;
+    setDownloadError(null);
+    try {
+      await downloadResearchCaptureAsset(session, String(selectedFreshRecord.id), asset);
+    } catch (downloadFailure) {
+      setDownloadError(downloadFailure instanceof Error ? downloadFailure.message : "Download failed");
+    }
   }
 
   useEffect(() => {
@@ -251,15 +264,30 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                     session={session}
                   />
                 ) : (
-                  <EntityTable
-                    onSelectRecord={(record) => {
-                      setSelectedRecord(record);
-                      setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
-                    }}
-                    records={records}
-                    resource={resource}
-                    selectedRecord={selectedFreshRecord}
-                  />
+                  <>
+                    <EntityTable
+                      onSelectRecord={(record) => {
+                        setSelectedRecord(record);
+                        setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
+                      }}
+                      records={records}
+                      resource={resource}
+                      selectedRecord={selectedFreshRecord}
+                    />
+                    {resource.name === "researchCaptures" && selectedFreshRecord ? (
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                        <Button onClick={() => downloadResearchAsset("recording")} startIcon={<DownloadIcon />} variant="contained">
+                          Download recording
+                        </Button>
+                        {selectedFreshRecord.photoContentType ? (
+                          <Button onClick={() => downloadResearchAsset("photo")} startIcon={<DownloadIcon />} variant="outlined">
+                            Download photo
+                          </Button>
+                        ) : null}
+                      </Stack>
+                    ) : null}
+                    {downloadError ? <Alert severity="error">{downloadError}</Alert> : null}
+                  </>
                 )}
                 {!usesCustomSamplesView && pagination && pagination.pageCount > 1 ? (
                   <Stack

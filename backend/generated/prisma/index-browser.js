@@ -151,6 +151,25 @@ exports.Prisma.UserScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.ResearchCaptureScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  captureId: 'captureId',
+  capturedAt: 'capturedAt',
+  category: 'category',
+  label: 'label',
+  note: 'note',
+  durationSeconds: 'durationSeconds',
+  rateHz: 'rateHz',
+  sampleCount: 'sampleCount',
+  metadata: 'metadata',
+  recording: 'recording',
+  photo: 'photo',
+  photoContentType: 'photoContentType',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.UserSessionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -210,9 +229,22 @@ exports.Prisma.SampleScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.SyncOperationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  operationType: 'operationType',
+  createdAtMs: 'createdAtMs',
+  processedAt: 'processedAt',
+  payload: 'payload'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -223,6 +255,12 @@ exports.Prisma.QueryMode = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 exports.VehicleType = exports.$Enums.VehicleType = {
   skates: 'skates',
@@ -239,10 +277,12 @@ exports.Prisma.ModelName = {
   AdminUser: 'AdminUser',
   AdminSession: 'AdminSession',
   User: 'User',
+  ResearchCapture: 'ResearchCapture',
   UserSession: 'UserSession',
   Device: 'Device',
   Ride: 'Ride',
-  Sample: 'Sample'
+  Sample: 'Sample',
+  SyncOperation: 'SyncOperation'
 };
 
 /**

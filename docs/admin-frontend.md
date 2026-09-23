@@ -116,7 +116,29 @@ component.
 Allowed custom policy belongs on the API side, for example:
 
 - hiding `passwordHash`
-- exposing virtual fields such as `AdminUser.password`
+- exposing virtual password fields for `AdminUser` and mobile `User` records
 - marking sensitive models read-only
 
+Models are editable by default when their Prisma scalar fields are writable.
+Read-only models and virtual fields are explicit API-side exceptions; frontend
+code must not hard-code a model as editable or read-only.
+
 Custom product workflows can get their own pages later, but the generic entity viewer should remain datamodel-driven.
+
+## Hardware Bench
+
+The hardware bench is an admin feature page rather than a separate web app.
+Its code is split by responsibility:
+
+- `features/hardware/browserHardware.ts` contains narrow browser API types.
+- `features/hardware/useHardwareConnection.ts` owns USB/BLE connection lifecycle and live samples.
+- `features/hardware/researchClient.ts` owns BLE request/page transport for the research protocol.
+- `features/hardware/useResearchRecorder.ts` owns capture, retrieval, validation, file-open, and file-save state.
+- `components/hardware/HardwareCharts.tsx` renders charts from data supplied by the page.
+- `pages/HardwareBenchPage.tsx` composes the workflow and MUI presentation.
+
+Browser device access is local to the administrator's computer. It does not go
+through the API, so TanStack Query is not involved. Web Bluetooth and Web Serial
+require a compatible browser and secure context. The deployed HTTPS admin app
+can connect to hardware attached to another administrator's computer, subject
+to that browser's permission prompt.

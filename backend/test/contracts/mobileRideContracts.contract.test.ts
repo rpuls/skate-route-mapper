@@ -28,6 +28,8 @@ import {
   rideStartSchema,
 } from "../../src/features/rides/contracts.js";
 import { syncRequestSchema } from "../../src/features/sync/contracts.js";
+import { researchCaptureUploadSchema } from "../../src/features/researchCaptures/contracts.js";
+import type { ResearchCaptureUpload } from "@skate-route-mapper/shared/researchContracts";
 
 const rideStartFixture = {
   rideId: "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
@@ -140,6 +142,22 @@ const mobileAuthResponseFixture = {
   deviceId: "cmdevice123",
 } satisfies MobileAuthResponse;
 
+const researchCaptureFixture = {
+  collectionId: "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
+  captureId: 42,
+  createdAt: 1760001000000,
+  category: "airborne-contact",
+  label: "curb hops",
+  note: "three repeated hops",
+  durationSeconds: 30,
+  rateHz: 1666,
+  sampleCount: 49980,
+  metadata: { report: { complete: true } },
+  recordingBase64: "U0tBVEVSMDEAAAAA",
+  photoBase64: null,
+  photoContentType: null,
+} satisfies ResearchCaptureUpload;
+
 describe("mobile ride contract", () => {
   it("keeps admin-only symbols out of the mobile contract runtime module", () => {
     const exportedNames = Object.keys(mobileContracts);
@@ -224,5 +242,32 @@ describe("mobile auth contract", () => {
     assert.equal(mobileAuthResponseSchema.safeParse(mobileAuthResponseFixture).success, true);
     assert.equal(mobileAuthResponseFixture.user.email, currentMobileUserFixture.email);
     assert.equal(Object.keys(mobileAuthResponseFixture).includes("adminUser"), false);
+  });
+});
+
+describe("research capture upload contract", () => {
+  it("accepts a shared research capture fixture", () => {
+    assert.equal(researchCaptureUploadSchema.safeParse(researchCaptureFixture).success, true);
+  });
+
+  it("accepts the complete unsigned 32-bit board capture ID range", () => {
+    assert.equal(researchCaptureUploadSchema.safeParse({
+      ...researchCaptureFixture,
+      captureId: 0xffffffff,
+    }).success, true);
+  });
+
+  it("rejects capture IDs outside the board's unsigned 32-bit range", () => {
+    assert.equal(researchCaptureUploadSchema.safeParse({
+      ...researchCaptureFixture,
+      captureId: 0x1_0000_0000,
+    }).success, false);
+  });
+
+  it("rejects unsupported capture rates", () => {
+    assert.equal(researchCaptureUploadSchema.safeParse({
+      ...researchCaptureFixture,
+      rateHz: 1000,
+    }).success, false);
   });
 });

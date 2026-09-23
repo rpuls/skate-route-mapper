@@ -6,4 +6,8 @@ export type {
   VehicleType,
 } from "@skate-route-mapper/shared/mobileContracts";
 
-export type { NessoImuPacket } from "@skate-route-mapper/shared/nessoBle";
+export type { XiaoImuPacket } from "@skate-route-mapper/shared/xiaoBle";
+
+export type ExternalImuPacket = import("@skate-route-mapper/shared/xiaoBle").XiaoImuPacket;
+
+export type ExternalImuDevice = "xiao";

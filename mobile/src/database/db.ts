@@ -4,6 +4,7 @@ import type {
   SyncOperationResult,
 } from "@skate-route-mapper/shared/mobileContracts";
 import type { MeasurementSample, Ride, SensorSource, VehicleType } from "../types/measurement";
+import type { ResearchCollection } from "../types/research";
 
 const db = SQLite.openDatabaseSync("skate-route-mapper.db");
 
@@ -57,11 +58,35 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_pending_changes_unsynced
       ON pending_changes (syncedAt, createdAt);
+
+    CREATE TABLE IF NOT EXISTS research_collections (
+      id TEXT PRIMARY KEY NOT NULL,
+      createdAt INTEGER NOT NULL,
+      metadata TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_research_collections_createdAt
+      ON research_collections (createdAt DESC);
   `);
 
   ensureSampleColumn("locationTimestamp", "INTEGER");
   ensureSampleColumn("locationAccuracy", "REAL");
   ensureSampleColumn("locationAgeMs", "INTEGER");
+}
+
+export function saveResearchCollection(collection: ResearchCollection) {
+  db.runSync(
+    `INSERT OR REPLACE INTO research_collections (id, createdAt, metadata) VALUES (?, ?, ?);`,
+    collection.id,
+    collection.createdAt,
+    JSON.stringify(collection)
+  );
+}
+
+export function getResearchCollections(): ResearchCollection[] {
+  return db.getAllSync<{ metadata: string }>(
+    `SELECT metadata FROM research_collections ORDER BY createdAt DESC;`
+  ).map((row) => JSON.parse(row.metadata) as ResearchCollection);
 }
 
 export function createRide(params: {

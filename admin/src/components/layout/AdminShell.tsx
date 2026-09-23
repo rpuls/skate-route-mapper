@@ -1,6 +1,7 @@
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import StorageIcon from "@mui/icons-material/Storage";
 import LogoutIcon from "@mui/icons-material/Logout";
+import SensorsIcon from "@mui/icons-material/Sensors";
 import {
   Box,
   Button,
@@ -35,6 +36,11 @@ const navItems: NavItem[] = [
     icon: <StorageIcon />,
     label: "Entities",
     view: "entities",
+  },
+  {
+    icon: <SensorsIcon />,
+    label: "Hardware bench",
+    view: "hardware",
   },
 ];
 

@@ -1,16 +1,12 @@
 import type {
+  CurrentMobileUser,
   MobileAuthResponse,
   MobileLoginPayload,
   MobileSignupPayload,
 } from "@skate-route-mapper/shared/mobileContracts";
+import { mobileApiBaseUrl } from "./config";
 
-const configuredApiBaseUrl = (globalThis as {
-  process?: {
-    env?: Record<string, string | undefined>;
-  };
-}).process?.env?.EXPO_PUBLIC_API_BASE_URL;
-
-export const mobileApiBaseUrl = configuredApiBaseUrl ?? "http://localhost:3001";
+export class InvalidMobileSessionError extends Error {}
 
 function getFriendlyAuthErrorMessage(message: string) {
   switch (message) {
@@ -57,4 +53,23 @@ export function signupMobileUser(payload: MobileSignupPayload) {
 
 export function loginMobileUser(payload: MobileLoginPayload) {
   return postMobileAuth("/v1/mobile/auth/login", payload);
+}
+
+export async function getCurrentMobileUser(token: string) {
+  const response = await fetch(`${mobileApiBaseUrl}/v1/mobile/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const body = await response.json();
+
+  if (response.status === 401 || response.status === 404) {
+    throw new InvalidMobileSessionError("Stored session is no longer valid");
+  }
+
+  if (!response.ok) {
+    throw new Error("Stored session is no longer valid");
+  }
+
+  return body.user as CurrentMobileUser;
 }

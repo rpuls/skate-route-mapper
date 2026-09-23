@@ -7,6 +7,7 @@ import RecordingScreen from "../screens/RecordingScreen";
 import RidesScreen from "../screens/RidesScreen";
 import RideDetailScreen from "../screens/RideDetailScreen";
 import AuthScreen from "../screens/AuthScreen";
+import ResearchScreen from "../screens/ResearchScreen";
 import { colors } from "@skate-route-mapper/shared/design";
 import { MobileAuthProvider } from "../auth/MobileAuthContext";
 
@@ -15,6 +16,7 @@ export type RootStackParamList = {
   Recording: undefined;
   Rides: undefined;
   Auth: undefined;
+  Research: undefined;
   RideDetail: {
     rideId: string;
   };
@@ -38,6 +40,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Recording" component={RecordingScreen} />
           <Stack.Screen name="Rides" component={RidesScreen} />
           <Stack.Screen name="Auth" component={AuthScreen} />
+          <Stack.Screen name="Research" component={ResearchScreen} />
           <Stack.Screen name="RideDetail" component={RideDetailScreen} />
         </Stack.Navigator>
       </NavigationContainer>

@@ -23,13 +23,14 @@ const hiddenFieldsByModel: Record<string, string[]> = {
   AdminUser: ["passwordHash"],
   User: ["passwordHash"],
   UserSession: ["tokenHash"],
+  ResearchCapture: ["recording", "photo"],
 };
 
 const readOnlyModels = new Set([
   "AdminSession",
   "SyncOperation",
-  "User",
   "UserSession",
+  "ResearchCapture",
 ]);
 
 function sentenceCase(value: string) {
@@ -112,7 +113,10 @@ function toResourceField(model: RuntimeModel, field: RuntimeField): AdminResourc
   const type = fieldType(field);
   const writable = isFieldWritable(model, field);
 
-  const list = !(model.name === "SyncOperation" && field.name === "payload");
+  const list = !(
+    (model.name === "SyncOperation" && field.name === "payload") ||
+    (model.name === "ResearchCapture" && field.name === "metadata")
+  );
 
   const resourceField: AdminResourceField = {
     name: field.name,
@@ -136,7 +140,7 @@ function datamodelModels() {
 }
 
 function withPolicyFields(model: RuntimeModel, fields: AdminResourceField[]) {
-  if (model.name !== "AdminUser") {
+  if (model.name !== "AdminUser" && model.name !== "User") {
     return fields;
   }
 

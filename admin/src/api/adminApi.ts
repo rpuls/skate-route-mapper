@@ -160,3 +160,28 @@ export async function getAdminRideDetail(session: AdminSession, rideId: string) 
 
   return parseJson<AdminRideDetailResponse>(response);
 }
+
+export async function downloadResearchCaptureAsset(
+  session: AdminSession,
+  researchCaptureId: string,
+  asset: "recording" | "photo"
+) {
+  const response = await fetch(
+    `${apiBaseUrl}/v1/admin/research-captures/${researchCaptureId}/${asset}`,
+    { headers: { Authorization: `Bearer ${session.token}` } }
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.message ?? `Unable to download research ${asset}.`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition");
+  const filename = disposition?.match(/filename="([^"]+)"/)?.[1]
+    ?? (asset === "photo" ? `research-${researchCaptureId}.jpg` : `research-${researchCaptureId}.skateresearch`);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}

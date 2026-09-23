@@ -8,10 +8,13 @@ import {
   getPendingChanges,
   getRide,
   getRides,
+  getResearchCollections,
   getSamplesForRide,
   initDatabase,
   insertSamples,
+  saveResearchCollection,
 } from "../../src/database/db.web.js";
+import type { ResearchCollection } from "../../src/types/research.js";
 
 const rideFixture = {
   id: "mobile-persistence-contract-ride",
@@ -78,6 +81,39 @@ describe("mobile persistence contract", () => {
     assert.deepEqual(
       getPendingChanges().map((change) => change.type),
       ["ride.start", "ride.samples", "ride.finish"]
+    );
+  });
+
+  it("round-trips research collection metadata without expanding the raw recording", () => {
+    const collection: ResearchCollection = {
+      id: "field-collection-1",
+      captureId: 42,
+      createdAt: 1760001000000,
+      category: "airborne-contact",
+      label: "curb hops",
+      note: "three repeated hops",
+      durationSeconds: 30,
+      rateHz: 1666,
+      sampleCount: 49980,
+      recordingUri: "file:///research/field-collection-1.skateresearch",
+      photoUri: "file:///research/surface.jpg",
+      startLocation: {
+        latitude: 52.3676,
+        longitude: 4.9041,
+        accuracy: 8,
+        altitude: 2,
+        speed: 0,
+        timestamp: 1760000999000,
+      },
+      endLocation: null,
+      transferMs: 120000,
+      report: { complete: true, rateWithinTolerance: true },
+    };
+
+    saveResearchCollection(collection);
+    assert.deepEqual(
+      getResearchCollections().find((item) => item.id === collection.id),
+      collection
     );
   });
 });

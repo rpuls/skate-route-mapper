@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import * as AdminResources from "../features/adminResources/index.js";
 import * as AdminUsers from "../features/adminUsers/index.js";
 import * as Rides from "../features/rides/index.js";
+import * as ResearchCaptures from "../features/researchCaptures/index.js";
 
 const adminEntityParamsSchema = z.object({
   resourceName: z.string().min(1),
@@ -239,5 +240,26 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       ok: true,
       rideId,
     });
+  });
+
+  app.get("/v1/admin/research-captures/:researchCaptureId/recording", {
+    preHandler: requireAdmin,
+  }, async (request, reply) => {
+    const { researchCaptureId } = ResearchCaptures.researchCaptureParamsSchema.parse(request.params);
+    const capture = await ResearchCaptures.getResearchCaptureAsset(researchCaptureId);
+    if (!capture) return reply.code(404).send({ ok: false, message: "Research capture not found" });
+    return reply
+      .header("Content-Type", "application/octet-stream")
+      .header("Content-Disposition", `attachment; filename=\"skate-research-${capture.captureId}.skateresearch\"`)
+      .send(capture.recording);
+  });
+
+  app.get("/v1/admin/research-captures/:researchCaptureId/photo", {
+    preHandler: requireAdmin,
+  }, async (request, reply) => {
+    const { researchCaptureId } = ResearchCaptures.researchCaptureParamsSchema.parse(request.params);
+    const capture = await ResearchCaptures.getResearchCaptureAsset(researchCaptureId);
+    if (!capture?.photo) return reply.code(404).send({ ok: false, message: "Research photo not found" });
+    return reply.header("Content-Type", capture.photoContentType ?? "image/jpeg").send(capture.photo);
   });
 }

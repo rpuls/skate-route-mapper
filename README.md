@@ -17,7 +17,7 @@ This project is built for inline skates, skateboards, and longboards, where smal
 backend/         Backend API service
 admin/       Admin dashboard app
 db/          Prisma schema and migrations
-firmware/    Device firmware such as the Nesso N1 BLE IMU sketch
+firmware/    XIAO BLE vibration-sensor firmware
 mobile/      Expo React Native app
 shared/      Shared TypeScript types and contracts
 ```
@@ -33,13 +33,15 @@ What each part does:
 
 Project docs:
 
+- `hardware/HARDWARE-HANDOFF.md` is the living resume point for the proven XIAO vibration hardware, battery assembly, and next field experiment.
+- `hardware/README.md` covers the XIAO hardware bench inside the admin app, USB/BLE checks, and staged battery hookup.
 - `docs/api.md` defines the backend contract.
 - `docs/data-model.md` explains the Prisma datamodel.
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
 - `docs/vibration-roughness-plan.md` plans high-frequency sensor capture, compact vibration features, and route roughness segmentation.
-- `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
-- `firmware/nesso-n1/README.md` covers the Nesso N1 BLE IMU sketch and packet format.
+- `mobile/README.md` covers the one-command iPhone workflow, device registration, native rebuilds, and web testing.
+- `firmware/xiao-lsm6dsox/README.md` covers the XIAO ESP32S3 + LSM6DSOX BLE IMU sketch and packet format.
 
 ## How The System Works
 
@@ -284,34 +286,20 @@ Short version:
 - mutations invalidate TanStack Query keys instead of manually patching broad app state
 - the generic entity viewer is generated from Prisma datamodel metadata
 
-### Run The Mobile App
+### iOS
 
-From the repo root:
-
-```bash
-npm run dev:mobile
-```
-
-To run on a physical iPhone with Expo Go from Windows, use the tunnel command:
+With the Skate Route Mapper development app installed, run:
 
 ```bash
-npm run dev:iphone
+npm run iphone
 ```
 
-For a physical iPhone without a Mac/Xcode:
+Keep the terminal open and keep the laptop and iPhone on the same Wi-Fi. Device
+registration and builds are not part of normal daily use. See
+[`mobile/README.md`](mobile/README.md#ios) for the short registration and build
+instructions.
 
-1. Install Expo Go from the App Store.
-2. Sign in with the same Expo account used by the CLI.
-3. Run `npm run dev:iphone`.
-4. Scan the QR code on the iPhone.
-
-If your phone and computer are on the same Wi-Fi network, LAN mode is usually faster:
-
-```bash
-npm run start --workspace @skate-route-mapper/mobile -- --lan --go
-```
-
-Use an EAS development build only when Expo Go is not enough, for example when testing custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account.
+### Web layout check
 
 The browser target is useful for UI/layout checks:
 
@@ -319,17 +307,8 @@ The browser target is useful for UI/layout checks:
 npm run dev:web
 ```
 
-Notes:
-
-- a physical device is strongly recommended because the app depends on motion sensors and GPS
-- `dev:iphone` is the default iPhone + Expo Go path and uses Expo's ngrok tunnel
-- tunnel mode depends on Expo's ngrok service and can fail when ngrok is blocked or unavailable
-- the web target is mainly useful for UI checks, not full ride recording
-- the web target uses fallbacks for native-only pieces such as SQLite storage and maps
-- the mobile app is not containerized; Docker is meant for backend services and the admin app
-
-Package-local mobile commands are still available for platform-specific work, for
-example `npm run android --workspace @skate-route-mapper/mobile`.
+The web target is for layout checks. BLE, sensors, GPS, camera, SQLite, and maps
+must be tested on a physical device.
 
 ### Design System
 
@@ -396,6 +375,7 @@ What already works:
 - backend ride ingestion and mobile sync APIs
 - Prisma-backed backend schema and migrations
 - protected admin dashboard entity views
+- browser-based XIAO USB/BLE hardware bench in the admin dashboard
 - admin ride detail analysis with route map and vibration charts
 - shared TypeScript contracts for mobile and backend
 - shared design tokens and design guide

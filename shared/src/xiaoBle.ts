@@ -1,13 +1,13 @@
-export const NESSO_BLE_DEVICE_NAME = "Skate Nesso N1";
-export const NESSO_BLE_SERVICE_UUID = "7b32f8c0-5d0b-4f0e-a1f5-8f30c44c0001";
-export const NESSO_BLE_IMU_CHARACTERISTIC_UUID =
-  "7b32f8c1-5d0b-4f0e-a1f5-8f30c44c0001";
-export const NESSO_BLE_CONFIG_CHARACTERISTIC_UUID =
-  "7b32f8c2-5d0b-4f0e-a1f5-8f30c44c0001";
+export const XIAO_BLE_DEVICE_NAME = "Skate XIAO IMU";
+export const XIAO_BLE_SERVICE_UUID = "7b32f8d0-5d0b-4f0e-a1f5-8f30c44c0001";
+export const XIAO_BLE_IMU_CHARACTERISTIC_UUID =
+  "7b32f8d1-5d0b-4f0e-a1f5-8f30c44c0001";
+export const XIAO_BLE_CONFIG_CHARACTERISTIC_UUID =
+  "7b32f8d2-5d0b-4f0e-a1f5-8f30c44c0001";
 
-export const NESSO_BLE_IMU_PACKET_SIZE = 20;
+export const XIAO_BLE_IMU_PACKET_SIZE = 20;
 
-export type NessoImuPacket = {
+export type XiaoImuPacket = {
   sequence: number;
   uptimeMs: number;
   ax: number;
@@ -18,10 +18,10 @@ export type NessoImuPacket = {
   gz: number;
 };
 
-export function parseNessoImuPacket(bytes: Uint8Array): NessoImuPacket {
-  if (bytes.byteLength !== NESSO_BLE_IMU_PACKET_SIZE) {
+export function parseXiaoImuPacket(bytes: Uint8Array): XiaoImuPacket {
+  if (bytes.byteLength !== XIAO_BLE_IMU_PACKET_SIZE) {
     throw new Error(
-      `Expected ${NESSO_BLE_IMU_PACKET_SIZE} bytes, received ${bytes.byteLength}`
+      `Expected ${XIAO_BLE_IMU_PACKET_SIZE} bytes, received ${bytes.byteLength}`
     );
   }
 
@@ -38,4 +38,3 @@ export function parseNessoImuPacket(bytes: Uint8Array): NessoImuPacket {
     gz: (packet.getInt16(18, true) / 1000) * (Math.PI / 180),
   };
 }
-

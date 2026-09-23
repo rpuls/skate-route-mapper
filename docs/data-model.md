@@ -179,6 +179,24 @@ Main fields:
 - `processedAt`
 - `payload`
 
+### ResearchCapture
+
+One labelled high-rate XIAO field recording uploaded by a signed-in mobile
+user. This is separate from `SyncOperation`: that table is an idempotency
+ledger, while a research capture is durable analysis data.
+
+Main fields:
+
+- `id` - phone collection UUID, making retry uploads idempotent
+- `userId` and the board's unsigned 32-bit `captureId` (stored as PostgreSQL
+  `BIGINT` so IDs above the signed 32-bit limit remain valid)
+- `capturedAt`, `category`, `label`, and `note`
+- `durationSeconds`, `rateHz`, and `sampleCount`
+- `metadata` - GPS context, transfer timing, and validation report
+- `recording` - original `.skateresearch` bytes
+- `photo` and `photoContentType`
+- `createdAt` and `updatedAt`
+
 ## Enums
 
 ### VehicleType
@@ -200,6 +218,7 @@ Main fields:
 - each `AdminSession` belongs to one `AdminUser`
 - one `User` has many `UserSession`, `Device`, and `Ride` rows
 - one `User` can have many `SyncOperation` rows
+- one `User` can have many `ResearchCapture` rows
 - one `Device` can have many `Ride` rows
 - `Ride.userId` and `Ride.deviceId` are nullable so anonymous and existing
   ride data remains valid

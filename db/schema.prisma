@@ -60,8 +60,33 @@ model User {
   devices        Device[]
   rides          Ride[]
   syncOperations SyncOperation[]
+  researchCaptures ResearchCapture[]
 
   @@map("users")
+}
+
+model ResearchCapture {
+  id               String   @id
+  userId           String   @map("user_id")
+  captureId        BigInt   @map("capture_id")
+  capturedAt       DateTime @map("captured_at")
+  category         String
+  label            String
+  note             String
+  durationSeconds  Int      @map("duration_seconds")
+  rateHz           Int      @map("rate_hz")
+  sampleCount      Int      @map("sample_count")
+  metadata         Json
+  recording        Bytes
+  photo            Bytes?
+  photoContentType String?  @map("photo_content_type")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, capturedAt(sort: Desc)])
+  @@index([captureId])
+  @@map("research_captures")
 }
 
 model UserSession {

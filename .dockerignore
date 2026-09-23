@@ -13,3 +13,5 @@ mobile/.expo
 **/*.log
 **/.DS_Store
 **/*.tsbuildinfo
+.resources
+*.skateresearch

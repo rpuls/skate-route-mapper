@@ -29,6 +29,11 @@ export type AdminSession = $Result.DefaultSelection<Prisma.$AdminSessionPayload>
  */
 export type User = $Result.DefaultSelection<Prisma.$UserPayload>
 /**
+ * Model ResearchCapture
+ * 
+ */
+export type ResearchCapture = $Result.DefaultSelection<Prisma.$ResearchCapturePayload>
+/**
  * Model UserSession
  * 
  */
@@ -48,6 +53,11 @@ export type Ride = $Result.DefaultSelection<Prisma.$RidePayload>
  * 
  */
 export type Sample = $Result.DefaultSelection<Prisma.$SamplePayload>
+/**
+ * Model SyncOperation
+ * 
+ */
+export type SyncOperation = $Result.DefaultSelection<Prisma.$SyncOperationPayload>
 
 /**
  * Enums
@@ -228,6 +238,16 @@ export class PrismaClient<
   get user(): Prisma.UserDelegate<ExtArgs, ClientOptions>;
 
   /**
+   * `prisma.researchCapture`: Exposes CRUD operations for the **ResearchCapture** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ResearchCaptures
+    * const researchCaptures = await prisma.researchCapture.findMany()
+    * ```
+    */
+  get researchCapture(): Prisma.ResearchCaptureDelegate<ExtArgs, ClientOptions>;
+
+  /**
    * `prisma.userSession`: Exposes CRUD operations for the **UserSession** model.
     * Example usage:
     * ```ts
@@ -266,6 +286,16 @@ export class PrismaClient<
     * ```
     */
   get sample(): Prisma.SampleDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.syncOperation`: Exposes CRUD operations for the **SyncOperation** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more SyncOperations
+    * const syncOperations = await prisma.syncOperation.findMany()
+    * ```
+    */
+  get syncOperation(): Prisma.SyncOperationDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -710,10 +740,12 @@ export namespace Prisma {
     AdminUser: 'AdminUser',
     AdminSession: 'AdminSession',
     User: 'User',
+    ResearchCapture: 'ResearchCapture',
     UserSession: 'UserSession',
     Device: 'Device',
     Ride: 'Ride',
-    Sample: 'Sample'
+    Sample: 'Sample',
+    SyncOperation: 'SyncOperation'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -732,7 +764,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "adminUser" | "adminSession" | "user" | "userSession" | "device" | "ride" | "sample"
+      modelProps: "adminUser" | "adminSession" | "user" | "researchCapture" | "userSession" | "device" | "ride" | "sample" | "syncOperation"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -955,6 +987,80 @@ export namespace Prisma {
           count: {
             args: Prisma.UserCountArgs<ExtArgs>
             result: $Utils.Optional<UserCountAggregateOutputType> | number
+          }
+        }
+      }
+      ResearchCapture: {
+        payload: Prisma.$ResearchCapturePayload<ExtArgs>
+        fields: Prisma.ResearchCaptureFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ResearchCaptureFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ResearchCaptureFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>
+          }
+          findFirst: {
+            args: Prisma.ResearchCaptureFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ResearchCaptureFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>
+          }
+          findMany: {
+            args: Prisma.ResearchCaptureFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>[]
+          }
+          create: {
+            args: Prisma.ResearchCaptureCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>
+          }
+          createMany: {
+            args: Prisma.ResearchCaptureCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ResearchCaptureCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>[]
+          }
+          delete: {
+            args: Prisma.ResearchCaptureDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>
+          }
+          update: {
+            args: Prisma.ResearchCaptureUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>
+          }
+          deleteMany: {
+            args: Prisma.ResearchCaptureDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ResearchCaptureUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ResearchCaptureUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>[]
+          }
+          upsert: {
+            args: Prisma.ResearchCaptureUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ResearchCapturePayload>
+          }
+          aggregate: {
+            args: Prisma.ResearchCaptureAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateResearchCapture>
+          }
+          groupBy: {
+            args: Prisma.ResearchCaptureGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ResearchCaptureGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ResearchCaptureCountArgs<ExtArgs>
+            result: $Utils.Optional<ResearchCaptureCountAggregateOutputType> | number
           }
         }
       }
@@ -1254,6 +1360,80 @@ export namespace Prisma {
           }
         }
       }
+      SyncOperation: {
+        payload: Prisma.$SyncOperationPayload<ExtArgs>
+        fields: Prisma.SyncOperationFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.SyncOperationFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.SyncOperationFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>
+          }
+          findFirst: {
+            args: Prisma.SyncOperationFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.SyncOperationFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>
+          }
+          findMany: {
+            args: Prisma.SyncOperationFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>[]
+          }
+          create: {
+            args: Prisma.SyncOperationCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>
+          }
+          createMany: {
+            args: Prisma.SyncOperationCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.SyncOperationCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>[]
+          }
+          delete: {
+            args: Prisma.SyncOperationDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>
+          }
+          update: {
+            args: Prisma.SyncOperationUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>
+          }
+          deleteMany: {
+            args: Prisma.SyncOperationDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.SyncOperationUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.SyncOperationUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>[]
+          }
+          upsert: {
+            args: Prisma.SyncOperationUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$SyncOperationPayload>
+          }
+          aggregate: {
+            args: Prisma.SyncOperationAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateSyncOperation>
+          }
+          groupBy: {
+            args: Prisma.SyncOperationGroupByArgs<ExtArgs>
+            result: $Utils.Optional<SyncOperationGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.SyncOperationCountArgs<ExtArgs>
+            result: $Utils.Optional<SyncOperationCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1353,10 +1533,12 @@ export namespace Prisma {
     adminUser?: AdminUserOmit
     adminSession?: AdminSessionOmit
     user?: UserOmit
+    researchCapture?: ResearchCaptureOmit
     userSession?: UserSessionOmit
     device?: DeviceOmit
     ride?: RideOmit
     sample?: SampleOmit
+    syncOperation?: SyncOperationOmit
   }
 
   /* Types for Logging */
@@ -1471,12 +1653,16 @@ export namespace Prisma {
     sessions: number
     devices: number
     rides: number
+    syncOperations: number
+    researchCaptures: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     sessions?: boolean | UserCountOutputTypeCountSessionsArgs
     devices?: boolean | UserCountOutputTypeCountDevicesArgs
     rides?: boolean | UserCountOutputTypeCountRidesArgs
+    syncOperations?: boolean | UserCountOutputTypeCountSyncOperationsArgs
+    researchCaptures?: boolean | UserCountOutputTypeCountResearchCapturesArgs
   }
 
   // Custom InputTypes
@@ -1509,6 +1695,20 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountRidesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: RideWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountSyncOperationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: SyncOperationWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountResearchCapturesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ResearchCaptureWhereInput
   }
 
 
@@ -3941,6 +4141,8 @@ export namespace Prisma {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     devices?: boolean | User$devicesArgs<ExtArgs>
     rides?: boolean | User$ridesArgs<ExtArgs>
+    syncOperations?: boolean | User$syncOperationsArgs<ExtArgs>
+    researchCaptures?: boolean | User$researchCapturesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3979,6 +4181,8 @@ export namespace Prisma {
     sessions?: boolean | User$sessionsArgs<ExtArgs>
     devices?: boolean | User$devicesArgs<ExtArgs>
     rides?: boolean | User$ridesArgs<ExtArgs>
+    syncOperations?: boolean | User$syncOperationsArgs<ExtArgs>
+    researchCaptures?: boolean | User$researchCapturesArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -3990,6 +4194,8 @@ export namespace Prisma {
       sessions: Prisma.$UserSessionPayload<ExtArgs>[]
       devices: Prisma.$DevicePayload<ExtArgs>[]
       rides: Prisma.$RidePayload<ExtArgs>[]
+      syncOperations: Prisma.$SyncOperationPayload<ExtArgs>[]
+      researchCaptures: Prisma.$ResearchCapturePayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -4396,6 +4602,8 @@ export namespace Prisma {
     sessions<T extends User$sessionsArgs<ExtArgs> = {}>(args?: Subset<T, User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     devices<T extends User$devicesArgs<ExtArgs> = {}>(args?: Subset<T, User$devicesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DevicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     rides<T extends User$ridesArgs<ExtArgs> = {}>(args?: Subset<T, User$ridesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$RidePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    syncOperations<T extends User$syncOperationsArgs<ExtArgs> = {}>(args?: Subset<T, User$syncOperationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    researchCaptures<T extends User$researchCapturesArgs<ExtArgs> = {}>(args?: Subset<T, User$researchCapturesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4892,6 +5100,54 @@ export namespace Prisma {
   }
 
   /**
+   * User.syncOperations
+   */
+  export type User$syncOperationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    where?: SyncOperationWhereInput
+    orderBy?: SyncOperationOrderByWithRelationInput | SyncOperationOrderByWithRelationInput[]
+    cursor?: SyncOperationWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: SyncOperationScalarFieldEnum | SyncOperationScalarFieldEnum[]
+  }
+
+  /**
+   * User.researchCaptures
+   */
+  export type User$researchCapturesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    where?: ResearchCaptureWhereInput
+    orderBy?: ResearchCaptureOrderByWithRelationInput | ResearchCaptureOrderByWithRelationInput[]
+    cursor?: ResearchCaptureWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ResearchCaptureScalarFieldEnum | ResearchCaptureScalarFieldEnum[]
+  }
+
+  /**
    * User without action
    */
   export type UserDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4907,6 +5163,1249 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: UserInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model ResearchCapture
+   */
+
+  export type AggregateResearchCapture = {
+    _count: ResearchCaptureCountAggregateOutputType | null
+    _avg: ResearchCaptureAvgAggregateOutputType | null
+    _sum: ResearchCaptureSumAggregateOutputType | null
+    _min: ResearchCaptureMinAggregateOutputType | null
+    _max: ResearchCaptureMaxAggregateOutputType | null
+  }
+
+  export type ResearchCaptureAvgAggregateOutputType = {
+    captureId: number | null
+    durationSeconds: number | null
+    rateHz: number | null
+    sampleCount: number | null
+  }
+
+  export type ResearchCaptureSumAggregateOutputType = {
+    captureId: number | null
+    durationSeconds: number | null
+    rateHz: number | null
+    sampleCount: number | null
+  }
+
+  export type ResearchCaptureMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    captureId: number | null
+    capturedAt: Date | null
+    category: string | null
+    label: string | null
+    note: string | null
+    durationSeconds: number | null
+    rateHz: number | null
+    sampleCount: number | null
+    recording: Bytes | null
+    photo: Bytes | null
+    photoContentType: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ResearchCaptureMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    captureId: number | null
+    capturedAt: Date | null
+    category: string | null
+    label: string | null
+    note: string | null
+    durationSeconds: number | null
+    rateHz: number | null
+    sampleCount: number | null
+    recording: Bytes | null
+    photo: Bytes | null
+    photoContentType: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ResearchCaptureCountAggregateOutputType = {
+    id: number
+    userId: number
+    captureId: number
+    capturedAt: number
+    category: number
+    label: number
+    note: number
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: number
+    recording: number
+    photo: number
+    photoContentType: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type ResearchCaptureAvgAggregateInputType = {
+    captureId?: true
+    durationSeconds?: true
+    rateHz?: true
+    sampleCount?: true
+  }
+
+  export type ResearchCaptureSumAggregateInputType = {
+    captureId?: true
+    durationSeconds?: true
+    rateHz?: true
+    sampleCount?: true
+  }
+
+  export type ResearchCaptureMinAggregateInputType = {
+    id?: true
+    userId?: true
+    captureId?: true
+    capturedAt?: true
+    category?: true
+    label?: true
+    note?: true
+    durationSeconds?: true
+    rateHz?: true
+    sampleCount?: true
+    recording?: true
+    photo?: true
+    photoContentType?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ResearchCaptureMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    captureId?: true
+    capturedAt?: true
+    category?: true
+    label?: true
+    note?: true
+    durationSeconds?: true
+    rateHz?: true
+    sampleCount?: true
+    recording?: true
+    photo?: true
+    photoContentType?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ResearchCaptureCountAggregateInputType = {
+    id?: true
+    userId?: true
+    captureId?: true
+    capturedAt?: true
+    category?: true
+    label?: true
+    note?: true
+    durationSeconds?: true
+    rateHz?: true
+    sampleCount?: true
+    metadata?: true
+    recording?: true
+    photo?: true
+    photoContentType?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type ResearchCaptureAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ResearchCapture to aggregate.
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ResearchCaptures to fetch.
+     */
+    orderBy?: ResearchCaptureOrderByWithRelationInput | ResearchCaptureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ResearchCaptureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ResearchCaptures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ResearchCaptures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ResearchCaptures
+    **/
+    _count?: true | ResearchCaptureCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ResearchCaptureAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ResearchCaptureSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ResearchCaptureMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ResearchCaptureMaxAggregateInputType
+  }
+
+  export type GetResearchCaptureAggregateType<T extends ResearchCaptureAggregateArgs> = {
+        [P in keyof T & keyof AggregateResearchCapture]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateResearchCapture[P]>
+      : GetScalarType<T[P], AggregateResearchCapture[P]>
+  }
+
+
+
+
+  export type ResearchCaptureGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ResearchCaptureWhereInput
+    orderBy?: ResearchCaptureOrderByWithAggregationInput | ResearchCaptureOrderByWithAggregationInput[]
+    by: ResearchCaptureScalarFieldEnum[] | ResearchCaptureScalarFieldEnum
+    having?: ResearchCaptureScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ResearchCaptureCountAggregateInputType | true
+    _avg?: ResearchCaptureAvgAggregateInputType
+    _sum?: ResearchCaptureSumAggregateInputType
+    _min?: ResearchCaptureMinAggregateInputType
+    _max?: ResearchCaptureMaxAggregateInputType
+  }
+
+  export type ResearchCaptureGroupByOutputType = {
+    id: string
+    userId: string
+    captureId: number
+    capturedAt: Date
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonValue
+    recording: Bytes
+    photo: Bytes | null
+    photoContentType: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: ResearchCaptureCountAggregateOutputType | null
+    _avg: ResearchCaptureAvgAggregateOutputType | null
+    _sum: ResearchCaptureSumAggregateOutputType | null
+    _min: ResearchCaptureMinAggregateOutputType | null
+    _max: ResearchCaptureMaxAggregateOutputType | null
+  }
+
+  type GetResearchCaptureGroupByPayload<T extends ResearchCaptureGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ResearchCaptureGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ResearchCaptureGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ResearchCaptureGroupByOutputType[P]>
+            : GetScalarType<T[P], ResearchCaptureGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ResearchCaptureSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    captureId?: boolean
+    capturedAt?: boolean
+    category?: boolean
+    label?: boolean
+    note?: boolean
+    durationSeconds?: boolean
+    rateHz?: boolean
+    sampleCount?: boolean
+    metadata?: boolean
+    recording?: boolean
+    photo?: boolean
+    photoContentType?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["researchCapture"]>
+
+  export type ResearchCaptureSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    captureId?: boolean
+    capturedAt?: boolean
+    category?: boolean
+    label?: boolean
+    note?: boolean
+    durationSeconds?: boolean
+    rateHz?: boolean
+    sampleCount?: boolean
+    metadata?: boolean
+    recording?: boolean
+    photo?: boolean
+    photoContentType?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["researchCapture"]>
+
+  export type ResearchCaptureSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    captureId?: boolean
+    capturedAt?: boolean
+    category?: boolean
+    label?: boolean
+    note?: boolean
+    durationSeconds?: boolean
+    rateHz?: boolean
+    sampleCount?: boolean
+    metadata?: boolean
+    recording?: boolean
+    photo?: boolean
+    photoContentType?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["researchCapture"]>
+
+  export type ResearchCaptureSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    captureId?: boolean
+    capturedAt?: boolean
+    category?: boolean
+    label?: boolean
+    note?: boolean
+    durationSeconds?: boolean
+    rateHz?: boolean
+    sampleCount?: boolean
+    metadata?: boolean
+    recording?: boolean
+    photo?: boolean
+    photoContentType?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type ResearchCaptureOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "captureId" | "capturedAt" | "category" | "label" | "note" | "durationSeconds" | "rateHz" | "sampleCount" | "metadata" | "recording" | "photo" | "photoContentType" | "createdAt" | "updatedAt", ExtArgs["result"]["researchCapture"]>
+  export type ResearchCaptureInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type ResearchCaptureIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type ResearchCaptureIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+
+  export type $ResearchCapturePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ResearchCapture"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string
+      captureId: number
+      capturedAt: Date
+      category: string
+      label: string
+      note: string
+      durationSeconds: number
+      rateHz: number
+      sampleCount: number
+      metadata: Prisma.JsonValue
+      recording: Prisma.Bytes
+      photo: Prisma.Bytes | null
+      photoContentType: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["researchCapture"]>
+    composites: {}
+  }
+
+  type ResearchCaptureGetPayload<S extends boolean | null | undefined | ResearchCaptureDefaultArgs> = $Result.GetResult<Prisma.$ResearchCapturePayload, S>
+
+  type ResearchCaptureCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ResearchCaptureFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ResearchCaptureCountAggregateInputType | true
+    }
+
+  export interface ResearchCaptureDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ResearchCapture'], meta: { name: 'ResearchCapture' } }
+    /**
+     * Find zero or one ResearchCapture that matches the filter.
+     * @param {ResearchCaptureFindUniqueArgs} args - Arguments to find a ResearchCapture
+     * @example
+     * // Get one ResearchCapture
+     * const researchCapture = await prisma.researchCapture.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ResearchCaptureFindUniqueArgs>(args: SelectSubset<T, ResearchCaptureFindUniqueArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one ResearchCapture that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ResearchCaptureFindUniqueOrThrowArgs} args - Arguments to find a ResearchCapture
+     * @example
+     * // Get one ResearchCapture
+     * const researchCapture = await prisma.researchCapture.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ResearchCaptureFindUniqueOrThrowArgs>(args: SelectSubset<T, ResearchCaptureFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ResearchCapture that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureFindFirstArgs} args - Arguments to find a ResearchCapture
+     * @example
+     * // Get one ResearchCapture
+     * const researchCapture = await prisma.researchCapture.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ResearchCaptureFindFirstArgs>(args?: SelectSubset<T, ResearchCaptureFindFirstArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first ResearchCapture that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureFindFirstOrThrowArgs} args - Arguments to find a ResearchCapture
+     * @example
+     * // Get one ResearchCapture
+     * const researchCapture = await prisma.researchCapture.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ResearchCaptureFindFirstOrThrowArgs>(args?: SelectSubset<T, ResearchCaptureFindFirstOrThrowArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more ResearchCaptures that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ResearchCaptures
+     * const researchCaptures = await prisma.researchCapture.findMany()
+     * 
+     * // Get first 10 ResearchCaptures
+     * const researchCaptures = await prisma.researchCapture.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const researchCaptureWithIdOnly = await prisma.researchCapture.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ResearchCaptureFindManyArgs>(args?: SelectSubset<T, ResearchCaptureFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a ResearchCapture.
+     * @param {ResearchCaptureCreateArgs} args - Arguments to create a ResearchCapture.
+     * @example
+     * // Create one ResearchCapture
+     * const ResearchCapture = await prisma.researchCapture.create({
+     *   data: {
+     *     // ... data to create a ResearchCapture
+     *   }
+     * })
+     * 
+     */
+    create<T extends ResearchCaptureCreateArgs>(args: SelectSubset<T, ResearchCaptureCreateArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many ResearchCaptures.
+     * @param {ResearchCaptureCreateManyArgs} args - Arguments to create many ResearchCaptures.
+     * @example
+     * // Create many ResearchCaptures
+     * const researchCapture = await prisma.researchCapture.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ResearchCaptureCreateManyArgs>(args?: SelectSubset<T, ResearchCaptureCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ResearchCaptures and returns the data saved in the database.
+     * @param {ResearchCaptureCreateManyAndReturnArgs} args - Arguments to create many ResearchCaptures.
+     * @example
+     * // Create many ResearchCaptures
+     * const researchCapture = await prisma.researchCapture.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ResearchCaptures and only return the `id`
+     * const researchCaptureWithIdOnly = await prisma.researchCapture.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ResearchCaptureCreateManyAndReturnArgs>(args?: SelectSubset<T, ResearchCaptureCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a ResearchCapture.
+     * @param {ResearchCaptureDeleteArgs} args - Arguments to delete one ResearchCapture.
+     * @example
+     * // Delete one ResearchCapture
+     * const ResearchCapture = await prisma.researchCapture.delete({
+     *   where: {
+     *     // ... filter to delete one ResearchCapture
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ResearchCaptureDeleteArgs>(args: SelectSubset<T, ResearchCaptureDeleteArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one ResearchCapture.
+     * @param {ResearchCaptureUpdateArgs} args - Arguments to update one ResearchCapture.
+     * @example
+     * // Update one ResearchCapture
+     * const researchCapture = await prisma.researchCapture.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ResearchCaptureUpdateArgs>(args: SelectSubset<T, ResearchCaptureUpdateArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more ResearchCaptures.
+     * @param {ResearchCaptureDeleteManyArgs} args - Arguments to filter ResearchCaptures to delete.
+     * @example
+     * // Delete a few ResearchCaptures
+     * const { count } = await prisma.researchCapture.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ResearchCaptureDeleteManyArgs>(args?: SelectSubset<T, ResearchCaptureDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ResearchCaptures.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ResearchCaptures
+     * const researchCapture = await prisma.researchCapture.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ResearchCaptureUpdateManyArgs>(args: SelectSubset<T, ResearchCaptureUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ResearchCaptures and returns the data updated in the database.
+     * @param {ResearchCaptureUpdateManyAndReturnArgs} args - Arguments to update many ResearchCaptures.
+     * @example
+     * // Update many ResearchCaptures
+     * const researchCapture = await prisma.researchCapture.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more ResearchCaptures and only return the `id`
+     * const researchCaptureWithIdOnly = await prisma.researchCapture.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ResearchCaptureUpdateManyAndReturnArgs>(args: SelectSubset<T, ResearchCaptureUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one ResearchCapture.
+     * @param {ResearchCaptureUpsertArgs} args - Arguments to update or create a ResearchCapture.
+     * @example
+     * // Update or create a ResearchCapture
+     * const researchCapture = await prisma.researchCapture.upsert({
+     *   create: {
+     *     // ... data to create a ResearchCapture
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ResearchCapture we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ResearchCaptureUpsertArgs>(args: SelectSubset<T, ResearchCaptureUpsertArgs<ExtArgs>>): Prisma__ResearchCaptureClient<$Result.GetResult<Prisma.$ResearchCapturePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of ResearchCaptures.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureCountArgs} args - Arguments to filter ResearchCaptures to count.
+     * @example
+     * // Count the number of ResearchCaptures
+     * const count = await prisma.researchCapture.count({
+     *   where: {
+     *     // ... the filter for the ResearchCaptures we want to count
+     *   }
+     * })
+    **/
+    count<T extends ResearchCaptureCountArgs>(
+      args?: Subset<T, ResearchCaptureCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ResearchCaptureCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ResearchCapture.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ResearchCaptureAggregateArgs>(args: Subset<T, ResearchCaptureAggregateArgs>): Prisma.PrismaPromise<GetResearchCaptureAggregateType<T>>
+
+    /**
+     * Group by ResearchCapture.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ResearchCaptureGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ResearchCaptureGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ResearchCaptureGroupByArgs['orderBy'] }
+        : { orderBy?: ResearchCaptureGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ResearchCaptureGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetResearchCaptureGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ResearchCapture model
+   */
+  readonly fields: ResearchCaptureFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ResearchCapture.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ResearchCaptureClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ResearchCapture model
+   */
+  interface ResearchCaptureFieldRefs {
+    readonly id: FieldRef<"ResearchCapture", 'String'>
+    readonly userId: FieldRef<"ResearchCapture", 'String'>
+    readonly captureId: FieldRef<"ResearchCapture", 'Int'>
+    readonly capturedAt: FieldRef<"ResearchCapture", 'DateTime'>
+    readonly category: FieldRef<"ResearchCapture", 'String'>
+    readonly label: FieldRef<"ResearchCapture", 'String'>
+    readonly note: FieldRef<"ResearchCapture", 'String'>
+    readonly durationSeconds: FieldRef<"ResearchCapture", 'Int'>
+    readonly rateHz: FieldRef<"ResearchCapture", 'Int'>
+    readonly sampleCount: FieldRef<"ResearchCapture", 'Int'>
+    readonly metadata: FieldRef<"ResearchCapture", 'Json'>
+    readonly recording: FieldRef<"ResearchCapture", 'Bytes'>
+    readonly photo: FieldRef<"ResearchCapture", 'Bytes'>
+    readonly photoContentType: FieldRef<"ResearchCapture", 'String'>
+    readonly createdAt: FieldRef<"ResearchCapture", 'DateTime'>
+    readonly updatedAt: FieldRef<"ResearchCapture", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ResearchCapture findUnique
+   */
+  export type ResearchCaptureFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * Filter, which ResearchCapture to fetch.
+     */
+    where: ResearchCaptureWhereUniqueInput
+  }
+
+  /**
+   * ResearchCapture findUniqueOrThrow
+   */
+  export type ResearchCaptureFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * Filter, which ResearchCapture to fetch.
+     */
+    where: ResearchCaptureWhereUniqueInput
+  }
+
+  /**
+   * ResearchCapture findFirst
+   */
+  export type ResearchCaptureFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * Filter, which ResearchCapture to fetch.
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ResearchCaptures to fetch.
+     */
+    orderBy?: ResearchCaptureOrderByWithRelationInput | ResearchCaptureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ResearchCaptures.
+     */
+    cursor?: ResearchCaptureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ResearchCaptures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ResearchCaptures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ResearchCaptures.
+     */
+    distinct?: ResearchCaptureScalarFieldEnum | ResearchCaptureScalarFieldEnum[]
+  }
+
+  /**
+   * ResearchCapture findFirstOrThrow
+   */
+  export type ResearchCaptureFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * Filter, which ResearchCapture to fetch.
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ResearchCaptures to fetch.
+     */
+    orderBy?: ResearchCaptureOrderByWithRelationInput | ResearchCaptureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ResearchCaptures.
+     */
+    cursor?: ResearchCaptureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ResearchCaptures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ResearchCaptures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ResearchCaptures.
+     */
+    distinct?: ResearchCaptureScalarFieldEnum | ResearchCaptureScalarFieldEnum[]
+  }
+
+  /**
+   * ResearchCapture findMany
+   */
+  export type ResearchCaptureFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * Filter, which ResearchCaptures to fetch.
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ResearchCaptures to fetch.
+     */
+    orderBy?: ResearchCaptureOrderByWithRelationInput | ResearchCaptureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ResearchCaptures.
+     */
+    cursor?: ResearchCaptureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ResearchCaptures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ResearchCaptures.
+     */
+    skip?: number
+    distinct?: ResearchCaptureScalarFieldEnum | ResearchCaptureScalarFieldEnum[]
+  }
+
+  /**
+   * ResearchCapture create
+   */
+  export type ResearchCaptureCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ResearchCapture.
+     */
+    data: XOR<ResearchCaptureCreateInput, ResearchCaptureUncheckedCreateInput>
+  }
+
+  /**
+   * ResearchCapture createMany
+   */
+  export type ResearchCaptureCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ResearchCaptures.
+     */
+    data: ResearchCaptureCreateManyInput | ResearchCaptureCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ResearchCapture createManyAndReturn
+   */
+  export type ResearchCaptureCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * The data used to create many ResearchCaptures.
+     */
+    data: ResearchCaptureCreateManyInput | ResearchCaptureCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ResearchCapture update
+   */
+  export type ResearchCaptureUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ResearchCapture.
+     */
+    data: XOR<ResearchCaptureUpdateInput, ResearchCaptureUncheckedUpdateInput>
+    /**
+     * Choose, which ResearchCapture to update.
+     */
+    where: ResearchCaptureWhereUniqueInput
+  }
+
+  /**
+   * ResearchCapture updateMany
+   */
+  export type ResearchCaptureUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ResearchCaptures.
+     */
+    data: XOR<ResearchCaptureUpdateManyMutationInput, ResearchCaptureUncheckedUpdateManyInput>
+    /**
+     * Filter which ResearchCaptures to update
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * Limit how many ResearchCaptures to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * ResearchCapture updateManyAndReturn
+   */
+  export type ResearchCaptureUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * The data used to update ResearchCaptures.
+     */
+    data: XOR<ResearchCaptureUpdateManyMutationInput, ResearchCaptureUncheckedUpdateManyInput>
+    /**
+     * Filter which ResearchCaptures to update
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * Limit how many ResearchCaptures to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ResearchCapture upsert
+   */
+  export type ResearchCaptureUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ResearchCapture to update in case it exists.
+     */
+    where: ResearchCaptureWhereUniqueInput
+    /**
+     * In case the ResearchCapture found by the `where` argument doesn't exist, create a new ResearchCapture with this data.
+     */
+    create: XOR<ResearchCaptureCreateInput, ResearchCaptureUncheckedCreateInput>
+    /**
+     * In case the ResearchCapture was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ResearchCaptureUpdateInput, ResearchCaptureUncheckedUpdateInput>
+  }
+
+  /**
+   * ResearchCapture delete
+   */
+  export type ResearchCaptureDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
+    /**
+     * Filter which ResearchCapture to delete.
+     */
+    where: ResearchCaptureWhereUniqueInput
+  }
+
+  /**
+   * ResearchCapture deleteMany
+   */
+  export type ResearchCaptureDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ResearchCaptures to delete
+     */
+    where?: ResearchCaptureWhereInput
+    /**
+     * Limit how many ResearchCaptures to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * ResearchCapture without action
+   */
+  export type ResearchCaptureDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ResearchCapture
+     */
+    select?: ResearchCaptureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ResearchCapture
+     */
+    omit?: ResearchCaptureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ResearchCaptureInclude<ExtArgs> | null
   }
 
 
@@ -9747,6 +11246,1126 @@ export namespace Prisma {
 
 
   /**
+   * Model SyncOperation
+   */
+
+  export type AggregateSyncOperation = {
+    _count: SyncOperationCountAggregateOutputType | null
+    _avg: SyncOperationAvgAggregateOutputType | null
+    _sum: SyncOperationSumAggregateOutputType | null
+    _min: SyncOperationMinAggregateOutputType | null
+    _max: SyncOperationMaxAggregateOutputType | null
+  }
+
+  export type SyncOperationAvgAggregateOutputType = {
+    createdAtMs: number | null
+  }
+
+  export type SyncOperationSumAggregateOutputType = {
+    createdAtMs: bigint | null
+  }
+
+  export type SyncOperationMinAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    operationType: string | null
+    createdAtMs: bigint | null
+    processedAt: Date | null
+  }
+
+  export type SyncOperationMaxAggregateOutputType = {
+    id: string | null
+    userId: string | null
+    operationType: string | null
+    createdAtMs: bigint | null
+    processedAt: Date | null
+  }
+
+  export type SyncOperationCountAggregateOutputType = {
+    id: number
+    userId: number
+    operationType: number
+    createdAtMs: number
+    processedAt: number
+    payload: number
+    _all: number
+  }
+
+
+  export type SyncOperationAvgAggregateInputType = {
+    createdAtMs?: true
+  }
+
+  export type SyncOperationSumAggregateInputType = {
+    createdAtMs?: true
+  }
+
+  export type SyncOperationMinAggregateInputType = {
+    id?: true
+    userId?: true
+    operationType?: true
+    createdAtMs?: true
+    processedAt?: true
+  }
+
+  export type SyncOperationMaxAggregateInputType = {
+    id?: true
+    userId?: true
+    operationType?: true
+    createdAtMs?: true
+    processedAt?: true
+  }
+
+  export type SyncOperationCountAggregateInputType = {
+    id?: true
+    userId?: true
+    operationType?: true
+    createdAtMs?: true
+    processedAt?: true
+    payload?: true
+    _all?: true
+  }
+
+  export type SyncOperationAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which SyncOperation to aggregate.
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SyncOperations to fetch.
+     */
+    orderBy?: SyncOperationOrderByWithRelationInput | SyncOperationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: SyncOperationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SyncOperations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SyncOperations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned SyncOperations
+    **/
+    _count?: true | SyncOperationCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: SyncOperationAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: SyncOperationSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: SyncOperationMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: SyncOperationMaxAggregateInputType
+  }
+
+  export type GetSyncOperationAggregateType<T extends SyncOperationAggregateArgs> = {
+        [P in keyof T & keyof AggregateSyncOperation]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateSyncOperation[P]>
+      : GetScalarType<T[P], AggregateSyncOperation[P]>
+  }
+
+
+
+
+  export type SyncOperationGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: SyncOperationWhereInput
+    orderBy?: SyncOperationOrderByWithAggregationInput | SyncOperationOrderByWithAggregationInput[]
+    by: SyncOperationScalarFieldEnum[] | SyncOperationScalarFieldEnum
+    having?: SyncOperationScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: SyncOperationCountAggregateInputType | true
+    _avg?: SyncOperationAvgAggregateInputType
+    _sum?: SyncOperationSumAggregateInputType
+    _min?: SyncOperationMinAggregateInputType
+    _max?: SyncOperationMaxAggregateInputType
+  }
+
+  export type SyncOperationGroupByOutputType = {
+    id: string
+    userId: string | null
+    operationType: string
+    createdAtMs: bigint
+    processedAt: Date
+    payload: JsonValue
+    _count: SyncOperationCountAggregateOutputType | null
+    _avg: SyncOperationAvgAggregateOutputType | null
+    _sum: SyncOperationSumAggregateOutputType | null
+    _min: SyncOperationMinAggregateOutputType | null
+    _max: SyncOperationMaxAggregateOutputType | null
+  }
+
+  type GetSyncOperationGroupByPayload<T extends SyncOperationGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<SyncOperationGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof SyncOperationGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], SyncOperationGroupByOutputType[P]>
+            : GetScalarType<T[P], SyncOperationGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type SyncOperationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    operationType?: boolean
+    createdAtMs?: boolean
+    processedAt?: boolean
+    payload?: boolean
+    user?: boolean | SyncOperation$userArgs<ExtArgs>
+  }, ExtArgs["result"]["syncOperation"]>
+
+  export type SyncOperationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    operationType?: boolean
+    createdAtMs?: boolean
+    processedAt?: boolean
+    payload?: boolean
+    user?: boolean | SyncOperation$userArgs<ExtArgs>
+  }, ExtArgs["result"]["syncOperation"]>
+
+  export type SyncOperationSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    userId?: boolean
+    operationType?: boolean
+    createdAtMs?: boolean
+    processedAt?: boolean
+    payload?: boolean
+    user?: boolean | SyncOperation$userArgs<ExtArgs>
+  }, ExtArgs["result"]["syncOperation"]>
+
+  export type SyncOperationSelectScalar = {
+    id?: boolean
+    userId?: boolean
+    operationType?: boolean
+    createdAtMs?: boolean
+    processedAt?: boolean
+    payload?: boolean
+  }
+
+  export type SyncOperationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "operationType" | "createdAtMs" | "processedAt" | "payload", ExtArgs["result"]["syncOperation"]>
+  export type SyncOperationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | SyncOperation$userArgs<ExtArgs>
+  }
+  export type SyncOperationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | SyncOperation$userArgs<ExtArgs>
+  }
+  export type SyncOperationIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | SyncOperation$userArgs<ExtArgs>
+  }
+
+  export type $SyncOperationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "SyncOperation"
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      userId: string | null
+      operationType: string
+      createdAtMs: bigint
+      processedAt: Date
+      payload: Prisma.JsonValue
+    }, ExtArgs["result"]["syncOperation"]>
+    composites: {}
+  }
+
+  type SyncOperationGetPayload<S extends boolean | null | undefined | SyncOperationDefaultArgs> = $Result.GetResult<Prisma.$SyncOperationPayload, S>
+
+  type SyncOperationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<SyncOperationFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: SyncOperationCountAggregateInputType | true
+    }
+
+  export interface SyncOperationDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['SyncOperation'], meta: { name: 'SyncOperation' } }
+    /**
+     * Find zero or one SyncOperation that matches the filter.
+     * @param {SyncOperationFindUniqueArgs} args - Arguments to find a SyncOperation
+     * @example
+     * // Get one SyncOperation
+     * const syncOperation = await prisma.syncOperation.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends SyncOperationFindUniqueArgs>(args: SelectSubset<T, SyncOperationFindUniqueArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one SyncOperation that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {SyncOperationFindUniqueOrThrowArgs} args - Arguments to find a SyncOperation
+     * @example
+     * // Get one SyncOperation
+     * const syncOperation = await prisma.syncOperation.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends SyncOperationFindUniqueOrThrowArgs>(args: SelectSubset<T, SyncOperationFindUniqueOrThrowArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first SyncOperation that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationFindFirstArgs} args - Arguments to find a SyncOperation
+     * @example
+     * // Get one SyncOperation
+     * const syncOperation = await prisma.syncOperation.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends SyncOperationFindFirstArgs>(args?: SelectSubset<T, SyncOperationFindFirstArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first SyncOperation that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationFindFirstOrThrowArgs} args - Arguments to find a SyncOperation
+     * @example
+     * // Get one SyncOperation
+     * const syncOperation = await prisma.syncOperation.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends SyncOperationFindFirstOrThrowArgs>(args?: SelectSubset<T, SyncOperationFindFirstOrThrowArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more SyncOperations that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all SyncOperations
+     * const syncOperations = await prisma.syncOperation.findMany()
+     * 
+     * // Get first 10 SyncOperations
+     * const syncOperations = await prisma.syncOperation.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const syncOperationWithIdOnly = await prisma.syncOperation.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends SyncOperationFindManyArgs>(args?: SelectSubset<T, SyncOperationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a SyncOperation.
+     * @param {SyncOperationCreateArgs} args - Arguments to create a SyncOperation.
+     * @example
+     * // Create one SyncOperation
+     * const SyncOperation = await prisma.syncOperation.create({
+     *   data: {
+     *     // ... data to create a SyncOperation
+     *   }
+     * })
+     * 
+     */
+    create<T extends SyncOperationCreateArgs>(args: SelectSubset<T, SyncOperationCreateArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many SyncOperations.
+     * @param {SyncOperationCreateManyArgs} args - Arguments to create many SyncOperations.
+     * @example
+     * // Create many SyncOperations
+     * const syncOperation = await prisma.syncOperation.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends SyncOperationCreateManyArgs>(args?: SelectSubset<T, SyncOperationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many SyncOperations and returns the data saved in the database.
+     * @param {SyncOperationCreateManyAndReturnArgs} args - Arguments to create many SyncOperations.
+     * @example
+     * // Create many SyncOperations
+     * const syncOperation = await prisma.syncOperation.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many SyncOperations and only return the `id`
+     * const syncOperationWithIdOnly = await prisma.syncOperation.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends SyncOperationCreateManyAndReturnArgs>(args?: SelectSubset<T, SyncOperationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a SyncOperation.
+     * @param {SyncOperationDeleteArgs} args - Arguments to delete one SyncOperation.
+     * @example
+     * // Delete one SyncOperation
+     * const SyncOperation = await prisma.syncOperation.delete({
+     *   where: {
+     *     // ... filter to delete one SyncOperation
+     *   }
+     * })
+     * 
+     */
+    delete<T extends SyncOperationDeleteArgs>(args: SelectSubset<T, SyncOperationDeleteArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one SyncOperation.
+     * @param {SyncOperationUpdateArgs} args - Arguments to update one SyncOperation.
+     * @example
+     * // Update one SyncOperation
+     * const syncOperation = await prisma.syncOperation.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends SyncOperationUpdateArgs>(args: SelectSubset<T, SyncOperationUpdateArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more SyncOperations.
+     * @param {SyncOperationDeleteManyArgs} args - Arguments to filter SyncOperations to delete.
+     * @example
+     * // Delete a few SyncOperations
+     * const { count } = await prisma.syncOperation.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends SyncOperationDeleteManyArgs>(args?: SelectSubset<T, SyncOperationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more SyncOperations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many SyncOperations
+     * const syncOperation = await prisma.syncOperation.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends SyncOperationUpdateManyArgs>(args: SelectSubset<T, SyncOperationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more SyncOperations and returns the data updated in the database.
+     * @param {SyncOperationUpdateManyAndReturnArgs} args - Arguments to update many SyncOperations.
+     * @example
+     * // Update many SyncOperations
+     * const syncOperation = await prisma.syncOperation.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more SyncOperations and only return the `id`
+     * const syncOperationWithIdOnly = await prisma.syncOperation.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends SyncOperationUpdateManyAndReturnArgs>(args: SelectSubset<T, SyncOperationUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one SyncOperation.
+     * @param {SyncOperationUpsertArgs} args - Arguments to update or create a SyncOperation.
+     * @example
+     * // Update or create a SyncOperation
+     * const syncOperation = await prisma.syncOperation.upsert({
+     *   create: {
+     *     // ... data to create a SyncOperation
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the SyncOperation we want to update
+     *   }
+     * })
+     */
+    upsert<T extends SyncOperationUpsertArgs>(args: SelectSubset<T, SyncOperationUpsertArgs<ExtArgs>>): Prisma__SyncOperationClient<$Result.GetResult<Prisma.$SyncOperationPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of SyncOperations.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationCountArgs} args - Arguments to filter SyncOperations to count.
+     * @example
+     * // Count the number of SyncOperations
+     * const count = await prisma.syncOperation.count({
+     *   where: {
+     *     // ... the filter for the SyncOperations we want to count
+     *   }
+     * })
+    **/
+    count<T extends SyncOperationCountArgs>(
+      args?: Subset<T, SyncOperationCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], SyncOperationCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a SyncOperation.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends SyncOperationAggregateArgs>(args: Subset<T, SyncOperationAggregateArgs>): Prisma.PrismaPromise<GetSyncOperationAggregateType<T>>
+
+    /**
+     * Group by SyncOperation.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SyncOperationGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends SyncOperationGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: SyncOperationGroupByArgs['orderBy'] }
+        : { orderBy?: SyncOperationGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, SyncOperationGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetSyncOperationGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the SyncOperation model
+   */
+  readonly fields: SyncOperationFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for SyncOperation.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__SyncOperationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends SyncOperation$userArgs<ExtArgs> = {}>(args?: Subset<T, SyncOperation$userArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the SyncOperation model
+   */
+  interface SyncOperationFieldRefs {
+    readonly id: FieldRef<"SyncOperation", 'String'>
+    readonly userId: FieldRef<"SyncOperation", 'String'>
+    readonly operationType: FieldRef<"SyncOperation", 'String'>
+    readonly createdAtMs: FieldRef<"SyncOperation", 'BigInt'>
+    readonly processedAt: FieldRef<"SyncOperation", 'DateTime'>
+    readonly payload: FieldRef<"SyncOperation", 'Json'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * SyncOperation findUnique
+   */
+  export type SyncOperationFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * Filter, which SyncOperation to fetch.
+     */
+    where: SyncOperationWhereUniqueInput
+  }
+
+  /**
+   * SyncOperation findUniqueOrThrow
+   */
+  export type SyncOperationFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * Filter, which SyncOperation to fetch.
+     */
+    where: SyncOperationWhereUniqueInput
+  }
+
+  /**
+   * SyncOperation findFirst
+   */
+  export type SyncOperationFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * Filter, which SyncOperation to fetch.
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SyncOperations to fetch.
+     */
+    orderBy?: SyncOperationOrderByWithRelationInput | SyncOperationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for SyncOperations.
+     */
+    cursor?: SyncOperationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SyncOperations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SyncOperations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of SyncOperations.
+     */
+    distinct?: SyncOperationScalarFieldEnum | SyncOperationScalarFieldEnum[]
+  }
+
+  /**
+   * SyncOperation findFirstOrThrow
+   */
+  export type SyncOperationFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * Filter, which SyncOperation to fetch.
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SyncOperations to fetch.
+     */
+    orderBy?: SyncOperationOrderByWithRelationInput | SyncOperationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for SyncOperations.
+     */
+    cursor?: SyncOperationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SyncOperations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SyncOperations.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of SyncOperations.
+     */
+    distinct?: SyncOperationScalarFieldEnum | SyncOperationScalarFieldEnum[]
+  }
+
+  /**
+   * SyncOperation findMany
+   */
+  export type SyncOperationFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * Filter, which SyncOperations to fetch.
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of SyncOperations to fetch.
+     */
+    orderBy?: SyncOperationOrderByWithRelationInput | SyncOperationOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing SyncOperations.
+     */
+    cursor?: SyncOperationWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` SyncOperations from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` SyncOperations.
+     */
+    skip?: number
+    distinct?: SyncOperationScalarFieldEnum | SyncOperationScalarFieldEnum[]
+  }
+
+  /**
+   * SyncOperation create
+   */
+  export type SyncOperationCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * The data needed to create a SyncOperation.
+     */
+    data: XOR<SyncOperationCreateInput, SyncOperationUncheckedCreateInput>
+  }
+
+  /**
+   * SyncOperation createMany
+   */
+  export type SyncOperationCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many SyncOperations.
+     */
+    data: SyncOperationCreateManyInput | SyncOperationCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * SyncOperation createManyAndReturn
+   */
+  export type SyncOperationCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * The data used to create many SyncOperations.
+     */
+    data: SyncOperationCreateManyInput | SyncOperationCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * SyncOperation update
+   */
+  export type SyncOperationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * The data needed to update a SyncOperation.
+     */
+    data: XOR<SyncOperationUpdateInput, SyncOperationUncheckedUpdateInput>
+    /**
+     * Choose, which SyncOperation to update.
+     */
+    where: SyncOperationWhereUniqueInput
+  }
+
+  /**
+   * SyncOperation updateMany
+   */
+  export type SyncOperationUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update SyncOperations.
+     */
+    data: XOR<SyncOperationUpdateManyMutationInput, SyncOperationUncheckedUpdateManyInput>
+    /**
+     * Filter which SyncOperations to update
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * Limit how many SyncOperations to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * SyncOperation updateManyAndReturn
+   */
+  export type SyncOperationUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * The data used to update SyncOperations.
+     */
+    data: XOR<SyncOperationUpdateManyMutationInput, SyncOperationUncheckedUpdateManyInput>
+    /**
+     * Filter which SyncOperations to update
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * Limit how many SyncOperations to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * SyncOperation upsert
+   */
+  export type SyncOperationUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * The filter to search for the SyncOperation to update in case it exists.
+     */
+    where: SyncOperationWhereUniqueInput
+    /**
+     * In case the SyncOperation found by the `where` argument doesn't exist, create a new SyncOperation with this data.
+     */
+    create: XOR<SyncOperationCreateInput, SyncOperationUncheckedCreateInput>
+    /**
+     * In case the SyncOperation was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<SyncOperationUpdateInput, SyncOperationUncheckedUpdateInput>
+  }
+
+  /**
+   * SyncOperation delete
+   */
+  export type SyncOperationDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+    /**
+     * Filter which SyncOperation to delete.
+     */
+    where: SyncOperationWhereUniqueInput
+  }
+
+  /**
+   * SyncOperation deleteMany
+   */
+  export type SyncOperationDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which SyncOperations to delete
+     */
+    where?: SyncOperationWhereInput
+    /**
+     * Limit how many SyncOperations to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * SyncOperation.user
+   */
+  export type SyncOperation$userArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
+  }
+
+  /**
+   * SyncOperation without action
+   */
+  export type SyncOperationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the SyncOperation
+     */
+    select?: SyncOperationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the SyncOperation
+     */
+    omit?: SyncOperationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: SyncOperationInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -9797,6 +12416,28 @@ export namespace Prisma {
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+  export const ResearchCaptureScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    captureId: 'captureId',
+    capturedAt: 'capturedAt',
+    category: 'category',
+    label: 'label',
+    note: 'note',
+    durationSeconds: 'durationSeconds',
+    rateHz: 'rateHz',
+    sampleCount: 'sampleCount',
+    metadata: 'metadata',
+    recording: 'recording',
+    photo: 'photo',
+    photoContentType: 'photoContentType',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type ResearchCaptureScalarFieldEnum = (typeof ResearchCaptureScalarFieldEnum)[keyof typeof ResearchCaptureScalarFieldEnum]
 
 
   export const UserSessionScalarFieldEnum: {
@@ -9870,12 +12511,31 @@ export namespace Prisma {
   export type SampleScalarFieldEnum = (typeof SampleScalarFieldEnum)[keyof typeof SampleScalarFieldEnum]
 
 
+  export const SyncOperationScalarFieldEnum: {
+    id: 'id',
+    userId: 'userId',
+    operationType: 'operationType',
+    createdAtMs: 'createdAtMs',
+    processedAt: 'processedAt',
+    payload: 'payload'
+  };
+
+  export type SyncOperationScalarFieldEnum = (typeof SyncOperationScalarFieldEnum)[keyof typeof SyncOperationScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const QueryMode: {
@@ -9892,6 +12552,15 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -9935,6 +12604,48 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Int'
+   */
+  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int[]'
+   */
+  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'QueryMode'
+   */
+  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+  /**
+   * Reference to a field of type 'Bytes'
+   */
+  export type BytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes'>
+    
+
+
+  /**
+   * Reference to a field of type 'Bytes[]'
+   */
+  export type ListBytesFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Bytes[]'>
+    
+
+
+  /**
    * Reference to a field of type 'VehicleType'
    */
   export type EnumVehicleTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VehicleType'>
@@ -9959,20 +12670,6 @@ export namespace Prisma {
    * Reference to a field of type 'SensorSource[]'
    */
   export type ListEnumSensorSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SensorSource[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int'
-   */
-  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int[]'
-   */
-  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -10151,6 +12848,8 @@ export namespace Prisma {
     sessions?: UserSessionListRelationFilter
     devices?: DeviceListRelationFilter
     rides?: RideListRelationFilter
+    syncOperations?: SyncOperationListRelationFilter
+    researchCaptures?: ResearchCaptureListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -10164,6 +12863,8 @@ export namespace Prisma {
     sessions?: UserSessionOrderByRelationAggregateInput
     devices?: DeviceOrderByRelationAggregateInput
     rides?: RideOrderByRelationAggregateInput
+    syncOperations?: SyncOperationOrderByRelationAggregateInput
+    researchCaptures?: ResearchCaptureOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -10180,6 +12881,8 @@ export namespace Prisma {
     sessions?: UserSessionListRelationFilter
     devices?: DeviceListRelationFilter
     rides?: RideListRelationFilter
+    syncOperations?: SyncOperationListRelationFilter
+    researchCaptures?: ResearchCaptureListRelationFilter
   }, "id" | "email">
 
   export type UserOrderByWithAggregationInput = {
@@ -10206,6 +12909,118 @@ export namespace Prisma {
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
+  }
+
+  export type ResearchCaptureWhereInput = {
+    AND?: ResearchCaptureWhereInput | ResearchCaptureWhereInput[]
+    OR?: ResearchCaptureWhereInput[]
+    NOT?: ResearchCaptureWhereInput | ResearchCaptureWhereInput[]
+    id?: StringFilter<"ResearchCapture"> | string
+    userId?: StringFilter<"ResearchCapture"> | string
+    captureId?: IntFilter<"ResearchCapture"> | number
+    capturedAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    category?: StringFilter<"ResearchCapture"> | string
+    label?: StringFilter<"ResearchCapture"> | string
+    note?: StringFilter<"ResearchCapture"> | string
+    durationSeconds?: IntFilter<"ResearchCapture"> | number
+    rateHz?: IntFilter<"ResearchCapture"> | number
+    sampleCount?: IntFilter<"ResearchCapture"> | number
+    metadata?: JsonFilter<"ResearchCapture">
+    recording?: BytesFilter<"ResearchCapture"> | Bytes
+    photo?: BytesNullableFilter<"ResearchCapture"> | Bytes | null
+    photoContentType?: StringNullableFilter<"ResearchCapture"> | string | null
+    createdAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    updatedAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }
+
+  export type ResearchCaptureOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    captureId?: SortOrder
+    capturedAt?: SortOrder
+    category?: SortOrder
+    label?: SortOrder
+    note?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+    metadata?: SortOrder
+    recording?: SortOrder
+    photo?: SortOrderInput | SortOrder
+    photoContentType?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type ResearchCaptureWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ResearchCaptureWhereInput | ResearchCaptureWhereInput[]
+    OR?: ResearchCaptureWhereInput[]
+    NOT?: ResearchCaptureWhereInput | ResearchCaptureWhereInput[]
+    userId?: StringFilter<"ResearchCapture"> | string
+    captureId?: IntFilter<"ResearchCapture"> | number
+    capturedAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    category?: StringFilter<"ResearchCapture"> | string
+    label?: StringFilter<"ResearchCapture"> | string
+    note?: StringFilter<"ResearchCapture"> | string
+    durationSeconds?: IntFilter<"ResearchCapture"> | number
+    rateHz?: IntFilter<"ResearchCapture"> | number
+    sampleCount?: IntFilter<"ResearchCapture"> | number
+    metadata?: JsonFilter<"ResearchCapture">
+    recording?: BytesFilter<"ResearchCapture"> | Bytes
+    photo?: BytesNullableFilter<"ResearchCapture"> | Bytes | null
+    photoContentType?: StringNullableFilter<"ResearchCapture"> | string | null
+    createdAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    updatedAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id">
+
+  export type ResearchCaptureOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    captureId?: SortOrder
+    capturedAt?: SortOrder
+    category?: SortOrder
+    label?: SortOrder
+    note?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+    metadata?: SortOrder
+    recording?: SortOrder
+    photo?: SortOrderInput | SortOrder
+    photoContentType?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: ResearchCaptureCountOrderByAggregateInput
+    _avg?: ResearchCaptureAvgOrderByAggregateInput
+    _max?: ResearchCaptureMaxOrderByAggregateInput
+    _min?: ResearchCaptureMinOrderByAggregateInput
+    _sum?: ResearchCaptureSumOrderByAggregateInput
+  }
+
+  export type ResearchCaptureScalarWhereWithAggregatesInput = {
+    AND?: ResearchCaptureScalarWhereWithAggregatesInput | ResearchCaptureScalarWhereWithAggregatesInput[]
+    OR?: ResearchCaptureScalarWhereWithAggregatesInput[]
+    NOT?: ResearchCaptureScalarWhereWithAggregatesInput | ResearchCaptureScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ResearchCapture"> | string
+    userId?: StringWithAggregatesFilter<"ResearchCapture"> | string
+    captureId?: IntWithAggregatesFilter<"ResearchCapture"> | number
+    capturedAt?: DateTimeWithAggregatesFilter<"ResearchCapture"> | Date | string
+    category?: StringWithAggregatesFilter<"ResearchCapture"> | string
+    label?: StringWithAggregatesFilter<"ResearchCapture"> | string
+    note?: StringWithAggregatesFilter<"ResearchCapture"> | string
+    durationSeconds?: IntWithAggregatesFilter<"ResearchCapture"> | number
+    rateHz?: IntWithAggregatesFilter<"ResearchCapture"> | number
+    sampleCount?: IntWithAggregatesFilter<"ResearchCapture"> | number
+    metadata?: JsonWithAggregatesFilter<"ResearchCapture">
+    recording?: BytesWithAggregatesFilter<"ResearchCapture"> | Bytes
+    photo?: BytesNullableWithAggregatesFilter<"ResearchCapture"> | Bytes | null
+    photoContentType?: StringNullableWithAggregatesFilter<"ResearchCapture"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"ResearchCapture"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"ResearchCapture"> | Date | string
   }
 
   export type UserSessionWhereInput = {
@@ -10576,6 +13391,68 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"Sample"> | Date | string
   }
 
+  export type SyncOperationWhereInput = {
+    AND?: SyncOperationWhereInput | SyncOperationWhereInput[]
+    OR?: SyncOperationWhereInput[]
+    NOT?: SyncOperationWhereInput | SyncOperationWhereInput[]
+    id?: StringFilter<"SyncOperation"> | string
+    userId?: StringNullableFilter<"SyncOperation"> | string | null
+    operationType?: StringFilter<"SyncOperation"> | string
+    createdAtMs?: BigIntFilter<"SyncOperation"> | bigint | number
+    processedAt?: DateTimeFilter<"SyncOperation"> | Date | string
+    payload?: JsonFilter<"SyncOperation">
+    user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }
+
+  export type SyncOperationOrderByWithRelationInput = {
+    id?: SortOrder
+    userId?: SortOrderInput | SortOrder
+    operationType?: SortOrder
+    createdAtMs?: SortOrder
+    processedAt?: SortOrder
+    payload?: SortOrder
+    user?: UserOrderByWithRelationInput
+  }
+
+  export type SyncOperationWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: SyncOperationWhereInput | SyncOperationWhereInput[]
+    OR?: SyncOperationWhereInput[]
+    NOT?: SyncOperationWhereInput | SyncOperationWhereInput[]
+    userId?: StringNullableFilter<"SyncOperation"> | string | null
+    operationType?: StringFilter<"SyncOperation"> | string
+    createdAtMs?: BigIntFilter<"SyncOperation"> | bigint | number
+    processedAt?: DateTimeFilter<"SyncOperation"> | Date | string
+    payload?: JsonFilter<"SyncOperation">
+    user?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
+  }, "id">
+
+  export type SyncOperationOrderByWithAggregationInput = {
+    id?: SortOrder
+    userId?: SortOrderInput | SortOrder
+    operationType?: SortOrder
+    createdAtMs?: SortOrder
+    processedAt?: SortOrder
+    payload?: SortOrder
+    _count?: SyncOperationCountOrderByAggregateInput
+    _avg?: SyncOperationAvgOrderByAggregateInput
+    _max?: SyncOperationMaxOrderByAggregateInput
+    _min?: SyncOperationMinOrderByAggregateInput
+    _sum?: SyncOperationSumOrderByAggregateInput
+  }
+
+  export type SyncOperationScalarWhereWithAggregatesInput = {
+    AND?: SyncOperationScalarWhereWithAggregatesInput | SyncOperationScalarWhereWithAggregatesInput[]
+    OR?: SyncOperationScalarWhereWithAggregatesInput[]
+    NOT?: SyncOperationScalarWhereWithAggregatesInput | SyncOperationScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"SyncOperation"> | string
+    userId?: StringNullableWithAggregatesFilter<"SyncOperation"> | string | null
+    operationType?: StringWithAggregatesFilter<"SyncOperation"> | string
+    createdAtMs?: BigIntWithAggregatesFilter<"SyncOperation"> | bigint | number
+    processedAt?: DateTimeWithAggregatesFilter<"SyncOperation"> | Date | string
+    payload?: JsonWithAggregatesFilter<"SyncOperation">
+  }
+
   export type AdminUserCreateInput = {
     id?: string
     email: string
@@ -10730,6 +13607,8 @@ export namespace Prisma {
     sessions?: UserSessionCreateNestedManyWithoutUserInput
     devices?: DeviceCreateNestedManyWithoutUserInput
     rides?: RideCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -10743,6 +13622,8 @@ export namespace Prisma {
     sessions?: UserSessionUncheckedCreateNestedManyWithoutUserInput
     devices?: DeviceUncheckedCreateNestedManyWithoutUserInput
     rides?: RideUncheckedCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationUncheckedCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -10756,6 +13637,8 @@ export namespace Prisma {
     sessions?: UserSessionUpdateManyWithoutUserNestedInput
     devices?: DeviceUpdateManyWithoutUserNestedInput
     rides?: RideUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -10769,6 +13652,8 @@ export namespace Prisma {
     sessions?: UserSessionUncheckedUpdateManyWithoutUserNestedInput
     devices?: DeviceUncheckedUpdateManyWithoutUserNestedInput
     rides?: RideUncheckedUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUncheckedUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -10797,6 +13682,138 @@ export namespace Prisma {
     passwordHash?: StringFieldUpdateOperationsInput | string
     name?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ResearchCaptureCreateInput = {
+    id: string
+    captureId: number
+    capturedAt: Date | string
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonNullValueInput | InputJsonValue
+    recording: Bytes
+    photo?: Bytes | null
+    photoContentType?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutResearchCapturesInput
+  }
+
+  export type ResearchCaptureUncheckedCreateInput = {
+    id: string
+    userId: string
+    captureId: number
+    capturedAt: Date | string
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonNullValueInput | InputJsonValue
+    recording: Bytes
+    photo?: Bytes | null
+    photoContentType?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ResearchCaptureUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutResearchCapturesNestedInput
+  }
+
+  export type ResearchCaptureUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ResearchCaptureCreateManyInput = {
+    id: string
+    userId: string
+    captureId: number
+    capturedAt: Date | string
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonNullValueInput | InputJsonValue
+    recording: Bytes
+    photo?: Bytes | null
+    photoContentType?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ResearchCaptureUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ResearchCaptureUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11217,6 +14234,68 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type SyncOperationCreateInput = {
+    id: string
+    operationType: string
+    createdAtMs: bigint | number
+    processedAt?: Date | string
+    payload: JsonNullValueInput | InputJsonValue
+    user?: UserCreateNestedOneWithoutSyncOperationsInput
+  }
+
+  export type SyncOperationUncheckedCreateInput = {
+    id: string
+    userId?: string | null
+    operationType: string
+    createdAtMs: bigint | number
+    processedAt?: Date | string
+    payload: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+    user?: UserUpdateOneWithoutSyncOperationsNestedInput
+  }
+
+  export type SyncOperationUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: NullableStringFieldUpdateOperationsInput | string | null
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationCreateManyInput = {
+    id: string
+    userId?: string | null
+    operationType: string
+    createdAtMs: bigint | number
+    processedAt?: Date | string
+    payload: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: NullableStringFieldUpdateOperationsInput | string | null
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -11444,6 +14523,18 @@ export namespace Prisma {
     none?: RideWhereInput
   }
 
+  export type SyncOperationListRelationFilter = {
+    every?: SyncOperationWhereInput
+    some?: SyncOperationWhereInput
+    none?: SyncOperationWhereInput
+  }
+
+  export type ResearchCaptureListRelationFilter = {
+    every?: ResearchCaptureWhereInput
+    some?: ResearchCaptureWhereInput
+    none?: ResearchCaptureWhereInput
+  }
+
   export type UserSessionOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -11453,6 +14544,14 @@ export namespace Prisma {
   }
 
   export type RideOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type SyncOperationOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ResearchCaptureOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -11486,9 +14585,188 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type BytesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    not?: NestedBytesFilter<$PrismaModel> | Bytes
+  }
+
+  export type BytesNullableFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel> | null
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    not?: NestedBytesNullableFilter<$PrismaModel> | Bytes | null
+  }
+
   export type UserScalarRelationFilter = {
     is?: UserWhereInput
     isNot?: UserWhereInput
+  }
+
+  export type ResearchCaptureCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    captureId?: SortOrder
+    capturedAt?: SortOrder
+    category?: SortOrder
+    label?: SortOrder
+    note?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+    metadata?: SortOrder
+    recording?: SortOrder
+    photo?: SortOrder
+    photoContentType?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ResearchCaptureAvgOrderByAggregateInput = {
+    captureId?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+  }
+
+  export type ResearchCaptureMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    captureId?: SortOrder
+    capturedAt?: SortOrder
+    category?: SortOrder
+    label?: SortOrder
+    note?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+    recording?: SortOrder
+    photo?: SortOrder
+    photoContentType?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ResearchCaptureMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    captureId?: SortOrder
+    capturedAt?: SortOrder
+    category?: SortOrder
+    label?: SortOrder
+    note?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+    recording?: SortOrder
+    photo?: SortOrder
+    photoContentType?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ResearchCaptureSumOrderByAggregateInput = {
+    captureId?: SortOrder
+    durationSeconds?: SortOrder
+    rateHz?: SortOrder
+    sampleCount?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
+
+  export type BytesWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    not?: NestedBytesWithAggregatesFilter<$PrismaModel> | Bytes
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBytesFilter<$PrismaModel>
+    _max?: NestedBytesFilter<$PrismaModel>
+  }
+
+  export type BytesNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel> | null
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    not?: NestedBytesNullableWithAggregatesFilter<$PrismaModel> | Bytes | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedBytesNullableFilter<$PrismaModel>
+    _max?: NestedBytesNullableFilter<$PrismaModel>
   }
 
   export type UserSessionCountOrderByAggregateInput = {
@@ -11568,17 +14846,6 @@ export namespace Prisma {
     in?: $Enums.SensorSource[] | ListEnumSensorSourceFieldRefInput<$PrismaModel>
     notIn?: $Enums.SensorSource[] | ListEnumSensorSourceFieldRefInput<$PrismaModel>
     not?: NestedEnumSensorSourceFilter<$PrismaModel> | $Enums.SensorSource
-  }
-
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type FloatNullableFilter<$PrismaModel = never> = {
@@ -11696,22 +14963,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumSensorSourceFilter<$PrismaModel>
     _max?: NestedEnumSensorSourceFilter<$PrismaModel>
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -11908,6 +15159,39 @@ export namespace Prisma {
     _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
+  export type SyncOperationCountOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    operationType?: SortOrder
+    createdAtMs?: SortOrder
+    processedAt?: SortOrder
+    payload?: SortOrder
+  }
+
+  export type SyncOperationAvgOrderByAggregateInput = {
+    createdAtMs?: SortOrder
+  }
+
+  export type SyncOperationMaxOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    operationType?: SortOrder
+    createdAtMs?: SortOrder
+    processedAt?: SortOrder
+  }
+
+  export type SyncOperationMinOrderByAggregateInput = {
+    id?: SortOrder
+    userId?: SortOrder
+    operationType?: SortOrder
+    createdAtMs?: SortOrder
+    processedAt?: SortOrder
+  }
+
+  export type SyncOperationSumOrderByAggregateInput = {
+    createdAtMs?: SortOrder
+  }
+
   export type AdminSessionCreateNestedManyWithoutAdminUserInput = {
     create?: XOR<AdminSessionCreateWithoutAdminUserInput, AdminSessionUncheckedCreateWithoutAdminUserInput> | AdminSessionCreateWithoutAdminUserInput[] | AdminSessionUncheckedCreateWithoutAdminUserInput[]
     connectOrCreate?: AdminSessionCreateOrConnectWithoutAdminUserInput | AdminSessionCreateOrConnectWithoutAdminUserInput[]
@@ -12005,6 +15289,20 @@ export namespace Prisma {
     connect?: RideWhereUniqueInput | RideWhereUniqueInput[]
   }
 
+  export type SyncOperationCreateNestedManyWithoutUserInput = {
+    create?: XOR<SyncOperationCreateWithoutUserInput, SyncOperationUncheckedCreateWithoutUserInput> | SyncOperationCreateWithoutUserInput[] | SyncOperationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: SyncOperationCreateOrConnectWithoutUserInput | SyncOperationCreateOrConnectWithoutUserInput[]
+    createMany?: SyncOperationCreateManyUserInputEnvelope
+    connect?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+  }
+
+  export type ResearchCaptureCreateNestedManyWithoutUserInput = {
+    create?: XOR<ResearchCaptureCreateWithoutUserInput, ResearchCaptureUncheckedCreateWithoutUserInput> | ResearchCaptureCreateWithoutUserInput[] | ResearchCaptureUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ResearchCaptureCreateOrConnectWithoutUserInput | ResearchCaptureCreateOrConnectWithoutUserInput[]
+    createMany?: ResearchCaptureCreateManyUserInputEnvelope
+    connect?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+  }
+
   export type UserSessionUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<UserSessionCreateWithoutUserInput, UserSessionUncheckedCreateWithoutUserInput> | UserSessionCreateWithoutUserInput[] | UserSessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: UserSessionCreateOrConnectWithoutUserInput | UserSessionCreateOrConnectWithoutUserInput[]
@@ -12024,6 +15322,20 @@ export namespace Prisma {
     connectOrCreate?: RideCreateOrConnectWithoutUserInput | RideCreateOrConnectWithoutUserInput[]
     createMany?: RideCreateManyUserInputEnvelope
     connect?: RideWhereUniqueInput | RideWhereUniqueInput[]
+  }
+
+  export type SyncOperationUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<SyncOperationCreateWithoutUserInput, SyncOperationUncheckedCreateWithoutUserInput> | SyncOperationCreateWithoutUserInput[] | SyncOperationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: SyncOperationCreateOrConnectWithoutUserInput | SyncOperationCreateOrConnectWithoutUserInput[]
+    createMany?: SyncOperationCreateManyUserInputEnvelope
+    connect?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+  }
+
+  export type ResearchCaptureUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<ResearchCaptureCreateWithoutUserInput, ResearchCaptureUncheckedCreateWithoutUserInput> | ResearchCaptureCreateWithoutUserInput[] | ResearchCaptureUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ResearchCaptureCreateOrConnectWithoutUserInput | ResearchCaptureCreateOrConnectWithoutUserInput[]
+    createMany?: ResearchCaptureCreateManyUserInputEnvelope
+    connect?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
   }
 
   export type UserSessionUpdateManyWithoutUserNestedInput = {
@@ -12068,6 +15380,34 @@ export namespace Prisma {
     deleteMany?: RideScalarWhereInput | RideScalarWhereInput[]
   }
 
+  export type SyncOperationUpdateManyWithoutUserNestedInput = {
+    create?: XOR<SyncOperationCreateWithoutUserInput, SyncOperationUncheckedCreateWithoutUserInput> | SyncOperationCreateWithoutUserInput[] | SyncOperationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: SyncOperationCreateOrConnectWithoutUserInput | SyncOperationCreateOrConnectWithoutUserInput[]
+    upsert?: SyncOperationUpsertWithWhereUniqueWithoutUserInput | SyncOperationUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: SyncOperationCreateManyUserInputEnvelope
+    set?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    disconnect?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    delete?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    connect?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    update?: SyncOperationUpdateWithWhereUniqueWithoutUserInput | SyncOperationUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: SyncOperationUpdateManyWithWhereWithoutUserInput | SyncOperationUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: SyncOperationScalarWhereInput | SyncOperationScalarWhereInput[]
+  }
+
+  export type ResearchCaptureUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ResearchCaptureCreateWithoutUserInput, ResearchCaptureUncheckedCreateWithoutUserInput> | ResearchCaptureCreateWithoutUserInput[] | ResearchCaptureUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ResearchCaptureCreateOrConnectWithoutUserInput | ResearchCaptureCreateOrConnectWithoutUserInput[]
+    upsert?: ResearchCaptureUpsertWithWhereUniqueWithoutUserInput | ResearchCaptureUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ResearchCaptureCreateManyUserInputEnvelope
+    set?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    disconnect?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    delete?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    connect?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    update?: ResearchCaptureUpdateWithWhereUniqueWithoutUserInput | ResearchCaptureUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ResearchCaptureUpdateManyWithWhereWithoutUserInput | ResearchCaptureUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ResearchCaptureScalarWhereInput | ResearchCaptureScalarWhereInput[]
+  }
+
   export type UserSessionUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<UserSessionCreateWithoutUserInput, UserSessionUncheckedCreateWithoutUserInput> | UserSessionCreateWithoutUserInput[] | UserSessionUncheckedCreateWithoutUserInput[]
     connectOrCreate?: UserSessionCreateOrConnectWithoutUserInput | UserSessionCreateOrConnectWithoutUserInput[]
@@ -12108,6 +15448,64 @@ export namespace Prisma {
     update?: RideUpdateWithWhereUniqueWithoutUserInput | RideUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: RideUpdateManyWithWhereWithoutUserInput | RideUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: RideScalarWhereInput | RideScalarWhereInput[]
+  }
+
+  export type SyncOperationUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<SyncOperationCreateWithoutUserInput, SyncOperationUncheckedCreateWithoutUserInput> | SyncOperationCreateWithoutUserInput[] | SyncOperationUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: SyncOperationCreateOrConnectWithoutUserInput | SyncOperationCreateOrConnectWithoutUserInput[]
+    upsert?: SyncOperationUpsertWithWhereUniqueWithoutUserInput | SyncOperationUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: SyncOperationCreateManyUserInputEnvelope
+    set?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    disconnect?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    delete?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    connect?: SyncOperationWhereUniqueInput | SyncOperationWhereUniqueInput[]
+    update?: SyncOperationUpdateWithWhereUniqueWithoutUserInput | SyncOperationUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: SyncOperationUpdateManyWithWhereWithoutUserInput | SyncOperationUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: SyncOperationScalarWhereInput | SyncOperationScalarWhereInput[]
+  }
+
+  export type ResearchCaptureUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<ResearchCaptureCreateWithoutUserInput, ResearchCaptureUncheckedCreateWithoutUserInput> | ResearchCaptureCreateWithoutUserInput[] | ResearchCaptureUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: ResearchCaptureCreateOrConnectWithoutUserInput | ResearchCaptureCreateOrConnectWithoutUserInput[]
+    upsert?: ResearchCaptureUpsertWithWhereUniqueWithoutUserInput | ResearchCaptureUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: ResearchCaptureCreateManyUserInputEnvelope
+    set?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    disconnect?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    delete?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    connect?: ResearchCaptureWhereUniqueInput | ResearchCaptureWhereUniqueInput[]
+    update?: ResearchCaptureUpdateWithWhereUniqueWithoutUserInput | ResearchCaptureUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: ResearchCaptureUpdateManyWithWhereWithoutUserInput | ResearchCaptureUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: ResearchCaptureScalarWhereInput | ResearchCaptureScalarWhereInput[]
+  }
+
+  export type UserCreateNestedOneWithoutResearchCapturesInput = {
+    create?: XOR<UserCreateWithoutResearchCapturesInput, UserUncheckedCreateWithoutResearchCapturesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutResearchCapturesInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type BytesFieldUpdateOperationsInput = {
+    set?: Bytes
+  }
+
+  export type NullableBytesFieldUpdateOperationsInput = {
+    set?: Bytes | null
+  }
+
+  export type UserUpdateOneRequiredWithoutResearchCapturesNestedInput = {
+    create?: XOR<UserCreateWithoutResearchCapturesInput, UserUncheckedCreateWithoutResearchCapturesInput>
+    connectOrCreate?: UserCreateOrConnectWithoutResearchCapturesInput
+    upsert?: UserUpsertWithoutResearchCapturesInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutResearchCapturesInput, UserUpdateWithoutResearchCapturesInput>, UserUncheckedUpdateWithoutResearchCapturesInput>
   }
 
   export type UserCreateNestedOneWithoutSessionsInput = {
@@ -12216,14 +15614,6 @@ export namespace Prisma {
     set?: $Enums.SensorSource
   }
 
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-  }
-
   export type NullableFloatFieldUpdateOperationsInput = {
     set?: number | null
     increment?: number
@@ -12316,6 +15706,22 @@ export namespace Prisma {
     upsert?: RideUpsertWithoutSamplesInput
     connect?: RideWhereUniqueInput
     update?: XOR<XOR<RideUpdateToOneWithWhereWithoutSamplesInput, RideUpdateWithoutSamplesInput>, RideUncheckedUpdateWithoutSamplesInput>
+  }
+
+  export type UserCreateNestedOneWithoutSyncOperationsInput = {
+    create?: XOR<UserCreateWithoutSyncOperationsInput, UserUncheckedCreateWithoutSyncOperationsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutSyncOperationsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneWithoutSyncOperationsNestedInput = {
+    create?: XOR<UserCreateWithoutSyncOperationsInput, UserUncheckedCreateWithoutSyncOperationsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutSyncOperationsInput
+    upsert?: UserUpsertWithoutSyncOperationsInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutSyncOperationsInput, UserUpdateWithoutSyncOperationsInput>, UserUncheckedUpdateWithoutSyncOperationsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -12465,6 +15871,90 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
+  export type NestedBytesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    not?: NestedBytesFilter<$PrismaModel> | Bytes
+  }
+
+  export type NestedBytesNullableFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel> | null
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    not?: NestedBytesNullableFilter<$PrismaModel> | Bytes | null
+  }
+
+  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedBytesWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel>
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel>
+    not?: NestedBytesWithAggregatesFilter<$PrismaModel> | Bytes
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBytesFilter<$PrismaModel>
+    _max?: NestedBytesFilter<$PrismaModel>
+  }
+
+  export type NestedBytesNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Bytes | BytesFieldRefInput<$PrismaModel> | null
+    in?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    notIn?: Bytes[] | ListBytesFieldRefInput<$PrismaModel> | null
+    not?: NestedBytesNullableWithAggregatesFilter<$PrismaModel> | Bytes | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedBytesNullableFilter<$PrismaModel>
+    _max?: NestedBytesNullableFilter<$PrismaModel>
+  }
+
   export type NestedEnumVehicleTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.VehicleType | EnumVehicleTypeFieldRefInput<$PrismaModel>
     in?: $Enums.VehicleType[] | ListEnumVehicleTypeFieldRefInput<$PrismaModel>
@@ -12508,33 +15998,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumSensorSourceFilter<$PrismaModel>
     _max?: NestedEnumSensorSourceFilter<$PrismaModel>
-  }
-
-  export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
-  }
-
-  export type NestedFloatFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
   export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -12832,6 +16295,78 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type SyncOperationCreateWithoutUserInput = {
+    id: string
+    operationType: string
+    createdAtMs: bigint | number
+    processedAt?: Date | string
+    payload: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationUncheckedCreateWithoutUserInput = {
+    id: string
+    operationType: string
+    createdAtMs: bigint | number
+    processedAt?: Date | string
+    payload: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationCreateOrConnectWithoutUserInput = {
+    where: SyncOperationWhereUniqueInput
+    create: XOR<SyncOperationCreateWithoutUserInput, SyncOperationUncheckedCreateWithoutUserInput>
+  }
+
+  export type SyncOperationCreateManyUserInputEnvelope = {
+    data: SyncOperationCreateManyUserInput | SyncOperationCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ResearchCaptureCreateWithoutUserInput = {
+    id: string
+    captureId: number
+    capturedAt: Date | string
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonNullValueInput | InputJsonValue
+    recording: Bytes
+    photo?: Bytes | null
+    photoContentType?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ResearchCaptureUncheckedCreateWithoutUserInput = {
+    id: string
+    captureId: number
+    capturedAt: Date | string
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonNullValueInput | InputJsonValue
+    recording: Bytes
+    photo?: Bytes | null
+    photoContentType?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ResearchCaptureCreateOrConnectWithoutUserInput = {
+    where: ResearchCaptureWhereUniqueInput
+    create: XOR<ResearchCaptureCreateWithoutUserInput, ResearchCaptureUncheckedCreateWithoutUserInput>
+  }
+
+  export type ResearchCaptureCreateManyUserInputEnvelope = {
+    data: ResearchCaptureCreateManyUserInput | ResearchCaptureCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type UserSessionUpsertWithWhereUniqueWithoutUserInput = {
     where: UserSessionWhereUniqueInput
     update: XOR<UserSessionUpdateWithoutUserInput, UserSessionUncheckedUpdateWithoutUserInput>
@@ -12928,6 +16463,144 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Ride"> | Date | string
   }
 
+  export type SyncOperationUpsertWithWhereUniqueWithoutUserInput = {
+    where: SyncOperationWhereUniqueInput
+    update: XOR<SyncOperationUpdateWithoutUserInput, SyncOperationUncheckedUpdateWithoutUserInput>
+    create: XOR<SyncOperationCreateWithoutUserInput, SyncOperationUncheckedCreateWithoutUserInput>
+  }
+
+  export type SyncOperationUpdateWithWhereUniqueWithoutUserInput = {
+    where: SyncOperationWhereUniqueInput
+    data: XOR<SyncOperationUpdateWithoutUserInput, SyncOperationUncheckedUpdateWithoutUserInput>
+  }
+
+  export type SyncOperationUpdateManyWithWhereWithoutUserInput = {
+    where: SyncOperationScalarWhereInput
+    data: XOR<SyncOperationUpdateManyMutationInput, SyncOperationUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type SyncOperationScalarWhereInput = {
+    AND?: SyncOperationScalarWhereInput | SyncOperationScalarWhereInput[]
+    OR?: SyncOperationScalarWhereInput[]
+    NOT?: SyncOperationScalarWhereInput | SyncOperationScalarWhereInput[]
+    id?: StringFilter<"SyncOperation"> | string
+    userId?: StringNullableFilter<"SyncOperation"> | string | null
+    operationType?: StringFilter<"SyncOperation"> | string
+    createdAtMs?: BigIntFilter<"SyncOperation"> | bigint | number
+    processedAt?: DateTimeFilter<"SyncOperation"> | Date | string
+    payload?: JsonFilter<"SyncOperation">
+  }
+
+  export type ResearchCaptureUpsertWithWhereUniqueWithoutUserInput = {
+    where: ResearchCaptureWhereUniqueInput
+    update: XOR<ResearchCaptureUpdateWithoutUserInput, ResearchCaptureUncheckedUpdateWithoutUserInput>
+    create: XOR<ResearchCaptureCreateWithoutUserInput, ResearchCaptureUncheckedCreateWithoutUserInput>
+  }
+
+  export type ResearchCaptureUpdateWithWhereUniqueWithoutUserInput = {
+    where: ResearchCaptureWhereUniqueInput
+    data: XOR<ResearchCaptureUpdateWithoutUserInput, ResearchCaptureUncheckedUpdateWithoutUserInput>
+  }
+
+  export type ResearchCaptureUpdateManyWithWhereWithoutUserInput = {
+    where: ResearchCaptureScalarWhereInput
+    data: XOR<ResearchCaptureUpdateManyMutationInput, ResearchCaptureUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type ResearchCaptureScalarWhereInput = {
+    AND?: ResearchCaptureScalarWhereInput | ResearchCaptureScalarWhereInput[]
+    OR?: ResearchCaptureScalarWhereInput[]
+    NOT?: ResearchCaptureScalarWhereInput | ResearchCaptureScalarWhereInput[]
+    id?: StringFilter<"ResearchCapture"> | string
+    userId?: StringFilter<"ResearchCapture"> | string
+    captureId?: IntFilter<"ResearchCapture"> | number
+    capturedAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    category?: StringFilter<"ResearchCapture"> | string
+    label?: StringFilter<"ResearchCapture"> | string
+    note?: StringFilter<"ResearchCapture"> | string
+    durationSeconds?: IntFilter<"ResearchCapture"> | number
+    rateHz?: IntFilter<"ResearchCapture"> | number
+    sampleCount?: IntFilter<"ResearchCapture"> | number
+    metadata?: JsonFilter<"ResearchCapture">
+    recording?: BytesFilter<"ResearchCapture"> | Bytes
+    photo?: BytesNullableFilter<"ResearchCapture"> | Bytes | null
+    photoContentType?: StringNullableFilter<"ResearchCapture"> | string | null
+    createdAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+    updatedAt?: DateTimeFilter<"ResearchCapture"> | Date | string
+  }
+
+  export type UserCreateWithoutResearchCapturesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    name?: string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: UserSessionCreateNestedManyWithoutUserInput
+    devices?: DeviceCreateNestedManyWithoutUserInput
+    rides?: RideCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutResearchCapturesInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    name?: string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: UserSessionUncheckedCreateNestedManyWithoutUserInput
+    devices?: DeviceUncheckedCreateNestedManyWithoutUserInput
+    rides?: RideUncheckedCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutResearchCapturesInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutResearchCapturesInput, UserUncheckedCreateWithoutResearchCapturesInput>
+  }
+
+  export type UserUpsertWithoutResearchCapturesInput = {
+    update: XOR<UserUpdateWithoutResearchCapturesInput, UserUncheckedUpdateWithoutResearchCapturesInput>
+    create: XOR<UserCreateWithoutResearchCapturesInput, UserUncheckedCreateWithoutResearchCapturesInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutResearchCapturesInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutResearchCapturesInput, UserUncheckedUpdateWithoutResearchCapturesInput>
+  }
+
+  export type UserUpdateWithoutResearchCapturesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: UserSessionUpdateManyWithoutUserNestedInput
+    devices?: DeviceUpdateManyWithoutUserNestedInput
+    rides?: RideUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutResearchCapturesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: UserSessionUncheckedUpdateManyWithoutUserNestedInput
+    devices?: DeviceUncheckedUpdateManyWithoutUserNestedInput
+    rides?: RideUncheckedUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUncheckedUpdateManyWithoutUserNestedInput
+  }
+
   export type UserCreateWithoutSessionsInput = {
     id?: string
     email: string
@@ -12938,6 +16611,8 @@ export namespace Prisma {
     updatedAt?: Date | string
     devices?: DeviceCreateNestedManyWithoutUserInput
     rides?: RideCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -12950,6 +16625,8 @@ export namespace Prisma {
     updatedAt?: Date | string
     devices?: DeviceUncheckedCreateNestedManyWithoutUserInput
     rides?: RideUncheckedCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationUncheckedCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -12978,6 +16655,8 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     devices?: DeviceUpdateManyWithoutUserNestedInput
     rides?: RideUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -12990,6 +16669,8 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     devices?: DeviceUncheckedUpdateManyWithoutUserNestedInput
     rides?: RideUncheckedUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUncheckedUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutDevicesInput = {
@@ -13002,6 +16683,8 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: UserSessionCreateNestedManyWithoutUserInput
     rides?: RideCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutDevicesInput = {
@@ -13014,6 +16697,8 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: UserSessionUncheckedCreateNestedManyWithoutUserInput
     rides?: RideUncheckedCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationUncheckedCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutDevicesInput = {
@@ -13090,6 +16775,8 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: UserSessionUpdateManyWithoutUserNestedInput
     rides?: RideUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDevicesInput = {
@@ -13102,6 +16789,8 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: UserSessionUncheckedUpdateManyWithoutUserNestedInput
     rides?: RideUncheckedUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUncheckedUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type RideUpsertWithWhereUniqueWithoutDeviceInput = {
@@ -13130,6 +16819,8 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: UserSessionCreateNestedManyWithoutUserInput
     devices?: DeviceCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutRidesInput = {
@@ -13142,6 +16833,8 @@ export namespace Prisma {
     updatedAt?: Date | string
     sessions?: UserSessionUncheckedCreateNestedManyWithoutUserInput
     devices?: DeviceUncheckedCreateNestedManyWithoutUserInput
+    syncOperations?: SyncOperationUncheckedCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutRidesInput = {
@@ -13245,6 +16938,8 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: UserSessionUpdateManyWithoutUserNestedInput
     devices?: DeviceUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutRidesInput = {
@@ -13257,6 +16952,8 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     sessions?: UserSessionUncheckedUpdateManyWithoutUserNestedInput
     devices?: DeviceUncheckedUpdateManyWithoutUserNestedInput
+    syncOperations?: SyncOperationUncheckedUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type DeviceUpsertWithoutRidesInput = {
@@ -13423,6 +17120,78 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type UserCreateWithoutSyncOperationsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    name?: string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: UserSessionCreateNestedManyWithoutUserInput
+    devices?: DeviceCreateNestedManyWithoutUserInput
+    rides?: RideCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutSyncOperationsInput = {
+    id?: string
+    email: string
+    passwordHash: string
+    name?: string | null
+    lastLoginAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    sessions?: UserSessionUncheckedCreateNestedManyWithoutUserInput
+    devices?: DeviceUncheckedCreateNestedManyWithoutUserInput
+    rides?: RideUncheckedCreateNestedManyWithoutUserInput
+    researchCaptures?: ResearchCaptureUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutSyncOperationsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutSyncOperationsInput, UserUncheckedCreateWithoutSyncOperationsInput>
+  }
+
+  export type UserUpsertWithoutSyncOperationsInput = {
+    update: XOR<UserUpdateWithoutSyncOperationsInput, UserUncheckedUpdateWithoutSyncOperationsInput>
+    create: XOR<UserCreateWithoutSyncOperationsInput, UserUncheckedCreateWithoutSyncOperationsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutSyncOperationsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutSyncOperationsInput, UserUncheckedUpdateWithoutSyncOperationsInput>
+  }
+
+  export type UserUpdateWithoutSyncOperationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: UserSessionUpdateManyWithoutUserNestedInput
+    devices?: DeviceUpdateManyWithoutUserNestedInput
+    rides?: RideUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutSyncOperationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    sessions?: UserSessionUncheckedUpdateManyWithoutUserNestedInput
+    devices?: DeviceUncheckedUpdateManyWithoutUserNestedInput
+    rides?: RideUncheckedUpdateManyWithoutUserNestedInput
+    researchCaptures?: ResearchCaptureUncheckedUpdateManyWithoutUserNestedInput
+  }
+
   export type AdminSessionCreateManyAdminUserInput = {
     id?: string
     tokenHash: string
@@ -13487,6 +17256,32 @@ export namespace Prisma {
     gpsPointCount?: number
     avgVibration?: number | null
     maxVibration?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type SyncOperationCreateManyUserInput = {
+    id: string
+    operationType: string
+    createdAtMs: bigint | number
+    processedAt?: Date | string
+    payload: JsonNullValueInput | InputJsonValue
+  }
+
+  export type ResearchCaptureCreateManyUserInput = {
+    id: string
+    captureId: number
+    capturedAt: Date | string
+    category: string
+    label: string
+    note: string
+    durationSeconds: number
+    rateHz: number
+    sampleCount: number
+    metadata: JsonNullValueInput | InputJsonValue
+    recording: Bytes
+    photo?: Bytes | null
+    photoContentType?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -13599,6 +17394,84 @@ export namespace Prisma {
     gpsPointCount?: IntFieldUpdateOperationsInput | number
     avgVibration?: NullableFloatFieldUpdateOperationsInput | number | null
     maxVibration?: NullableFloatFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type SyncOperationUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+  }
+
+  export type SyncOperationUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    operationType?: StringFieldUpdateOperationsInput | string
+    createdAtMs?: BigIntFieldUpdateOperationsInput | bigint | number
+    processedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    payload?: JsonNullValueInput | InputJsonValue
+  }
+
+  export type ResearchCaptureUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ResearchCaptureUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ResearchCaptureUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    captureId?: IntFieldUpdateOperationsInput | number
+    capturedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    category?: StringFieldUpdateOperationsInput | string
+    label?: StringFieldUpdateOperationsInput | string
+    note?: StringFieldUpdateOperationsInput | string
+    durationSeconds?: IntFieldUpdateOperationsInput | number
+    rateHz?: IntFieldUpdateOperationsInput | number
+    sampleCount?: IntFieldUpdateOperationsInput | number
+    metadata?: JsonNullValueInput | InputJsonValue
+    recording?: BytesFieldUpdateOperationsInput | Bytes
+    photo?: NullableBytesFieldUpdateOperationsInput | Bytes | null
+    photoContentType?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

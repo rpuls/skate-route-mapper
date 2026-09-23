@@ -3,6 +3,7 @@ import type {
   SyncOperationResult,
 } from "@skate-route-mapper/shared/mobileContracts";
 import type { MeasurementSample, Ride, SensorSource, VehicleType } from "../types/measurement";
+import type { ResearchCollection } from "../types/research";
 
 type StoredSample = MeasurementSample & {
   rideId: string;
@@ -17,6 +18,7 @@ type DatabaseSnapshot = {
   rides: Ride[];
   samples: StoredSample[];
   pendingChanges: Array<PendingChange & { syncedAt: number | null }>;
+  researchCollections: ResearchCollection[];
 };
 
 const storageKey = "skate-route-mapper-web-db";
@@ -25,6 +27,7 @@ let snapshot: DatabaseSnapshot = {
   rides: [],
   samples: [],
   pendingChanges: [],
+  researchCollections: [],
 };
 
 export function initDatabase() {
@@ -195,6 +198,18 @@ export function getPendingChangeCount() {
     .length;
 }
 
+export function saveResearchCollection(collection: ResearchCollection) {
+  snapshot.researchCollections = [
+    collection,
+    ...snapshot.researchCollections.filter((item) => item.id !== collection.id),
+  ];
+  writeSnapshot();
+}
+
+export function getResearchCollections(): ResearchCollection[] {
+  return [...snapshot.researchCollections].sort((left, right) => right.createdAt - left.createdAt);
+}
+
 export function getLatestSamples(limit = 20) {
   return [...snapshot.samples]
     .sort((left, right) => right.timestamp - left.timestamp)
@@ -241,6 +256,9 @@ function readSnapshot(): DatabaseSnapshot {
       samples: Array.isArray(parsed.samples) ? parsed.samples : [],
       pendingChanges: Array.isArray(parsed.pendingChanges)
         ? parsed.pendingChanges
+        : [],
+      researchCollections: Array.isArray(parsed.researchCollections)
+        ? parsed.researchCollections
         : [],
     };
   } catch {

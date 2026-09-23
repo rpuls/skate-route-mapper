@@ -3,7 +3,7 @@ import type {
   SyncRequest,
   SyncResponse,
 } from "@skate-route-mapper/shared/mobileContracts";
-import { mobileApiBaseUrl } from "./mobileAuth";
+import { mobileApiBaseUrl } from "./config";
 
 export async function postSyncOperations(params: {
   token: string;

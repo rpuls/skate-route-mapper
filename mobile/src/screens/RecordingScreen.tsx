@@ -98,7 +98,9 @@ export default function RecordingScreen() {
   const addSample = useMeasurementStore((state) => state.addSample);
   const addSamples = useMeasurementStore((state) => state.addSamples);
   const stopRecordingInStore = useMeasurementStore((state) => state.stopRecording);
-  const canUseAndroidBackgroundRecorder = USE_ANDROID_BACKGROUND_RECORDER;
+  const canUseAndroidBackgroundRecorder =
+    USE_ANDROID_BACKGROUND_RECORDER &&
+    sensorSource === "phone";
 
   const [accel, setAccel] = useState<AccelData>({ x: 0, y: 0, z: 0 });
   const [gyro, setGyro] = useState<GyroData>({ x: 0, y: 0, z: 0 });
@@ -379,7 +381,7 @@ export default function RecordingScreen() {
           <Text style={styles.appName}>Skate Route Mapper</Text>
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
-            Measuring vibration using {sensorSource === "external" ? "the Nesso N1 IMU" : "the phone accelerometer and gyroscope"}.
+            Measuring vibration using {sensorSource === "external" ? "the external IMU" : "the phone accelerometer and gyroscope"}.
             Android preview builds can keep recording from the foreground
             service while the phone is locked.
           </Text>

@@ -12,6 +12,7 @@ export async function buildApp() {
   });
 
   await app.register(cors, {
+    methods: ["GET", "HEAD", "POST", "PATCH", "DELETE", "OPTIONS"],
     origin: env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN,
   });
 
@@ -58,6 +59,22 @@ export async function buildApp() {
       });
     }
 
+    if (error instanceof Error && error.message === "Research capture access denied") {
+      return reply.code(403).send({ ok: false, message: error.message });
+    }
+
+    if (error instanceof Error && error.message === "Research capture identity mismatch") {
+      return reply.code(409).send({ ok: false, message: error.message });
+    }
+
+    if (error instanceof Error && [
+      "Invalid research recording",
+      "Research recording is too large",
+      "Research photo is too large",
+    ].includes(error.message)) {
+      return reply.code(400).send({ ok: false, message: error.message });
+    }
+
     if (error instanceof Error && error.message === "Invalid admin credentials") {
       return reply.code(401).send({
         ok: false,
@@ -72,7 +89,7 @@ export async function buildApp() {
       });
     }
 
-    if (error instanceof Error && error.message === "Admin password must be at least 12 characters") {
+    if (error instanceof Error && /^Password must be at least \d+ characters$/.test(error.message)) {
       return reply.code(400).send({
         ok: false,
         message: error.message,
