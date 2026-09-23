@@ -130,10 +130,15 @@ Those endpoints return a session token. Send it as:
 Authorization: Bearer <mobile-user-session-token>
 ```
 
+Mobile user sessions last 30 days. The app stores the returned session locally,
+restores it after restart, and checks it with `GET /v1/mobile/me`. An offline
+startup keeps a locally unexpired session so local-first features remain usable.
+
 Use a mobile user session token for:
 
 - `GET /v1/mobile/me`
 - `POST /v1/mobile/auth/logout`
+- `POST /v1/mobile/research-captures`
 - optionally, mobile ride ingestion endpoints when the uploaded ride should be
   attached to that user
 
@@ -162,6 +167,8 @@ Use `ADMIN_API_KEY` or an admin session token for:
 - `GET /v1/admin/users`
 - `POST /v1/admin/users`
 - `PATCH /v1/admin/users/:adminUserId`
+- `GET /v1/admin/research-captures/:researchCaptureId/recording`
+- `GET /v1/admin/research-captures/:researchCaptureId/photo`
 
 Dashboard users sign in with `POST /v1/admin/login`. The returned session token can also authorize admin endpoints with the same bearer header format.
 
@@ -230,13 +237,13 @@ endpoint.
 ```ts
 type MeasurementSample = {
   timestamp: number;
-  ax: number;
-  ay: number;
-  az: number;
-  gx: number;
-  gy: number;
-  gz: number;
-  vibrationMagnitude: number;
+  ax: number | null;
+  ay: number | null;
+  az: number | null;
+  gx: number | null;
+  gy: number | null;
+  gz: number | null;
+  vibrationMagnitude: number | null;
   latitude: number | null;
   longitude: number | null;
   speed: number | null;
@@ -248,7 +255,13 @@ type MeasurementSample = {
 
 Notes:
 
-- `vibrationMagnitude` must already be calculated by the mobile app.
+- `vibrationMagnitude` must already be calculated by the mobile app when
+  motion data is present.
+- `ax`, `ay`, `az`, `gx`, `gy`, `gz` and `vibrationMagnitude` may all be `null`.
+  A phone-only ride is a GPS route with no motion data at all: the phone owns
+  the route and the external XIAO board owns vibration. Ride-level
+  `avgVibration` and `maxVibration` are computed only over the samples that
+  carry a reading, so a GPS-only batch leaves them untouched.
 - `latitude`, `longitude`, and `speed` may be `null`.
 - `speed` should be meters per second if provided by the mobile app.
 - `locationTimestamp`, `locationAccuracy`, and `locationAgeMs` are optional
@@ -262,7 +275,7 @@ Notes:
   concept thresholds in `mobile/src/screens/RideDetailScreen.tsx` via
   `MAX_TRUSTED_LOCATION_AGE_MS` and `MAX_TRUSTED_LOCATION_ACCURACY_METERS`.
 - For `sensorSource: "external"`, accelerometer and gyroscope may come from an
-  external BLE IMU such as Nesso N1, while GPS still comes from the phone.
+  external XIAO BLE IMU, while GPS still comes from the phone.
 
 ## Endpoints
 
@@ -826,6 +839,36 @@ Success response:
 }
 ```
 
+### `POST /v1/mobile/research-captures`
+
+Upload a verified XIAO research collection to the production database. This
+requires a signed-in mobile-user session. The collection UUID is the primary
+key, so retrying replaces that user's same collection instead of duplicating
+it.
+
+The JSON body contains collection metadata, a base64 `.skateresearch` file and
+an optional base64 JPEG. The request limit is 12 MB; decoded recordings are
+limited to 1.1 MB and photos to 6 MB. The server independently decodes the
+container, checks both CRCs and summary coverage, and verifies capture ID, rate,
+and sample count before storing it. `captureId` accepts the XIAO protocol's full
+unsigned 32-bit range (`0` through `4294967295`).
+
+```json
+{
+  "ok": true,
+  "researchCaptureId": "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
+  "recordingBytes": 300512,
+  "photoBytes": 824112
+}
+```
+
+Uploaded metadata appears in the generated admin `Research Captures` table.
+Select a row in the dashboard to use the authenticated recording/photo download
+buttons, backed by:
+
+- `GET /v1/admin/research-captures/:researchCaptureId/recording`
+- `GET /v1/admin/research-captures/:researchCaptureId/photo`
+
 ## Admin API
 
 ### `GET /v1/admin/rides`
@@ -862,6 +905,35 @@ Query params:
 - `sampleOffset`: optional, default `0`
 
 The response includes `samplesTruncated` when more samples exist than were returned.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `GET /v1/admin/research-captures/:researchCaptureId/recording`
+
+Download the original uploaded `.skateresearch` file for laptop analysis.
+
+Responds with `Content-Type: application/octet-stream` and a
+`Content-Disposition` attachment named `skate-research-<captureId>.skateresearch`.
+
+Returns `404` when the capture does not exist.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `GET /v1/admin/research-captures/:researchCaptureId/photo`
+
+Download the context photograph attached to a research capture.
+
+Responds with the stored photo content type, defaulting to `image/jpeg`.
+
+Returns `404` when the capture does not exist or has no photo.
 
 Auth:
 

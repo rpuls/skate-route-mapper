@@ -13,15 +13,15 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { space } from "@skate-route-mapper/shared/design";
 import { useEffect, useMemo, useState } from "react";
 import {
   useAdminRideDetail,
   useEntityRecords,
 } from "../../features/entities/entityQueries";
+import type { EntityListViewProps } from "../../features/entities/entityViewContract";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
-import type { AdminSession, EntityRecord } from "../../types";
+import type { EntityRecord } from "../../types";
 
 const allUsersValue = "__all__";
 const anonymousUserValue = "__anonymous__";
@@ -68,15 +68,8 @@ function sampleTimestamp(sample: EntityRecord) {
   return displayDate(sample.timestamp);
 }
 
-export function SamplesExplorer({
-  initialRideId,
-  resources,
-  session,
-}: {
-  initialRideId: string | null;
-  resources: AdminResource[];
-  session: AdminSession;
-}) {
+/** The handed-over record is the ride whose samples an admin asked to see. */
+export function SamplesExplorer({ focusRecordId, resources, session }: EntityListViewProps) {
   const usersResource = resources.find((resource) => resource.name === "users") ?? null;
   const ridesResource = resources.find((resource) => resource.name === "rides") ?? null;
   const usersQuery = useEntityRecords(session, usersResource, {
@@ -91,13 +84,13 @@ export function SamplesExplorer({
   const rides = ridesQuery.data?.items ?? [];
 
   const [selectedUserId, setSelectedUserId] = useState(allUsersValue);
-  const [selectedRideId, setSelectedRideId] = useState(initialRideId ?? "");
+  const [selectedRideId, setSelectedRideId] = useState(focusRecordId ?? "");
 
   useEffect(() => {
-    if (initialRideId) {
-      setSelectedRideId(initialRideId);
+    if (focusRecordId) {
+      setSelectedRideId(focusRecordId);
     }
-  }, [initialRideId]);
+  }, [focusRecordId]);
 
   const filteredRides = useMemo(() => {
     if (selectedUserId === allUsersValue) {

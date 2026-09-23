@@ -7,7 +7,9 @@
   "include": [
     "../../src/features/rides/contracts.ts",
     "../../src/features/mobileUsers/contracts.ts",
+    "../../src/features/researchCaptures/contracts.ts",
     "../../../shared/src/mobileContracts.ts",
+    "../../../shared/src/researchContracts.ts",
     "*.contract.test.ts"
   ]
 }

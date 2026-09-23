@@ -3,11 +3,14 @@ import { AdminShell } from "./components/layout/AdminShell";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EntityManagementPage } from "./pages/EntityManagementPage";
 import { LoginPage } from "./pages/LoginPage";
+import { HardwareBenchPage } from "./pages/HardwareBenchPage";
 import { clearStoredSession, readStoredSession } from "./session/sessionStore";
 import type { AdminSession, AdminView } from "./types";
 
 function viewTitle(view: AdminView) {
-  return view === "entities" ? "Entity management" : "Dashboard";
+  if (view === "entities") return "Entity management";
+  if (view === "hardware") return "Hardware bench";
+  return "Dashboard";
 }
 
 export default function App() {
@@ -36,11 +39,9 @@ export default function App() {
       session={session}
       title={viewTitle(activeView)}
     >
-      {activeView === "entities" ? (
-        <EntityManagementPage session={session} />
-      ) : (
-        <DashboardPage onNavigate={setActiveView} session={session} />
-      )}
+      {activeView === "entities" && <EntityManagementPage session={session} />}
+      {activeView === "hardware" && <HardwareBenchPage />}
+      {activeView === "dashboard" && <DashboardPage onNavigate={setActiveView} session={session} />}
     </AdminShell>
   );
 }

@@ -98,7 +98,9 @@ export default function RecordingScreen() {
   const addSample = useMeasurementStore((state) => state.addSample);
   const addSamples = useMeasurementStore((state) => state.addSamples);
   const stopRecordingInStore = useMeasurementStore((state) => state.stopRecording);
-  const canUseAndroidBackgroundRecorder = USE_ANDROID_BACKGROUND_RECORDER;
+  const canUseAndroidBackgroundRecorder =
+    USE_ANDROID_BACKGROUND_RECORDER &&
+    sensorSource === "phone";
 
   const [accel, setAccel] = useState<AccelData>({ x: 0, y: 0, z: 0 });
   const [gyro, setGyro] = useState<GyroData>({ x: 0, y: 0, z: 0 });
@@ -322,7 +324,7 @@ export default function RecordingScreen() {
     }
 
     const latest = samples.slice(-40);
-    const values = latest.map((sample) => sample.vibrationMagnitude);
+    const values = latest.map((sample) => sample.vibrationMagnitude ?? 0);
 
     return values.length > 0 ? values : [0];
   }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
@@ -337,13 +339,14 @@ export default function RecordingScreen() {
       return total / visibleValues.length;
     }
 
-    if (samples.length === 0) return 0;
+    const latest = samples
+      .slice(-40)
+      .map((sample) => sample.vibrationMagnitude)
+      .filter((value): value is number => value !== null);
 
-    const latest = samples.slice(-40);
-    const total = latest.reduce(
-      (sum, sample) => sum + sample.vibrationMagnitude,
-      0
-    );
+    if (latest.length === 0) return 0;
+
+    const total = latest.reduce((sum, value) => sum + value, 0);
 
     return total / latest.length;
   }, [canUseAndroidBackgroundRecorder, nativeChartData, samples]);
@@ -379,7 +382,7 @@ export default function RecordingScreen() {
           <Text style={styles.appName}>Skate Route Mapper</Text>
           <Text style={styles.title}>Recording route</Text>
           <Text style={styles.subtitle}>
-            Measuring vibration using {sensorSource === "external" ? "the Nesso N1 IMU" : "the phone accelerometer and gyroscope"}.
+            Measuring vibration using {sensorSource === "external" ? "the external IMU" : "the phone accelerometer and gyroscope"}.
             Android preview builds can keep recording from the foreground
             service while the phone is locked.
           </Text>
@@ -401,7 +404,7 @@ export default function RecordingScreen() {
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Vibration</Text>
             <Text style={styles.metricValue}>
-              {visibleLatestSample?.vibrationMagnitude.toFixed(3) ?? "0.000"}
+              {visibleLatestSample?.vibrationMagnitude?.toFixed(3) ?? "0.000"}
             </Text>
           </View>
 

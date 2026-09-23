@@ -58,7 +58,8 @@ export function LoginPage({ onLogin }: { onLogin: (session: AdminSession) => voi
             </Typography>
             <Typography variant="h2">Admin sign in</Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              Use the initial admin account or a later created admin user.
+              Private operator dashboard for the Skate Route Mapper project.
+              Only authorized project administrators should sign in.
             </Typography>
           </Box>
 

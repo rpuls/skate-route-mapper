@@ -18,10 +18,11 @@ import {
 import { useMobileAuth } from "../auth/MobileAuthContext";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 
-type AppRouteName = keyof Pick<RootStackParamList, "Home" | "Rides" | "Auth">;
+type AppRouteName = keyof Pick<RootStackParamList, "Home" | "Research" | "Rides" | "Auth">;
 
 const menuItems: { label: string; routeName: AppRouteName }[] = [
   { label: "Start a Ride", routeName: "Home" },
+  { label: "Research Collections", routeName: "Research" },
   { label: "Saved Rides", routeName: "Rides" },
   { label: "Sign in/up", routeName: "Auth" },
 ];

@@ -46,7 +46,7 @@ function getFriendlySubmitError(error: unknown) {
 }
 
 export default function AuthScreen() {
-  const { setSession, signOut, user } = useMobileAuth();
+  const { isRestoring, setSession, signOut, user } = useMobileAuth();
   const [authMode, setAuthMode] = useState<AuthMode>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -115,7 +115,7 @@ export default function AuthScreen() {
           ? await signupMobileUser(payload)
           : await loginMobileUser(payload);
 
-      setSession(session);
+      await setSession(session);
       setPassword("");
       setConfirmPassword("");
       setMessage(`Signed in as ${session.user.email}.`);
@@ -126,8 +126,8 @@ export default function AuthScreen() {
     }
   };
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
     setMessage("");
   };
 
@@ -144,7 +144,7 @@ export default function AuthScreen() {
         />
 
         <View style={styles.card}>
-          {!user && (
+          {!user && !isRestoring && (
             <View style={styles.modeTabs}>
               {(["signup", "login"] as const).map((mode) => {
                 const selected = authMode === mode;
@@ -170,7 +170,11 @@ export default function AuthScreen() {
             </View>
           )}
 
-          {user ? (
+          {isRestoring ? (
+            <View style={styles.statusPanel}>
+              <Text style={styles.statusCopy}>Restoring your session...</Text>
+            </View>
+          ) : user ? (
             <View style={styles.statusPanel}>
               <Text style={styles.statusTitle}>{user.email}</Text>
               <Text style={styles.statusCopy}>

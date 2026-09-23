@@ -8,10 +8,16 @@
     "shared"
   ],
   "scripts": {
+    "hardware:test": "node --test hardware/research.test.mjs",
     "app": "docker compose up --build --detach --wait && node scripts/docker-ready.mjs",
     "logs": "docker compose logs -f",
     "dev:mobile": "npm run start --workspace @skate-route-mapper/mobile --",
-    "dev:iphone": "npm run start --workspace @skate-route-mapper/mobile -- --tunnel --go",
+    "iphone": "npm run iphone --workspace @skate-route-mapper/mobile",
+    "dev:iphone": "npm run iphone",
+    "iphone:tunnel": "npm run iphone:tunnel --workspace @skate-route-mapper/mobile",
+    "iphone:build": "npm run iphone:build --workspace @skate-route-mapper/mobile",
+    "iphone:devices": "npm run iphone:devices --workspace @skate-route-mapper/mobile",
+    "iphone:register": "npm run iphone:register --workspace @skate-route-mapper/mobile",
     "dev:web": "npm run web --workspace @skate-route-mapper/mobile",
     "check": "npm run db:generate && npm run contracts:test && npm run check --workspace @skate-route-mapper/api",
     "build": "npm run db:generate && npm run build --workspace @skate-route-mapper/api && npm run build --workspace @skate-route-mapper/admin",

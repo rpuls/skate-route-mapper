@@ -7,6 +7,7 @@
   "include": [
     "../../src/database/db.web.ts",
     "../../src/types/measurement.ts",
+    "../../src/types/research.ts",
     "../../../shared/src/mobileContracts.ts",
     "*.contract.test.ts"
   ]

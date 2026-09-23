@@ -60,8 +60,33 @@ model User {
   devices        Device[]
   rides          Ride[]
   syncOperations SyncOperation[]
+  researchCaptures ResearchCapture[]
 
   @@map("users")
+}
+
+model ResearchCapture {
+  id               String   @id
+  userId           String   @map("user_id")
+  captureId        BigInt   @map("capture_id")
+  capturedAt       DateTime @map("captured_at")
+  category         String
+  label            String
+  note             String
+  durationSeconds  Int      @map("duration_seconds")
+  rateHz           Int      @map("rate_hz")
+  sampleCount      Int      @map("sample_count")
+  metadata         Json
+  recording        Bytes
+  photo            Bytes?
+  photoContentType String?  @map("photo_content_type")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, capturedAt(sort: Desc)])
+  @@index([captureId])
+  @@map("research_captures")
 }
 
 model UserSession {
@@ -125,13 +150,13 @@ model Sample {
   id                 BigInt    @id @default(autoincrement())
   rideId             String    @map("ride_id")
   recordedAt         DateTime  @map("recorded_at")
-  ax                 Float
-  ay                 Float
-  az                 Float
-  gx                 Float
-  gy                 Float
-  gz                 Float
-  vibrationMagnitude Float     @map("vibration_magnitude")
+  ax                 Float?
+  ay                 Float?
+  az                 Float?
+  gx                 Float?
+  gy                 Float?
+  gz                 Float?
+  vibrationMagnitude Float?    @map("vibration_magnitude")
   latitude           Float?
   longitude          Float?
   speed              Float?

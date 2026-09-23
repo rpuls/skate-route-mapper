@@ -20,35 +20,43 @@ import {
   useEntityRecords,
   useUpdateEntityRecord,
 } from "../features/entities/entityQueries";
+import { entityViewFor } from "../features/entities/entityViewRegistry";
 import { AddOrEditEntityDialog } from "../components/entities/AddOrEditEntityDialog";
 import { EntityTable } from "../components/entities/EntityTable";
-import { RidesExplorer } from "../components/entities/RidesExplorer";
-import { SamplesExplorer } from "../components/entities/SamplesExplorer";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
 import type { AdminSession, EntityPayload, EntityRecord } from "../types";
 
 const entityPageSize = 25;
 
+/** A record carried from one resource to another, such as a ride to its samples. */
+type EntityHandoff = {
+  resourceName: string;
+  recordId: string;
+};
+
 export function EntityManagementPage({ session }: { session: AdminSession }) {
   const [resourceName, setResourceName] = useState<string | null>(null);
   const [entityPage, setEntityPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(null);
-  const [selectedSamplesRideId, setSelectedSamplesRideId] = useState<string | null>(null);
+  const [handoff, setHandoff] = useState<EntityHandoff | null>(null);
   const [upsertOpen, setUpsertOpen] = useState(false);
 
   const resourcesQuery = useAdminResources(session);
   const resources = resourcesQuery.data ?? [];
   const resource = resources.find((item) => item.name === resourceName) ?? resources[0] ?? null;
-  const usesCustomSamplesView = resource?.name === "samples";
-  const usesCustomWorkflow = resource?.name === "rides" || usesCustomSamplesView;
-  const recordsQuery = useEntityRecords(
-    session,
-    usesCustomSamplesView ? null : resource,
-    {
-      page: entityPage,
-      pageSize: entityPageSize,
-    }
-  );
+
+  // Resources that need more than a generated table register a view; everything
+  // on this page stays driven by datamodel metadata and that registry answer.
+  const entityView = entityViewFor(resource?.name);
+  const ListView = entityView?.list?.component ?? null;
+  const DetailView = entityView?.detail ?? null;
+  const listLoadsOwnRecords = Boolean(entityView?.list?.loadsOwnRecords);
+  const canOpenUpsertDialog = Boolean(resource?.canEdit || resource?.canDelete);
+
+  const recordsQuery = useEntityRecords(session, listLoadsOwnRecords ? null : resource, {
+    page: entityPage,
+    pageSize: entityPageSize,
+  });
   const createMutation = useCreateEntityRecord(session, resource);
   const deleteMutation = useDeleteEntityRecord(session, resource);
   const updateMutation = useUpdateEntityRecord(session, resource);
@@ -59,7 +67,7 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   const error = resourcesQuery.error ?? recordsQuery.error ?? createMutation.error ?? deleteMutation.error ?? updateMutation.error;
   const isLoading =
     resourcesQuery.isPending ||
-    (!usesCustomSamplesView && (recordsQuery.isPending || recordsQuery.isFetching));
+    (!listLoadsOwnRecords && (recordsQuery.isPending || recordsQuery.isFetching));
 
   const selectedFreshRecord = useMemo(() => {
     if (!selectedRecordId) {
@@ -99,13 +107,11 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
     setSelectedRecord(null);
   }
 
-  function handleResourceChange(nextResourceName: string) {
+  function openResource(nextResourceName: string, recordId?: string) {
     setResourceName(nextResourceName);
+    setHandoff(recordId ? { resourceName: nextResourceName, recordId } : null);
     setEntityPage(1);
     setSelectedRecord(null);
-    if (nextResourceName !== "samples") {
-      setSelectedSamplesRideId(null);
-    }
     setUpsertOpen(false);
   }
 
@@ -159,7 +165,7 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
 
         <Box sx={surfaceSx({ bgcolor: colors.surfaceMuted, level: radiusLevel.inner, padding: space.sm })}>
           <Tabs
-            onChange={(_, nextValue: string) => handleResourceChange(nextValue)}
+            onChange={(_, nextValue: string) => openResource(nextValue)}
             scrollButtons="auto"
             sx={{
               minHeight: 56,
@@ -209,13 +215,10 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                   <Typography variant="h3">{resource.labelPlural}</Typography>
                   <Stack direction="row" spacing={1}>
                     <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
-                      {usesCustomSamplesView
-                        ? "Filter by user and ride"
-                        : isLoading
-                          ? "Loading"
-                          : `${pagination?.total ?? records.length} total`}
+                      {entityView?.list?.summary
+                        ?? (isLoading ? "Loading" : `${pagination?.total ?? records.length} total`)}
                     </Typography>
-                    {resource.canCreate && !usesCustomSamplesView ? (
+                    {resource.canCreate && !listLoadsOwnRecords ? (
                       <Button
                         onClick={() => {
                           setSelectedRecord(null);
@@ -230,38 +233,46 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                     ) : null}
                   </Stack>
                 </Stack>
-                {resource.name === "rides" ? (
-                  <RidesExplorer
+                {ListView ? (
+                  <ListView
+                    focusRecordId={handoff?.resourceName === resource.name ? handoff.recordId : null}
                     onEditRecord={(record) => {
                       setSelectedRecord(record);
-                      setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
+                      setUpsertOpen(canOpenUpsertDialog);
                     }}
-                    onViewSamples={(rideId) => {
-                      setSelectedSamplesRideId(rideId);
-                      handleResourceChange("samples");
-                    }}
+                    onOpenResource={openResource}
                     records={records}
                     resource={resource}
-                    session={session}
-                  />
-                ) : resource.name === "samples" ? (
-                  <SamplesExplorer
-                    initialRideId={selectedSamplesRideId}
                     resources={resources}
                     session={session}
                   />
                 ) : (
-                  <EntityTable
-                    onSelectRecord={(record) => {
-                      setSelectedRecord(record);
-                      setUpsertOpen(Boolean(resource.canEdit || resource.canDelete));
-                    }}
-                    records={records}
-                    resource={resource}
-                    selectedRecord={selectedFreshRecord}
-                  />
+                  <>
+                    <EntityTable
+                      onSelectRecord={(record) => {
+                        setSelectedRecord(record);
+
+                        // A registered detail view owns the record interaction,
+                        // so selecting a row reveals it instead of the dialog.
+                        if (!DetailView) {
+                          setUpsertOpen(canOpenUpsertDialog);
+                        }
+                      }}
+                      records={records}
+                      resource={resource}
+                      selectedRecord={selectedFreshRecord}
+                    />
+                    {DetailView && selectedFreshRecord ? (
+                      <DetailView
+                        onEditRecord={() => setUpsertOpen(canOpenUpsertDialog)}
+                        record={selectedFreshRecord}
+                        resource={resource}
+                        session={session}
+                      />
+                    ) : null}
+                  </>
                 )}
-                {!usesCustomSamplesView && pagination && pagination.pageCount > 1 ? (
+                {!listLoadsOwnRecords && pagination && pagination.pageCount > 1 ? (
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     spacing={1}

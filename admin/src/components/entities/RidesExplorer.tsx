@@ -9,14 +9,17 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import { colors, space } from "@skate-route-mapper/shared/design";
 import { useEffect, useMemo, useState } from "react";
+import type { EntityListViewProps } from "../../features/entities/entityViewContract";
 import { useAdminRideDetail } from "../../features/entities/entityQueries";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
-import type { AdminSession, EntityRecord } from "../../types";
+import type { EntityRecord } from "../../types";
 import { EntityTable } from "./EntityTable";
 import { RideAnalysisPanel } from "./RideAnalysisPanel";
+
+// Samples for one ride are browsed in the samples resource rather than here.
+const samplesResourceName = "samples";
 
 function stringValue(value: unknown) {
   return typeof value === "string" ? value : null;
@@ -57,17 +60,11 @@ function DetailItem({ label, value }: { label: string; value: unknown }) {
 
 export function RidesExplorer({
   onEditRecord,
-  onViewSamples,
+  onOpenResource,
   records,
   resource,
   session,
-}: {
-  onEditRecord: (record: EntityRecord) => void;
-  onViewSamples: (rideId: string) => void;
-  records: EntityRecord[];
-  resource: AdminResource;
-  session: AdminSession;
-}) {
+}: EntityListViewProps) {
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(
     records[0] ?? null
   );
@@ -137,7 +134,9 @@ export function RidesExplorer({
                 <Button
                   disabled={!selectedRideId}
                   endIcon={<ArrowForwardIcon />}
-                  onClick={() => selectedRideId && onViewSamples(selectedRideId)}
+                  onClick={() =>
+                    selectedRideId && onOpenResource(samplesResourceName, selectedRideId)
+                  }
                   variant="contained"
                 >
                   View samples

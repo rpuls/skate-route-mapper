@@ -10,6 +10,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Data model: `docs/data-model.md`
 - Admin frontend architecture: `docs/admin-frontend.md`
 - Vibration roughness planning: `docs/vibration-roughness-plan.md`
+- Current development plan and known gaps: `docs/development-plan.md`
 - Design system guide: `docs/design-guide.md`
 - Design tokens/source of truth: `shared/src/design.ts`
 
@@ -20,9 +21,11 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Treat `shared` as a set of explicit contract modules. Prefer subpath imports
   such as `@skate-route-mapper/shared/contracts`,
   `@skate-route-mapper/shared/mobileContracts`,
+  `@skate-route-mapper/shared/researchContracts`,
   `@skate-route-mapper/shared/design`,
-  `@skate-route-mapper/shared/adminResources`, and
-  `@skate-route-mapper/shared/nessoBle` over importing from the root package.
+  `@skate-route-mapper/shared/adminResources`,
+  `@skate-route-mapper/shared/xiaoBle`, and
+  `@skate-route-mapper/shared/xiaoResearch` over importing from the root package.
 - Do not re-export feature-specific or platform-specific modules from
   `shared/src/index.ts`; doing so makes unrelated builds type-check that code.
 - Do not commit secrets from `.env` files.

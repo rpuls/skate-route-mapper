@@ -7,7 +7,7 @@ export type AdminSession = {
   };
 };
 
-export type AdminView = "dashboard" | "entities";
+export type AdminView = "dashboard" | "entities" | "hardware";
 
 export type EntityRecord = Record<string, unknown>;
 

@@ -8,6 +8,7 @@ import {
 import { env } from "../config/env.js";
 import * as MobileUsers from "../features/mobileUsers/index.js";
 import * as Rides from "../features/rides/index.js";
+import * as ResearchCaptures from "../features/researchCaptures/index.js";
 import * as Sync from "../features/sync/index.js";
 
 type MobileAuthenticatedRequest = {
@@ -160,5 +161,23 @@ export async function registerMobileRoutes(app: FastifyInstance) {
     });
 
     return reply.code(200).send(syncResult);
+  });
+
+  app.post("/v1/mobile/research-captures", {
+    bodyLimit: 12 * 1024 * 1024,
+    preHandler: requireMobileUser,
+  }, async (request, reply) => {
+    const auth = (request as MobileAuthenticatedRequest).mobileAuth;
+    if (!auth || auth.kind !== "user") {
+      return reply.code(401).send({ ok: false, message: "Unauthorized" });
+    }
+    const payload = ResearchCaptures.researchCaptureUploadSchema.parse(request.body);
+    const saved = await ResearchCaptures.saveResearchCapture(payload, auth.user.id);
+    return reply.code(201).send({
+      ok: true,
+      researchCaptureId: saved.id,
+      recordingBytes: saved.recordingBytes,
+      photoBytes: saved.photoBytes,
+    });
   });
 }

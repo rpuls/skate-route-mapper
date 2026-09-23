@@ -5,6 +5,7 @@ import type {
   SyncOperationResult,
 } from "@skate-route-mapper/shared/mobileContracts";
 import { prisma } from "../../db/prisma.js";
+import { nextVibrationAggregate } from "../rides/index.js";
 
 type SyncAccess = {
   userId?: string | null;
@@ -114,17 +115,7 @@ async function updateRideSampleStats(
   const gpsPointCount = samples.filter(
     (sample) => sample.latitude !== null && sample.longitude !== null
   ).length;
-  const batchMax = Math.max(...samples.map((sample) => sample.vibrationMagnitude));
-  const batchSum = samples.reduce(
-    (sum, sample) => sum + sample.vibrationMagnitude,
-    0
-  );
-  const nextSampleCount = ride.sampleCount + sampleCount;
-  const nextAverage =
-    nextSampleCount === 0
-      ? null
-      : ((ride.avgVibration ?? 0) * ride.sampleCount + batchSum) /
-        nextSampleCount;
+  const vibration = nextVibrationAggregate(ride, samples);
 
   await tx.ride.update({
     where: {
@@ -137,11 +128,8 @@ async function updateRideSampleStats(
       gpsPointCount: {
         increment: gpsPointCount,
       },
-      avgVibration: nextAverage,
-      maxVibration:
-        ride.maxVibration === null
-          ? batchMax
-          : Math.max(ride.maxVibration, batchMax),
+      avgVibration: vibration.avgVibration,
+      maxVibration: vibration.maxVibration,
     },
   });
 }

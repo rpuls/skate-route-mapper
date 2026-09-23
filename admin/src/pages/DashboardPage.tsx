@@ -1,5 +1,6 @@
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
+import SensorsIcon from "@mui/icons-material/Sensors";
 import { colors, space } from "@skate-route-mapper/shared/design";
 import { apiBaseUrl } from "../config";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
@@ -114,6 +115,31 @@ export function DashboardPage({
             detail="Expires"
             title={new Date(session.expiresAt).toLocaleString()}
           />
+          <Paper
+            component="button"
+            elevation={0}
+            onClick={() => onNavigate("hardware")}
+            sx={{
+              ...surfaceSx({
+                bgcolor: colors.surfaceMuted,
+                border: true,
+                level: radiusLevel.inner,
+                padding: space.md,
+              }),
+              borderColor: "primary.main",
+              cursor: "pointer",
+              minHeight: 148,
+              textAlign: "left",
+            }}
+          >
+            <Stack spacing={1}>
+              <SensorsIcon color="primary" />
+              <Typography variant="h3">Hardware bench</Typography>
+              <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
+                Connect, inspect, record, and retrieve XIAO sensor data
+              </Typography>
+            </Stack>
+          </Paper>
           <MetricTile caption="API" detail="Connected endpoint" title={apiBaseUrl} />
 
           {/* Later dashboard widgets can live here: ride ingest health, newest ride,

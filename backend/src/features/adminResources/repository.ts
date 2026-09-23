@@ -85,16 +85,22 @@ function buildEntityData(resource: AdminResource, payload: Record<string, unknow
     return nextData;
   }, {});
 
-  if (resource.name === "adminUsers" && typeof payload.password === "string" && payload.password.length > 0) {
-    if (payload.password.length < 12) {
-      throw new Error("Admin password must be at least 12 characters");
+  const passwordMinimum = resource.name === "adminUsers"
+    ? 12
+    : resource.name === "users"
+      ? 8
+      : null;
+
+  if (passwordMinimum && typeof payload.password === "string" && payload.password.length > 0) {
+    if (payload.password.length < passwordMinimum) {
+      throw new Error(`Password must be at least ${passwordMinimum} characters`);
     }
 
     data.passwordHash = hashPassword(payload.password);
   }
 
-  if (resource.name === "adminUsers" && mode === "create" && typeof data.passwordHash !== "string") {
-    throw new Error("Admin password must be at least 12 characters");
+  if (passwordMinimum && mode === "create" && typeof data.passwordHash !== "string") {
+    throw new Error(`Password must be at least ${passwordMinimum} characters`);
   }
 
   return data;

@@ -15,9 +15,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.timmosquadros.skateroutemapper",
+      "bundleIdentifier": "com.rasmuspuls.skateroutemapper",
       "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "Skate Route Mapper connects to Nesso N1 sensors for accelerometer and gyroscope data.",
+        "NSBluetoothAlwaysUsageDescription": "Skate Route Mapper connects to external BLE IMU sensors for accelerometer and gyroscope data.",
+        "NSCameraUsageDescription": "Skate Route Mapper attaches a surface photo to a research collection.",
+        "NSLocationWhenInUseUsageDescription": "Skate Route Mapper records the location of rides and research collections.",
+        "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "bluetooth-central"
         ]
@@ -52,12 +55,24 @@
     "plugins": [
       "expo-sqlite",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Skate Route Mapper to photograph the surface for a research collection."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Skate Route Mapper to record the location of rides and research collections."
+        }
+      ],
+      [
         "react-native-ble-plx",
         {
           "modes": [
             "central"
           ],
-          "bluetoothAlwaysPermission": "Skate Route Mapper connects to Nesso N1 sensors for accelerometer and gyroscope data."
+          "bluetoothAlwaysPermission": "Skate Route Mapper connects to external BLE IMU sensors for accelerometer and gyroscope data."
         }
       ]
     ],

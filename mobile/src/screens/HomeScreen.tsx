@@ -1,35 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  StatusBar,
-  ScrollView,
-  Platform,
-} from "react-native";
+import { Pressable, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
+import { XIAO_BLE_DEVICE_NAME, type XiaoImuPacket } from "@skate-route-mapper/shared/xiaoBle";
+import { ScreenHeader } from "../components/AppMenu";
+import * as XiaoBle from "../native/XiaoBle";
+import type { XiaoBleConnection } from "../native/XiaoBle";
 import { useMeasurementStore } from "../store/measurementStore";
 import type { SensorSource, VehicleType } from "../types/measurement";
-import { useNavigation } from "@react-navigation/native";
-import {
-  buttonVariants,
-  colors,
-  radius,
-  shadows,
-  space,
-  stateStyles,
-} from "@skate-route-mapper/shared/design";
-import {
-  NESSO_BLE_DEVICE_NAME,
-  type NessoImuPacket,
-} from "@skate-route-mapper/shared/nessoBle";
-import * as NessoBle from "../native/NessoBle";
-import type { NessoBleConnection } from "../native/NessoBle";
-import * as BackgroundRecorder from "../native/BackgroundRecorder";
-import { ScreenHeader } from "../components/AppMenu";
 
-type NessoStatus = "idle" | "scanning" | "connected" | "error" | "unsupported";
+type XiaoStatus = "idle" | "scanning" | "connected" | "error" | "unsupported";
 
 const vehicleOptions: { label: string; value: VehicleType }[] = [
   { label: "Inline skates", value: "skates" },
@@ -38,676 +18,160 @@ const vehicleOptions: { label: string; value: VehicleType }[] = [
 ];
 
 const sensorOptions: { label: string; value: SensorSource; description: string }[] = [
-  {
-    label: "Phone sensors",
-    value: "phone",
-    description: "Use accelerometer, gyroscope, GPS and camera from this phone.",
-  },
-  {
-    label: "Nesso N1 + phone GPS",
-    value: "external",
-    description: `${NESSO_BLE_DEVICE_NAME} supplies accelerometer and gyroscope. GPS and camera stay on this phone.`,
-  },
+  { label: "Phone sensors", value: "phone", description: "Use this phone for motion and GPS." },
+  { label: "XIAO + phone GPS", value: "external", description: "Use the XIAO live BLE preview with GPS from this phone." },
 ];
 
 export default function HomeScreen() {
-  const {
-    vehicleType,
-    sensorSource,
-    status,
-    setVehicleType,
-    setSensorSource,
-    setLatestExternalImuSample,
-    startRecording,
-  } = useMeasurementStore();
-
-  const [nessoStatus, setNessoStatus] = useState<NessoStatus>(
-    NessoBle.isNessoBleSupported() ? "idle" : "unsupported"
-  );
-  const [nessoMessage, setNessoMessage] = useState(
-    NessoBle.isNessoBleSupported()
-      ? "Ready to pair with the Nesso N1."
-      : "BLE sensor pairing requires a native mobile build."
-  );
-  const [latestNessoSample, setLatestNessoSample] =
-    useState<NessoImuPacket | null>(null);
-  const nessoConnection = useRef<NessoBleConnection | null>(null);
-
-  const hasNessoConnection = nessoStatus === "connected";
-  const canStart = sensorSource === "phone" || hasNessoConnection;
-  const nessoSignalStrength =
-    nessoStatus === "connected" ? 4 : nessoStatus === "scanning" ? 2 : 0;
-  const nessoVisualLabel = getNessoVisualLabel(nessoStatus);
-  const latestNessoMagnitude = latestNessoSample
-    ? Math.sqrt(
-        latestNessoSample.ax * latestNessoSample.ax +
-          latestNessoSample.ay * latestNessoSample.ay +
-          latestNessoSample.az * latestNessoSample.az
-      )
-    : null;
-
   const navigation = useNavigation<any>();
+  const {
+    vehicleType, sensorSource, status, setVehicleType, setSensorSource,
+    setExternalImuDevice, setLatestExternalImuSample, startRecording,
+  } = useMeasurementStore();
+  const [xiaoStatus, setXiaoStatus] = useState<XiaoStatus>(XiaoBle.isXiaoBleSupported() ? "idle" : "unsupported");
+  const [message, setMessage] = useState(XiaoBle.isXiaoBleSupported() ? "Ready to connect." : "BLE needs the native iPhone development build.");
+  const [latest, setLatest] = useState<XiaoImuPacket | null>(null);
+  const connection = useRef<XiaoBleConnection | null>(null);
 
-  useEffect(() => {
-    return () => {
-      nessoConnection.current?.disconnect();
-      setLatestExternalImuSample(null);
-    };
-  }, [setLatestExternalImuSample]);
+  useEffect(() => () => {
+    connection.current?.disconnect().catch(() => undefined);
+    setExternalImuDevice(null);
+    setLatestExternalImuSample(null);
+  }, [setExternalImuDevice, setLatestExternalImuSample]);
 
-  const handleConnectNesso = async () => {
-    if (nessoStatus === "connected") {
-      await nessoConnection.current?.disconnect();
-      nessoConnection.current = null;
-      setLatestNessoSample(null);
+  useEffect(() => navigation.addListener("blur", () => {
+    const state = navigation.getState();
+    const activeRoute = state.routes[state.index]?.name;
+    if (activeRoute !== "Recording") {
+      connection.current?.disconnect().catch(() => undefined);
+      connection.current = null;
       setLatestExternalImuSample(null);
-      setNessoStatus("idle");
-      setNessoMessage("Ready to pair with the Nesso N1.");
+      setExternalImuDevice(null);
       setSensorSource("phone");
+      setXiaoStatus(XiaoBle.isXiaoBleSupported() ? "idle" : "unsupported");
+    }
+  }), [navigation, setExternalImuDevice, setLatestExternalImuSample, setSensorSource]);
+
+  const connect = async () => {
+    if (xiaoStatus === "connected") {
+      await connection.current?.disconnect().catch(() => undefined);
+      connection.current = null;
+      setLatest(null);
+      setLatestExternalImuSample(null);
+      setExternalImuDevice(null);
+      setSensorSource("phone");
+      setXiaoStatus("idle");
+      setMessage("Ready to connect.");
       return;
     }
-
-    setNessoStatus("scanning");
-    setNessoMessage(`Searching for ${NESSO_BLE_DEVICE_NAME}...`);
-
+    setXiaoStatus("scanning");
+    setMessage(`Searching for ${XIAO_BLE_DEVICE_NAME}...`);
     try {
-      const connection = await NessoBle.connectToNesso({
-        onSample: (sample) => {
-          setLatestNessoSample(sample);
-          setLatestExternalImuSample(sample);
-        },
-      });
-      await connection.setSampleInterval(200); //5 hz
-
-      nessoConnection.current = connection;
-      setNessoStatus("connected");
-      setNessoMessage(`${connection.deviceName} connected. GPS remains on this phone.`);
+      const next = await XiaoBle.connectToXiao({ onSample: (sample) => {
+        setLatest(sample);
+        setLatestExternalImuSample(sample);
+      }});
+      await next.setSampleInterval(50);
+      connection.current = next;
+      setExternalImuDevice("xiao");
       setSensorSource("external");
+      setXiaoStatus("connected");
+      setMessage(`${next.deviceName} connected.`);
     } catch (error) {
-      nessoConnection.current = null;
-      setNessoStatus("error");
-      setNessoMessage(error instanceof Error ? error.message : "Unable to connect.");
-      setSensorSource("phone");
+      setXiaoStatus("error");
+      setMessage(error instanceof Error ? error.message : "Unable to connect.");
     }
   };
 
-  const handleStartRecording = async () => {
-    if (
-      sensorSource === "external" &&
-      Platform.OS === "android" &&
-      BackgroundRecorder.isAvailable()
-    ) {
-      await nessoConnection.current?.disconnect();
-      nessoConnection.current = null;
-      setNessoMessage(
-        "Nesso N1 will reconnect through the Android recording service."
-      );
-    }
-
-    startRecording();
-    navigation.navigate("Recording");
+  const openResearch = async () => {
+    await connection.current?.disconnect().catch(() => undefined);
+    connection.current = null;
+    setLatestExternalImuSample(null);
+    setExternalImuDevice(null);
+    setSensorSource("phone");
+    setXiaoStatus(XiaoBle.isXiaoBleSupported() ? "idle" : "unsupported");
+    navigation.navigate("Research");
   };
+
+  const canStart = sensorSource === "phone" || xiaoStatus === "connected";
+  const magnitude = latest ? Math.hypot(latest.ax, latest.ay, latest.az) : null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <ScreenHeader title="Map a New Ride" subtitle="Record a route, or collect labelled high-rate sensor data for algorithm research." />
 
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <ScreenHeader
-        title="Map a New Ride"
-        subtitle="Set up your ride and begin measuring road vibration. No account required."
-      />
+        <Pressable onPress={openResearch} style={styles.researchCard}>
+          <Text style={styles.eyebrow}>XIAO FIELD RESEARCH</Text>
+          <Text style={styles.researchTitle}>Collect high-rate training data</Text>
+          <Text style={styles.researchBody}>Start a 10–60 second board capture, attach a surface photo, GPS location and notes, then retrieve the verified file.</Text>
+          <Text style={styles.researchLink}>Open research collections →</Text>
+        </Pressable>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Ride type</Text>
-
-          <View style={styles.optionGrid}>
-            {vehicleOptions.map((option) => {
-              const selected = option.value === vehicleType;
-
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => setVehicleType(option.value)}
-                  style={[styles.optionButton, selected && styles.optionButtonSelected]}
-                >
-                  <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Text style={styles.title}>Ride type</Text>
+          <View style={styles.chips}>{vehicleOptions.map((option) => (
+            <Pressable key={option.value} onPress={() => setVehicleType(option.value)} style={[styles.chip, vehicleType === option.value && styles.chipSelected]}>
+              <Text style={[styles.chipText, vehicleType === option.value && styles.chipTextSelected]}>{option.label}</Text>
+            </Pressable>
+          ))}</View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Sensor source</Text>
-
-          <View style={styles.blePanel}>
-            <View style={styles.bleHero}>
-              <View style={styles.imuLogo}>
-                <View
-                  style={[
-                    styles.imuLogoCore,
-                    nessoStatus === "connected" && styles.imuLogoCoreConnected,
-                    nessoStatus === "scanning" && styles.imuLogoCoreScanning,
-                    nessoStatus === "error" && styles.imuLogoCoreError,
-                  ]}
-                >
-                  <Text style={styles.imuLogoText}>N1</Text>
-                </View>
-                <View style={styles.imuDeck} />
-                <View style={styles.imuWheelLeft} />
-                <View style={styles.imuWheelRight} />
-              </View>
-
-              <View style={styles.bleCopy}>
-                <View style={styles.bleTitleRow}>
-                  <View>
-                    <Text style={styles.sensorTitle}>Skate IMU</Text>
-                    <Text style={styles.bleName}>Nesso N1 motion module</Text>
-                  </View>
-
-                  <View style={[styles.statusPill, getNessoPillStyle(nessoStatus)]}>
-                    <View style={[styles.statusDot, getNessoDotStyle(nessoStatus)]} />
-                    <Text style={styles.statusPillText}>{nessoVisualLabel}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.sensorDescription}>
-                  Connect the Nesso N1 for accelerometer and gyroscope data. Route GPS and camera stay on this phone.
-                </Text>
-                <Text style={styles.bleStatus}>{nessoMessage}</Text>
-              </View>
-            </View>
-
-            <View style={styles.bleTelemetry}>
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Signal</Text>
-                <SignalBars level={nessoSignalStrength} />
-              </View>
-
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Sample</Text>
-                <Text style={styles.telemetryValue}>
-                  {latestNessoSample ? `#${latestNessoSample.sequence}` : "-"}
-                </Text>
-              </View>
-
-              <View style={styles.telemetryItem}>
-                <Text style={styles.telemetryLabel}>Motion</Text>
-                <Text style={styles.telemetryValue}>
-                  {latestNessoMagnitude != null ? `${latestNessoMagnitude.toFixed(2)}g` : "-"}
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              disabled={nessoStatus === "unsupported" || nessoStatus === "scanning"}
-              onPress={handleConnectNesso}
-              style={[
-                styles.bleButton,
-                nessoStatus === "connected" && styles.bleButtonConnected,
-                (nessoStatus === "unsupported" || nessoStatus === "scanning") &&
-                  styles.bleButtonDisabled,
-              ]}
-            >
-              <Text style={styles.bleButtonText}>
-                {nessoStatus === "connected"
-                  ? "Disconnect"
-                  : nessoStatus === "scanning"
-                  ? "Pairing..."
-                  : "Connect Nesso N1"}
-              </Text>
+          <Text style={styles.title}>Normal ride sensor</Text>
+          <View style={styles.devicePanel}>
+            <Text style={styles.deviceName}>XIAO ESP32S3 + LSM6DSOX</Text>
+            <Text style={styles.body}>{message}</Text>
+            {latest && <Text style={styles.metric}>Sample #{latest.sequence} · {magnitude?.toFixed(2)} g</Text>}
+            <Pressable disabled={xiaoStatus === "scanning" || xiaoStatus === "unsupported"} onPress={connect} style={styles.primaryButton}>
+              <Text style={styles.primaryText}>{xiaoStatus === "connected" ? "Disconnect XIAO" : xiaoStatus === "scanning" ? "Connecting..." : "Connect XIAO"}</Text>
             </Pressable>
           </View>
-
           {sensorOptions.map((option) => {
+            const disabled = option.value === "external" && xiaoStatus !== "connected";
             const selected = option.value === sensorSource;
-            const disabled = option.value === "external" && !hasNessoConnection;
-
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => !disabled && setSensorSource(option.value)}
-                style={[
-                  styles.sensorCard,
-                  selected && styles.sensorCardSelected,
-                  disabled && styles.sensorCardDisabled,
-                ]}
-              >
-                <View>
-                  <Text style={[styles.sensorTitle, selected && styles.sensorTitleSelected]}>
-                    {option.label}
-                  </Text>
-                  <Text style={styles.sensorDescription}>{option.description}</Text>
-                </View>
-
-                {selected && <Text style={styles.badge}>Selected</Text>}
-                {disabled && <Text style={styles.badgeMuted}>Pair first</Text>}
-              </Pressable>
-            );
+            return <Pressable key={option.value} disabled={disabled} onPress={() => setSensorSource(option.value)} style={[styles.sensorOption, selected && styles.sensorSelected, disabled && styles.disabled]}>
+              <Text style={styles.sensorTitle}>{option.label}</Text><Text style={styles.body}>{option.description}</Text>
+            </Pressable>;
           })}
         </View>
 
-        <View style={styles.footer}>
-        <Pressable
-          disabled={!canStart}
-          onPress={handleStartRecording}
-          style={[styles.startButton, !canStart && styles.startButtonDisabled]}
-        >
-          <Text style={styles.startButtonText}>Start route scan</Text>
+        <Pressable disabled={!canStart} onPress={() => { startRecording(); navigation.navigate("Recording"); }} style={[styles.startButton, !canStart && styles.disabled]}>
+          <Text style={styles.startText}>Start route scan</Text>
         </Pressable>
-
-        <Text style={styles.statusText}>Status: {status}</Text>
-      </View>
-    </ScrollView>
-  </SafeAreaView>
-);
-}
-
-function SignalBars({ level }: { level: number }) {
-  return (
-    <View style={styles.signalBars}>
-      {[1, 2, 3, 4].map((bar) => (
-        <View
-          key={bar}
-          style={[
-            styles.signalBar,
-            getSignalBarStyle(bar),
-            bar <= level && styles.signalBarActive,
-          ]}
-        />
-      ))}
-    </View>
+        <Text style={styles.status}>Status: {status}</Text>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-function getNessoVisualLabel(status: NessoStatus) {
-  switch (status) {
-    case "connected":
-      return "Linked";
-    case "scanning":
-      return "Booting";
-    case "error":
-      return "Check";
-    case "unsupported":
-      return "Native only";
-    default:
-      return "Ready";
-  }
-}
-
-function getNessoPillStyle(status: NessoStatus) {
-  switch (status) {
-    case "connected":
-      return styles.statusPillConnected;
-    case "scanning":
-      return styles.statusPillScanning;
-    case "error":
-      return styles.statusPillError;
-    default:
-      return styles.statusPillIdle;
-  }
-}
-
-function getNessoDotStyle(status: NessoStatus) {
-  switch (status) {
-    case "connected":
-      return styles.statusDotConnected;
-    case "scanning":
-      return styles.statusDotScanning;
-    case "error":
-      return styles.statusDotError;
-    default:
-      return styles.statusDotIdle;
-  }
-}
-
-function getSignalBarStyle(bar: number) {
-  switch (bar) {
-    case 1:
-      return styles.signalBar1;
-    case 2:
-      return styles.signalBar2;
-    case 3:
-      return styles.signalBar3;
-    default:
-      return styles.signalBar4;
-  }
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.page,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: space.lg,
-    ...shadows.tile,
-  },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  optionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  optionButton: {
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: colors.accent,
-  },
-  optionButtonSelected: {
-    backgroundColor: colors.accent,
-  },
-  optionText: {
-    color: colors.accent,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  optionTextSelected: {
-    color: colors.textOnOrange,
-  },
-  sensorCard: {
-    padding: 14,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 2,
-    borderColor: "transparent",
-    marginBottom: 10,
-    gap: 10,
-  },
-  sensorCardSelected: {
-    backgroundColor: colors.surfaceWarm,
-    borderColor: colors.accent,
-  },
-  sensorCardDisabled: {
-    opacity: 0.55,
-  },
-  sensorTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  sensorTitleSelected: {
-    color: colors.text,
-  },
-  sensorDescription: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  blePanel: {
-    padding: 14,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceMuted,
-    marginBottom: 12,
-    gap: 12,
-  },
-  bleHero: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  imuLogo: {
-    width: 82,
-    height: 72,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  imuLogoCore: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.lg,
-    backgroundColor: colors.text,
-    alignItems: "center",
-    justifyContent: "center",
-    transform: [{ rotate: "-8deg" }],
-  },
-  imuLogoCoreConnected: {
-    backgroundColor: colors.success,
-  },
-  imuLogoCoreScanning: {
-    backgroundColor: colors.accent,
-  },
-  imuLogoCoreError: {
-    backgroundColor: colors.danger,
-  },
-  imuLogoText: {
-    color: colors.textOnOrange,
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  imuDeck: {
-    position: "absolute",
-    bottom: 10,
-    width: 68,
-    height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.text,
-  },
-  imuWheelLeft: {
-    position: "absolute",
-    bottom: 4,
-    left: 19,
-    width: 10,
-    height: 10,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-  },
-  imuWheelRight: {
-    position: "absolute",
-    bottom: 4,
-    right: 19,
-    width: 10,
-    height: 10,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-  },
-  bleCopy: {
-    flex: 1,
-    gap: 5,
-  },
-  bleTitleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  bleName: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  bleStatus: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 18,
-  },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-  },
-  statusPillIdle: {
-    backgroundColor: colors.surface,
-  },
-  statusPillConnected: {
-    backgroundColor: colors.surfaceWarm,
-  },
-  statusPillScanning: {
-    backgroundColor: colors.surfaceWarm,
-  },
-  statusPillError: {
-    backgroundColor: colors.surfaceWarm,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radius.pill,
-  },
-  statusDotIdle: {
-    backgroundColor: colors.textMuted,
-  },
-  statusDotConnected: {
-    backgroundColor: colors.success,
-  },
-  statusDotScanning: {
-    backgroundColor: colors.accent,
-  },
-  statusDotError: {
-    backgroundColor: colors.danger,
-  },
-  statusPillText: {
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  bleTelemetry: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  telemetryItem: {
-    flex: 1,
-    minHeight: 54,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    justifyContent: "space-between",
-  },
-  telemetryLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  telemetryValue: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  signalBars: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 3,
-    height: 20,
-  },
-  signalBar: {
-    width: 5,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-  },
-  signalBar1: {
-    height: 6,
-  },
-  signalBar2: {
-    height: 10,
-  },
-  signalBar3: {
-    height: 14,
-  },
-  signalBar4: {
-    height: 18,
-  },
-  signalBarActive: {
-    backgroundColor: colors.success,
-  },
-  bleMeta: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  bleButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: radius.pill,
-    backgroundColor: buttonVariants.primary.filled.backgroundColor,
-  },
-  bleButtonConnected: {
-    backgroundColor: colors.text,
-  },
-  bleButtonDisabled: {
-    ...stateStyles.disabled,
-  },
-  bleButtonText: {
-    color: buttonVariants.primary.filled.color,
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  badge: {
-    alignSelf: "flex-start",
-    color: colors.text,
-    backgroundColor: colors.surface,
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  badgeMuted: {
-    alignSelf: "flex-start",
-    color: colors.textMuted,
-    backgroundColor: colors.surface,
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  footer: {
-    gap: 12,
-  },
-  startButton: {
-    backgroundColor: buttonVariants.primary.filled.backgroundColor,
-    paddingVertical: 17,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: buttonVariants.primary.filled.borderColor,
-  },
-  startButtonDisabled: {
-    backgroundColor: colors.textMuted,
-  },
-  startButtonText: {
-    color: buttonVariants.primary.filled.color,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  statusText: {
-    color: colors.textOnOrange,
-    textAlign: "center",
-    fontSize: 13,
-    opacity: 0.8,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 48,
-    gap: 18,
-  },
+  safeArea: { flex: 1, backgroundColor: colors.page },
+  content: { padding: space.lg, paddingBottom: 60, gap: space.lg },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.lg, gap: space.md, ...shadows.tile },
+  researchCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.xl, gap: space.sm, ...shadows.tile },
+  eyebrow: { color: colors.accent, fontSize: 12, fontWeight: "900", letterSpacing: 1.2 },
+  researchTitle: { color: colors.text, fontSize: 25, fontWeight: "900", lineHeight: 30 },
+  researchBody: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
+  researchLink: { color: colors.link, fontSize: 15, fontWeight: "900", marginTop: space.sm },
+  title: { color: colors.text, fontSize: 21, fontWeight: "900" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  chip: { backgroundColor: colors.surfaceMuted, borderColor: colors.surfaceMuted, borderRadius: radius.pill, borderWidth: 2, paddingHorizontal: 14, paddingVertical: 10 },
+  chipSelected: { backgroundColor: colors.surfaceWarm, borderColor: colors.accent },
+  chipText: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  chipTextSelected: { color: colors.accentStrong },
+  devicePanel: { backgroundColor: colors.surfaceMuted, borderRadius: radius.lg, padding: space.lg, gap: space.sm },
+  deviceName: { color: colors.text, fontSize: 17, fontWeight: "900" },
+  body: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+  metric: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  primaryButton: { alignItems: "center", backgroundColor: colors.accent, borderRadius: radius.lg, justifyContent: "center", minHeight: 50, marginTop: space.sm },
+  primaryText: { color: colors.textOnOrange, fontSize: 15, fontWeight: "900" },
+  sensorOption: { backgroundColor: colors.surfaceMuted, borderColor: colors.surfaceMuted, borderRadius: radius.lg, borderWidth: 2, padding: space.lg, gap: space.xs },
+  sensorSelected: { backgroundColor: colors.surfaceWarm, borderColor: colors.accent },
+  sensorTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
+  startButton: { alignItems: "center", backgroundColor: colors.text, borderRadius: radius.lg, justifyContent: "center", minHeight: 60, ...shadows.tile },
+  startText: { color: colors.surface, fontSize: 18, fontWeight: "900" },
+  disabled: { opacity: 0.45 },
+  status: { color: colors.textOnOrange, fontSize: 13, textAlign: "center", fontWeight: "800" },
 });

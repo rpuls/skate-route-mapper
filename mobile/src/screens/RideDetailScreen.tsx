@@ -96,27 +96,34 @@ export default function RideDetailScreen() {
     const startIndex = Math.max(0, playbackIndex - CHART_SAMPLE_WINDOW + 1);
     const values = samples
       .slice(startIndex, playbackIndex + 1)
-      .map((sample) => sample.vibrationMagnitude);
+      .map((sample) => sample.vibrationMagnitude ?? 0);
 
     return values.length > 0 ? values : [0];
   }, [samples, playbackIndex]);
 
+  // GPS-only rides carry no vibration readings, so both figures are averaged
+  // over the samples that actually measured something.
+  const vibrationReadings = useMemo(
+    () =>
+      samples
+        .map((sample) => sample.vibrationMagnitude)
+        .filter((value): value is number => value !== null),
+    [samples]
+  );
+
   const averageVibration = useMemo(() => {
-    if (samples.length === 0) return 0;
+    if (vibrationReadings.length === 0) return 0;
 
-    const total = samples.reduce(
-      (sum, sample) => sum + sample.vibrationMagnitude,
-      0
-    );
+    const total = vibrationReadings.reduce((sum, value) => sum + value, 0);
 
-    return total / samples.length;
-  }, [samples]);
+    return total / vibrationReadings.length;
+  }, [vibrationReadings]);
 
   const maxVibration = useMemo(() => {
-    if (samples.length === 0) return 0;
+    if (vibrationReadings.length === 0) return 0;
 
-    return Math.max(...samples.map((sample) => sample.vibrationMagnitude));
-  }, [samples]);
+    return Math.max(...vibrationReadings);
+  }, [vibrationReadings]);
 
   const initialRegion = useMemo(() => {
     const first = coordinates[0];
@@ -225,7 +232,7 @@ export default function RideDetailScreen() {
           <RideRouteMap
             currentCoordinate={currentCoordinate}
             currentMarkerDescription={`Vibration: ${
-              currentSample?.vibrationMagnitude.toFixed(3) ?? "-"
+              currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"
             }`}
             currentMarkerTitle={formatDuration(elapsedMs)}
             initialRegion={initialRegion}
@@ -300,7 +307,7 @@ export default function RideDetailScreen() {
               <Text style={styles.replayText}>
                 Vibration:{" "}
                 <Text style={styles.replayValue}>
-                  {currentSample?.vibrationMagnitude.toFixed(3) ?? "-"}
+                  {currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"}
                 </Text>
               </Text>
 

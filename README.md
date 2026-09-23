@@ -1,63 +1,105 @@
 # Skate Route Mapper
 
-Skate Route Mapper helps skaters find better routes, avoid rough pavement, and build a clearer picture of surface quality over time. The mobile app records vibration, motion, and GPS data while you ride, and the backend is designed to ingest that data immediately so it can be processed, ranked, and used in future route intelligence.
-
-For end users, the promise is simple:
-
-- record a ride with your phone
-- capture how smooth or rough the road feels
-- replay the route on a map
-- turn raw ride data into useful route-quality insight
+Skate Route Mapper helps skaters find better routes, avoid rough pavement, and build a clearer picture of surface quality over time. The backend ingests ride data so it can be processed, ranked, and used for route intelligence.
 
 This project is built for inline skates, skateboards, and longboards, where small changes in pavement quality make a real difference.
+
+## Who The App Is For
+
+The app has to be worth using **without** any extra hardware, so it is built in
+two tiers.
+
+**Everyone — phone only.** Record a skate route like any other sports tracker:
+route, distance, duration and speed, saved and replayable on a map. Later,
+riders will be able to rate road sections by hand, so a route's surface quality
+can be described even where no sensor has been.
+
+**Riders with the XIAO board.** The external sensor measures pavement vibration
+at a rate the phone cannot reach, and contributes measured surface quality to
+the same routes.
+
+Phone accelerometers are not a realistic substitute for the board: they are too
+slow, too filtered, and too dependent on where the phone is carried. The phone
+owns GPS and the route; the board owns vibration.
+
+The long-term goal serves both groups: good-asphalt route planning for anyone,
+built from data that device owners contribute.
 
 ## Repo Structure
 
 ```text
-backend/         Backend API service
+backend/     Backend API service
 admin/       Admin dashboard app
 db/          Prisma schema and migrations
-firmware/    Device firmware such as the Nesso N1 BLE IMU sketch
+docs/        API contract, data model, design and planning docs
+firmware/    XIAO BLE vibration-sensor firmware
+hardware/    Hardware handoff, research protocol, offline analysis tooling
 mobile/      Expo React Native app
 shared/      Shared TypeScript types and contracts
+test/        Playwright end-to-end tests
 ```
 
 What each part does:
 
-- `mobile` is the client that records rides with accelerometer, gyroscope, and GPS.
+- `mobile` is the client that records ride routes with GPS, and labelled
+  high-rate research captures from the XIAO board.
 - `backend` is the Node.js backend that receives ride data, serves admin endpoints, and owns server-side processing.
-- `admin` is the internal dashboard app.
+- `admin` is the internal dashboard app, including the XIAO hardware bench and
+  the signal analysis workbench.
 - `db` holds the Prisma datamodel and migrations.
 - `firmware` holds companion-device firmware that supports mobile recording.
+- `hardware` holds the hardware handoff, research protocol, and offline
+  analysis tooling for `.skateresearch` captures.
 - `shared` holds the shared ride/sample contract and design tokens used by the apps.
 
 Project docs:
 
+- `hardware/HARDWARE-HANDOFF.md` is the living resume point for the proven XIAO vibration hardware, battery assembly, and next field experiment.
+- `hardware/README.md` covers the XIAO hardware bench inside the admin app, USB/BLE checks, and staged battery hookup.
 - `docs/api.md` defines the backend contract.
 - `docs/data-model.md` explains the Prisma datamodel.
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
 - `docs/vibration-roughness-plan.md` plans high-frequency sensor capture, compact vibration features, and route roughness segmentation.
-- `mobile/README.md` covers mobile development, Expo Go, web testing, and device-build notes.
-- `firmware/nesso-n1/README.md` covers the Nesso N1 BLE IMU sketch and packet format.
+- `docs/development-plan.md` records the current gaps and the planned order of work.
+- `mobile/README.md` covers the one-command iPhone workflow, device registration, native rebuilds, and web testing.
+- `firmware/xiao-lsm6dsox/README.md` covers the XIAO ESP32S3 + LSM6DSOX BLE IMU sketch and packet format.
 
 ## How The System Works
 
-The current system follows a very direct flow:
+There are two data paths.
+
+**Ride recording** is the product flow:
 
 1. A user starts a ride in the mobile app.
-2. The app collects motion and GPS samples.
-3. Samples are stored locally on-device.
-4. The backend is ready to accept ride start events, sample batches, and ride completion events.
-5. Later, an admin dashboard can inspect rides and derived metrics from the database.
+2. The app collects GPS fixes, plus vibration samples when a XIAO board is
+   connected.
+3. Samples are stored locally on-device in SQLite.
+4. A signed-in user syncs pending changes to the backend.
+5. The admin dashboard inspects rides and derived metrics from the database.
+
+**Research capture** is the algorithm-development flow, and does not run during
+an ordinary ride:
+
+1. The phone asks the XIAO for a bounded 10/30/60 second capture at 833 or
+   1,666 Hz.
+2. The board samples into its own RAM, independent of BLE reliability.
+3. The phone retrieves and validates the capture, attaches a category, label,
+   note, photo and GPS fixes, and saves it as a `.skateresearch` file.
+4. A signed-in user uploads it, and an admin downloads it for laptop analysis
+   or inspects it in the admin signal workbench.
 
 Core backend endpoints:
 
 - `POST /v1/mobile/rides/start`
 - `POST /v1/mobile/rides/:rideId/samples`
 - `POST /v1/mobile/rides/:rideId/finish`
+- `POST /v1/mobile/sync`
+- `POST /v1/mobile/research-captures`
 - `GET /v1/admin/rides`
 - `GET /v1/admin/rides/:rideId`
+- `GET /v1/admin/research-captures/:researchCaptureId/recording`
+- `GET /v1/admin/research-captures/:researchCaptureId/photo`
 - `POST /v1/admin/mobile/rides/start`
 - `POST /v1/admin/mobile/rides/:rideId/samples`
 - `POST /v1/admin/mobile/rides/:rideId/finish`
@@ -284,34 +326,20 @@ Short version:
 - mutations invalidate TanStack Query keys instead of manually patching broad app state
 - the generic entity viewer is generated from Prisma datamodel metadata
 
-### Run The Mobile App
+### iOS
 
-From the repo root:
-
-```bash
-npm run dev:mobile
-```
-
-To run on a physical iPhone with Expo Go from Windows, use the tunnel command:
+With the Skate Route Mapper development app installed, run:
 
 ```bash
-npm run dev:iphone
+npm run iphone
 ```
 
-For a physical iPhone without a Mac/Xcode:
+Keep the terminal open and keep the laptop and iPhone on the same Wi-Fi. Device
+registration and builds are not part of normal daily use. See
+[`mobile/README.md`](mobile/README.md#ios) for the short registration and build
+instructions.
 
-1. Install Expo Go from the App Store.
-2. Sign in with the same Expo account used by the CLI.
-3. Run `npm run dev:iphone`.
-4. Scan the QR code on the iPhone.
-
-If your phone and computer are on the same Wi-Fi network, LAN mode is usually faster:
-
-```bash
-npm run start --workspace @skate-route-mapper/mobile -- --lan --go
-```
-
-Use an EAS development build only when Expo Go is not enough, for example when testing custom native modules such as BLE. Physical iPhone development builds require Apple signing through a paid Apple Developer account.
+### Web layout check
 
 The browser target is useful for UI/layout checks:
 
@@ -319,17 +347,8 @@ The browser target is useful for UI/layout checks:
 npm run dev:web
 ```
 
-Notes:
-
-- a physical device is strongly recommended because the app depends on motion sensors and GPS
-- `dev:iphone` is the default iPhone + Expo Go path and uses Expo's ngrok tunnel
-- tunnel mode depends on Expo's ngrok service and can fail when ngrok is blocked or unavailable
-- the web target is mainly useful for UI checks, not full ride recording
-- the web target uses fallbacks for native-only pieces such as SQLite storage and maps
-- the mobile app is not containerized; Docker is meant for backend services and the admin app
-
-Package-local mobile commands are still available for platform-specific work, for
-example `npm run android --workspace @skate-route-mapper/mobile`.
+The web target is for layout checks. BLE, sensors, GPS, camera, SQLite, and maps
+must be tested on a physical device.
 
 ### Design System
 
@@ -385,17 +404,22 @@ Key files:
 
 ## Current Status
 
+The API is deployed and healthy at
+`https://skate-route-mapper-api.up.railway.app`.
+
 What already works:
 
-- mobile ride recording
-- local SQLite persistence on device
+- mobile ride recording with GPS and local SQLite persistence
 - optional mobile signup/sign-in
 - offline-first pending-change sync from mobile SQLite to the backend
 - mobile web layout preview with native fallbacks
 - ride replay on a map
 - backend ride ingestion and mobile sync APIs
 - Prisma-backed backend schema and migrations
-- protected admin dashboard entity views
+- protected admin dashboard entity views, including admin user records
+- browser-based XIAO USB/BLE hardware bench in the admin dashboard
+- labelled XIAO research captures from the phone, uploaded and inspectable in
+  the admin dashboard
 - admin ride detail analysis with route map and vibration charts
 - shared TypeScript contracts for mobile and backend
 - shared design tokens and design guide
@@ -403,9 +427,24 @@ What already works:
 
 What is not wired up yet:
 
-- admin user management screens
+- **the core product promise**: no route scoring, no colour-coded surface
+  quality on a map for end users, and no server-side processing of ride data
+- normal-ride compact feature frames from the XIAO. The board currently streams
+  the 20-byte live preview packet; the on-board roughness features described in
+  `docs/vibration-roughness-plan.md` are not implemented in firmware
+- manual road-section rating by users
+- route planning over known-good surfaces
+- background route recording on iOS. `mobile/app.json` declares only the
+  `bluetooth-central` background mode, so recording stops when the screen locks
+- batched sync. Each sample currently becomes its own `pending_changes` row,
+  which makes a long ride impractical to upload
 - paginated/downsampled deep analysis for very large ride sample sets
-- advanced analytics or calibrated surface scoring
+- calibrated surface scoring. The roughness figure in the admin ride analysis
+  is an unvalidated broadband-RMS heuristic used for eyeballing data, not a
+  product algorithm
+
+The blocking gate for all surface-quality work is physical: no labelled outdoor
+captures have been collected yet. See `hardware/HARDWARE-HANDOFF.md`.
 
 ## Deployment Shape
 
@@ -423,7 +462,14 @@ That keeps responsibilities clean:
 
 ## Next Development Priorities
 
-1. Harden admin ride analysis for large rides with pagination, downsampling, and backend summaries.
-2. Add admin user management.
-3. Improve mobile sync ergonomics, retries, and historical ride recovery.
-4. Add better route scoring and later geospatial features.
+1. Collect labelled outdoor XIAO captures. Every algorithm decision below is
+   blocked on real road data.
+2. Fix background route recording on iOS and batch the mobile sync queue, so a
+   full ride can actually be recorded and uploaded.
+3. Build the phone-only route tracker experience: a rider without a XIAO should
+   get a normal sports-tracker ride with route, distance, duration and speed.
+4. From the captured data, choose the feature set and sample rate, then move
+   roughness computation onto the board as compact BLE feature frames.
+5. Add route scoring, colour-coded segments, and manual road-section rating.
+6. Harden admin ride analysis for large rides with pagination, downsampling, and
+   backend summaries.

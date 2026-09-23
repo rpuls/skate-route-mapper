@@ -56,8 +56,12 @@ yarn-error.*
 /ios
 /android
 /mobile/android
-/mobile/modules/background-recorder/android/
 /mobile/ios
+
+# Gradle output inside the hand-written background-recorder module. The module's
+# android/ directory is source, not prebuild output, so it must stay tracked.
+/mobile/modules/background-recorder/android/build/
+/mobile/modules/background-recorder/android/.gradle/
 
 # Coverage
 coverage/
@@ -79,7 +83,7 @@ playwright-report/
 *.zip
 *.tar
 *.gz
-backend/generated/prisma/
+backend/generated/
 
 # Fastlane
 fastlane/report.xml
@@ -90,3 +94,15 @@ fastlane/test_output/
 # Misc
 Thumbs.db
 results.bin
+
+# Design system sync tooling and generated bundle
+.ds-sync/
+.design-sync/
+ds-bundle/
+
+# Playwright MCP session dumps
+.playwright-mcp/
+
+# Python analysis artifacts
+__pycache__/
+*.pyc

@@ -1,0 +1,765 @@
+{
+  "input": "C:\\Users\\rasmu\\Documents\\GitHub\\skate-route-mapper\\skate-research-4199261890.skateresearch",
+  "sha256": "7db3e5efd213d2107aa9e3bb8035938c56287e7301eb6826e4e441c70ce580d0",
+  "software": {
+    "numpy": "2.2.6",
+    "scipy": "1.13.1",
+    "matplotlib": "3.10.9"
+  },
+  "metadata": {
+    "format": "skate-research-v1",
+    "captureId": 4199261890,
+    "state": 2,
+    "error": 0,
+    "rawStride": 6,
+    "rateHz": 1666,
+    "count": 16660,
+    "target": 16660,
+    "windows": 51,
+    "capacity": 99960,
+    "startedMs": 76479,
+    "elapsedUs": 10119413,
+    "overruns": 0,
+    "busErrors": 0,
+    "clipped": 0,
+    "rawCrc": 2413874712,
+    "summariesCrc": 1631012233,
+    "windowSamples": 333,
+    "scaleG": 0.0004879999905824661,
+    "freeHeap": 240140,
+    "timestampCount": 521,
+    "firstSensorTimestamp": 30,
+    "lastSensorTimestamp": 399390,
+    "minTimestampDeltaTicks": 768,
+    "maxTimestampDeltaTicks": 768,
+    "meanTimestampDeltaTicks": 768,
+    "stdTimestampDeltaTicks": 0,
+    "timestampDecimation": 32,
+    "label": "",
+    "exportedAt": "2026-09-22T19:33:04.044Z",
+    "transferMs": 62041.099999997765,
+    "timing": "sample index plus sensor timestamp statistics; not GPS-aligned",
+    "channels": "acceleration XYZ only"
+  },
+  "integrity": {
+    "rawAndSummaryCrcsMatch": true,
+    "summaryCoverageSamples": 16660,
+    "maxSummaryErrorG": 1.1892504803157067e-07,
+    "summariesMatch": true,
+    "completeByRecordedCounters": true
+  },
+  "timing": {
+    "samples": 16660,
+    "nominalRateHz": 1666,
+    "nominalDurationSeconds": 10.0,
+    "boardElapsedSeconds": 10.119413,
+    "averageRateFromBoardElapsedHz": 1646.3405535479183,
+    "nominalNyquistHz": 833.0,
+    "nominalIntervalMs": 0.6002400960384153,
+    "sensorTimestampRateHz": 1666.6666666666667,
+    "timestampBlocks": 521,
+    "timestampDeltaMinTicks": 768,
+    "timestampDeltaMaxTicks": 768,
+    "timestampDeltaStdTicks": 0,
+    "limitation": "Sensor timestamps audit cadence in 32-sample blocks; individual-sample jitter is not retained."
+  },
+  "signal": {
+    "axisMinG": [
+      -2.147199958562851,
+      -1.6601759679615498,
+      -1.7621679659932852
+    ],
+    "axisMaxG": [
+      2.9382479432970285,
+      2.929463943466544,
+      1.0799439791589975
+    ],
+    "peakNormG": 3.5963959138302672,
+    "clippedSamples": 0,
+    "identicalAdjacentTriples": 2,
+    "longestIdenticalRunSamples": 2,
+    "summaryRmsMinMedianMaxG": [
+      0.006066908594220877,
+      0.13762740790843964,
+      1.9594321250915527
+    ],
+    "firstHalfMedianWindowRmsG": 0.007665843237191439,
+    "secondHalfMedianWindowRmsG": 1.3544174432754517
+  },
+  "segments": {
+    "whole": {
+      "axisMeanG": [
+        0.6379131483136579,
+        0.5643938993122809,
+        -0.41014079304539464
+      ],
+      "axisStdG": [
+        0.6899911429887564,
+        0.6098038983665901,
+        0.40327204919099074
+      ],
+      "vectorRmsAroundMeanG": 1.005274548332306,
+      "deviationMedianG": 0.31292780326156666,
+      "deviationP95G": 2.329481679991891,
+      "deviationP99G": 3.0333398307464847,
+      "peakDeviationG": 3.738350222400735,
+      "peakVectorMagnitudeG": 3.5963959138302672
+    },
+    "firstHalf": {
+      "axisMeanG": [
+        0.8187925124100419,
+        0.333290870879002,
+        -0.35255421648564494
+      ],
+      "axisStdG": [
+        0.030234104591671036,
+        0.047556666783076885,
+        0.03216821230143316
+      ],
+      "vectorRmsAroundMeanG": 0.06488860854300073,
+      "deviationMedianG": 0.01395780610173708,
+      "deviationP95G": 0.1379882810951332,
+      "deviationP99G": 0.29341566587341683,
+      "peakDeviationG": 0.7554914355643657,
+      "peakVectorMagnitudeG": 1.298908301626217
+    },
+    "secondHalf": {
+      "axisMeanG": [
+        0.45703378421727386,
+        0.7954969277455598,
+        -0.4677273696051443
+      ],
+      "axisStdG": [
+        0.9411837041797825,
+        0.7966446716501642,
+        0.5635507695274549
+      ],
+      "vectorRmsAroundMeanG": 1.3557503338436472,
+      "deviationMedianG": 1.030325149931048,
+      "deviationP95G": 2.5429517398560377,
+      "deviationP99G": 2.965082911394079,
+      "peakDeviationG": 3.4886398538536096,
+      "peakVectorMagnitudeG": 3.5963959138302672
+    },
+    "settled0to4s": {
+      "axisMeanG": [
+        0.8219933646892076,
+        0.3257490009165035,
+        -0.35114455264730277
+      ],
+      "axisStdG": [
+        0.006099751398721639,
+        0.00772489945142823,
+        0.010087591297453442
+      ],
+      "vectorRmsAroundMeanG": 0.01409398938715867,
+      "deviationMedianG": 0.009440203880544961,
+      "deviationP95G": 0.022890697314889203,
+      "deviationP99G": 0.046110698721857184,
+      "peakDeviationG": 0.10717328477111457,
+      "peakVectorMagnitudeG": 0.9924903689593477
+    },
+    "strongMotion6to10s": {
+      "axisMeanG": [
+        0.39594008119459323,
+        0.8617329965753644,
+        -0.5032163780439189
+      ],
+      "axisStdG": [
+        1.0145978699724996,
+        0.8513643721413943,
+        0.6161805958552534
+      ],
+      "vectorRmsAroundMeanG": 1.4607904225497164,
+      "deviationMedianG": 1.2026945321287998,
+      "deviationP95G": 2.5661133178774973,
+      "deviationP99G": 2.94104541728568,
+      "peakDeviationG": 3.41866019794557,
+      "peakVectorMagnitudeG": 3.5963959138302672
+    }
+  },
+  "halfComparison": {
+    "secondToFirstRmsRatio": 20.893502947365736,
+    "secondToFirstPowerDb": 26.400225174115334
+  },
+  "spectral": {
+    "whole": {
+      "welchBinWidthHz": 1.6269531250000002,
+      "acRmsG": 0.9323614331895296,
+      "above25HzPercentAcPower": 2.4894840277513066,
+      "above25HzRmsG": 0.14710890840682353,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.12079314717945633,
+          "percentAcPower": 1.678479308114075
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 0.9127243980310095,
+          "percentAcPower": 95.83203666413462
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.12743363150107556,
+          "percentAcPower": 1.8680974058714086
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.05358693927401237,
+          "percentAcPower": 0.33033097767990205
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.030918264710284186,
+          "percentAcPower": 0.10996680842859846
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.03469891216073735,
+          "percentAcPower": 0.13850425559909807
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.019240240032411916,
+          "percentAcPower": 0.042584580172300476
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 8.134765625000002,
+          "densityG2PerHz": 0.2916500491322652
+        },
+        {
+          "frequencyHz": 16.269531250000004,
+          "densityG2PerHz": 0.011528556336570737
+        },
+        {
+          "frequencyHz": 24.404296875000004,
+          "densityG2PerHz": 0.004045406805581067
+        },
+        {
+          "frequencyHz": 32.53906250000001,
+          "densityG2PerHz": 0.0012891660351633369
+        },
+        {
+          "frequencyHz": 40.67382812500001,
+          "densityG2PerHz": 0.00047816536298078444
+        }
+      ]
+    },
+    "firstHalf": {
+      "welchBinWidthHz": 1.6269531250000002,
+      "acRmsG": 0.039162402484806694,
+      "above25HzPercentAcPower": 83.23229222475811,
+      "above25HzRmsG": 0.03572853872092456,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.009716133302812664,
+          "percentAcPower": 6.155286557473484
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 0.01275782281156791,
+          "percentAcPower": 10.61242121776841
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.02006010469073363,
+          "percentAcPower": 26.23781934171403
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.021109066427484967,
+          "percentAcPower": 29.05356301408602
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.016336766547127613,
+          "percentAcPower": 17.40177515990756
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.010191582896865902,
+          "percentAcPower": 6.772431634332581
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.007600637495000123,
+          "percentAcPower": 3.766703074717925
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 63.45117187500001,
+          "densityG2PerHz": 2.9866638885273934e-05
+        },
+        {
+          "frequencyHz": 45.55468750000001,
+          "densityG2PerHz": 2.848872795428398e-05
+        },
+        {
+          "frequencyHz": 34.16601562500001,
+          "densityG2PerHz": 2.8126413276177716e-05
+        },
+        {
+          "frequencyHz": 17.896484375000004,
+          "densityG2PerHz": 1.8521191181636807e-05
+        },
+        {
+          "frequencyHz": 27.658203125000004,
+          "densityG2PerHz": 1.5568802730021015e-05
+        }
+      ]
+    },
+    "secondHalf": {
+      "welchBinWidthHz": 1.6269531250000002,
+      "acRmsG": 1.355027139887802,
+      "above25HzPercentAcPower": 2.2753911604358183,
+      "above25HzRmsG": 0.2043977106030773,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.15708801368140865,
+          "percentAcPower": 1.3439716536250932
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 1.3302794750316065,
+          "percentAcPower": 96.38063718593908
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.18145774376497742,
+          "percentAcPower": 1.7933085767798083
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.06713670043827451,
+          "percentAcPower": 0.24548445649334855
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.03805204994676406,
+          "percentAcPower": 0.07886060937650134
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.04752189395896607,
+          "percentAcPower": 0.12299614340707442
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.02525640257768876,
+          "percentAcPower": 0.03474137437908599
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 8.134765625000002,
+          "densityG2PerHz": 0.620313317034402
+        },
+        {
+          "frequencyHz": 16.269531250000004,
+          "densityG2PerHz": 0.024042661073794325
+        },
+        {
+          "frequencyHz": 24.404296875000004,
+          "densityG2PerHz": 0.008161759360054838
+        },
+        {
+          "frequencyHz": 32.53906250000001,
+          "densityG2PerHz": 0.002775585388454127
+        },
+        {
+          "frequencyHz": 55.31640625000001,
+          "densityG2PerHz": 0.0002896246565808157
+        }
+      ]
+    },
+    "settled0to4s": {
+      "welchBinWidthHz": 1.6269531250000002,
+      "acRmsG": 0.00884969090821595,
+      "above25HzPercentAcPower": 65.66720869319282,
+      "above25HzRmsG": 0.007171374135268849,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.0032956097521402174,
+          "percentAcPower": 13.868048562839228
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 0.004003420855288052,
+          "percentAcPower": 20.464742743967957
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.002928039117866576,
+          "percentAcPower": 10.947061151977271
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.002882893787546554,
+          "percentAcPower": 10.612093791418049
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.0027442432961987603,
+          "percentAcPower": 9.615879647697723
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.0032547756670954294,
+          "percentAcPower": 13.526514929456221
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.004052120606561868,
+          "percentAcPower": 20.965659172643555
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 19.523437500000004,
+          "densityG2PerHz": 2.013491669836155e-06
+        },
+        {
+          "frequencyHz": 39.04687500000001,
+          "densityG2PerHz": 4.5653292664239905e-07
+        },
+        {
+          "frequencyHz": 56.94335937500001,
+          "densityG2PerHz": 4.278260612038868e-07
+        },
+        {
+          "frequencyHz": 43.92773437500001,
+          "densityG2PerHz": 3.8245455631072186e-07
+        },
+        {
+          "frequencyHz": 65.07812500000001,
+          "densityG2PerHz": 3.216879452231872e-07
+        }
+      ]
+    },
+    "strongMotion6to10s": {
+      "welchBinWidthHz": 1.6269531250000002,
+      "acRmsG": 1.4681972701430717,
+      "above25HzPercentAcPower": 2.201082664475348,
+      "above25HzRmsG": 0.2178224251071473,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.12555909071914845,
+          "percentAcPower": 0.7313537615034182
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 1.4465101209164732,
+          "percentAcPower": 97.06756357402125
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.19326712376097008,
+          "percentAcPower": 1.732794825597053
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.07187392284798344,
+          "percentAcPower": 0.23964803577528468
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.04023230114749029,
+          "percentAcPower": 0.07508979563395861
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.050626909860492536,
+          "percentAcPower": 0.11890332939845169
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.027328463358154843,
+          "percentAcPower": 0.034646678070600234
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 8.134765625000002,
+          "densityG2PerHz": 0.7503119900711941
+        },
+        {
+          "frequencyHz": 16.269531250000004,
+          "densityG2PerHz": 0.030507172843198635
+        },
+        {
+          "frequencyHz": 24.404296875000004,
+          "densityG2PerHz": 0.010176031511114878
+        },
+        {
+          "frequencyHz": 32.53906250000001,
+          "densityG2PerHz": 0.0033373367605961466
+        },
+        {
+          "frequencyHz": 40.67382812500001,
+          "densityG2PerHz": 0.0011463483523094693
+        }
+      ]
+    }
+  },
+  "descriptiveSegments": {
+    "initial0to0_5s": {
+      "welchBinWidthHz": 2.0000000000000004,
+      "acRmsG": 0.00925364501508224,
+      "above25HzPercentAcPower": 74.95351477535928,
+      "above25HzRmsG": 0.008011407758695046,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.0027265975783199196,
+          "percentAcPower": 8.681932776698488
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 0.00374338849639964,
+          "percentAcPower": 16.364552447942224
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.0040756038620688405,
+          "percentAcPower": 19.398058277265964
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.003789214317443352,
+          "percentAcPower": 16.767668091945872
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.0025576981470685533,
+          "percentAcPower": 7.639640233499851
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.0032404029910257422,
+          "percentAcPower": 12.262312458142736
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.004021433940310913,
+          "percentAcPower": 18.88583571450486
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 44.00000000000001,
+          "densityG2PerHz": 1.2853500519459507e-06
+        },
+        {
+          "frequencyHz": 14.000000000000004,
+          "densityG2PerHz": 1.2753811056453498e-06
+        },
+        {
+          "frequencyHz": 28.000000000000007,
+          "densityG2PerHz": 1.2223985851224422e-06
+        },
+        {
+          "frequencyHz": 32.00000000000001,
+          "densityG2PerHz": 1.2146226577869115e-06
+        },
+        {
+          "frequencyHz": 24.000000000000007,
+          "densityG2PerHz": 1.2143107787441581e-06
+        }
+      ]
+    },
+    "interval1to5s": {
+      "welchBinWidthHz": 1.6269531250000002,
+      "acRmsG": 0.0490472486553837,
+      "above25HzPercentAcPower": 79.59004653543818,
+      "above25HzRmsG": 0.04375664642473625,
+      "bands": [
+        {
+          "lowHz": 0,
+          "highHz": 5,
+          "rmsG": 0.014193993149903541,
+          "percentAcPower": 8.374904858039413
+        },
+        {
+          "lowHz": 5,
+          "highHz": 25,
+          "rmsG": 0.017015259409839938,
+          "percentAcPower": 12.035048606522443
+        },
+        {
+          "lowHz": 25,
+          "highHz": 50,
+          "rmsG": 0.024246895210023465,
+          "percentAcPower": 24.438974062947892
+        },
+        {
+          "lowHz": 50,
+          "highHz": 100,
+          "rmsG": 0.026531195516128602,
+          "percentAcPower": 29.260674939349958
+        },
+        {
+          "lowHz": 100,
+          "highHz": 200,
+          "rmsG": 0.01967118284866041,
+          "percentAcPower": 16.085392031966112
+        },
+        {
+          "lowHz": 200,
+          "highHz": 400,
+          "rmsG": 0.01233639695885104,
+          "percentAcPower": 6.326264862074267
+        },
+        {
+          "lowHz": 400,
+          "highHz": 833.0,
+          "rmsG": 0.009147989883395246,
+          "percentAcPower": 3.478740639099935
+        }
+      ],
+      "strongestLocalPeaksAbove5Hz": [
+        {
+          "frequencyHz": 65.07812500000001,
+          "densityG2PerHz": 5.190799775157284e-05
+        },
+        {
+          "frequencyHz": 45.55468750000001,
+          "densityG2PerHz": 4.34299562316551e-05
+        },
+        {
+          "frequencyHz": 34.16601562500001,
+          "densityG2PerHz": 4.29515965780286e-05
+        },
+        {
+          "frequencyHz": 16.269531250000004,
+          "densityG2PerHz": 3.5489647294062993e-05
+        },
+        {
+          "frequencyHz": 27.658203125000004,
+          "densityG2PerHz": 2.080553440722683e-05
+        }
+      ]
+    }
+  },
+  "perSecond": [
+    {
+      "startSeconds": 0,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 0.009332384528258537,
+      "peakNormG": 0.965469102142097
+    },
+    {
+      "startSeconds": 1,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 0.013866341539010466,
+      "peakNormG": 0.9673101543464369
+    },
+    {
+      "startSeconds": 2,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 0.007708340272384946,
+      "peakNormG": 0.9657572830155549
+    },
+    {
+      "startSeconds": 3,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 0.01611871136674315,
+      "peakNormG": 0.9924903689593477
+    },
+    {
+      "startSeconds": 4,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 0.13738940005045677,
+      "peakNormG": 1.298908301626217
+    },
+    {
+      "startSeconds": 5,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 0.6834308029885076,
+      "peakNormG": 2.484905056506675
+    },
+    {
+      "startSeconds": 6,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 1.0783426965780896,
+      "peakNormG": 2.39604993809387
+    },
+    {
+      "startSeconds": 7,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 1.5008196985158373,
+      "peakNormG": 3.5963959138302672
+    },
+    {
+      "startSeconds": 8,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 1.7072782171296534,
+      "peakNormG": 3.399608809882644
+    },
+    {
+      "startSeconds": 9,
+      "samples": 1666,
+      "vectorRmsAroundMeanG": 1.4470202296930383,
+      "peakNormG": 3.269080758379029
+    }
+  ],
+  "storage": {
+    "fileBytes": 102880,
+    "rawBytes": 99960,
+    "summaryBytes": 1224,
+    "metadataAndFramingBytes": 1696,
+    "projectedRawBytesPerHour": 35985600,
+    "projectedSummaryBytesPerHour": 432259.45945945947,
+    "retrievalSecondsAcrossAttempts": 62.04109999999776
+  },
+  "methods": "Welch PSD: nominal 1666 Hz, Hann 1024-point windows, 50% overlap, constant detrending per segment, sum of three axis PSDs. Bands integrate discrete bins excluding DC. Split halves use the supplied still/shaking labels. Near-Nyquist energy can contain aliases."
+}

@@ -6,15 +6,17 @@ export type VehicleType = (typeof vehicleTypes)[number];
 export type SensorSource = (typeof sensorSources)[number];
 export type MeasurementStatus = (typeof measurementStatuses)[number];
 
+// A GPS-only ride has no IMU data: the phone tracks the route and the external
+// XIAO board owns vibration, so every motion field can legitimately be null.
 export type MeasurementSample = {
   timestamp: number;
-  ax: number;
-  ay: number;
-  az: number;
-  gx: number;
-  gy: number;
-  gz: number;
-  vibrationMagnitude: number;
+  ax: number | null;
+  ay: number | null;
+  az: number | null;
+  gx: number | null;
+  gy: number | null;
+  gz: number | null;
+  vibrationMagnitude: number | null;
   latitude: number | null;
   longitude: number | null;
   speed: number | null;
