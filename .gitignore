@@ -56,8 +56,12 @@ yarn-error.*
 /ios
 /android
 /mobile/android
-/mobile/modules/background-recorder/android/
 /mobile/ios
+
+# Gradle output inside the hand-written background-recorder module. The module's
+# android/ directory is source, not prebuild output, so it must stay tracked.
+/mobile/modules/background-recorder/android/build/
+/mobile/modules/background-recorder/android/.gradle/
 
 # Coverage
 coverage/
