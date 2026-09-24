@@ -43,7 +43,13 @@ export type EntityListViewProps = {
   sort: EntitySort | null;
 };
 
-/** Rendered below the generic table for the selected record. */
+/**
+ * Rendered below the generic list card for the selected record.
+ *
+ * The viewer does not wrap it in a card, because a detail view is free to be
+ * several: a view that shows a record and then its measurements returns two
+ * cards rather than nesting a panel inside one.
+ */
 export type EntityDetailViewProps = {
   /** Opens the shared add/edit dialog for this record. */
   onEditRecord: () => void;
@@ -65,7 +71,7 @@ export type EntityView = {
   };
   /**
    * Selecting a row reveals this instead of opening the edit dialog, so the view
-   * can own the record interaction.
+   * can own the record interaction. It renders its own `PageCard`s.
    */
   detail?: ComponentType<EntityDetailViewProps>;
 };

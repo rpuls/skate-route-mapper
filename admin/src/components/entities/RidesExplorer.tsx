@@ -6,11 +6,10 @@ import {
   Box,
   Button,
   Divider,
-  Paper,
   Stack,
   Typography,
 } from "@mui/material";
-import { colors, space } from "@skate-route-mapper/shared/design";
+import { space } from "@skate-route-mapper/shared/design";
 import {
   formatDistance,
   formatDuration,
@@ -22,7 +21,7 @@ import {
   useAdminRideDetail,
   useRecomputeRideMetrics,
 } from "../../features/entities/entityQueries";
-import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
+import { px } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";
 import { EntityTable } from "./EntityTable";
 import { RideAnalysisPanel } from "./RideAnalysisPanel";
@@ -137,17 +136,9 @@ export function RidesExplorer({
         sort={sort}
       />
 
-      <Paper
-        elevation={0}
-        sx={{
-          ...surfaceSx({
-            bgcolor: colors.surface,
-            level: radiusLevel.embedded,
-            padding: space.lg,
-          }),
-          minWidth: 0,
-        }}
-      >
+      <Divider />
+
+      <Box sx={{ minWidth: 0 }}>
         {detail ? (
           <Stack spacing={2}>
             <Stack
@@ -270,7 +261,7 @@ export function RidesExplorer({
             Select a ride to inspect metadata and samples.
           </Typography>
         )}
-      </Paper>
+      </Box>
     </Stack>
   );
 }

@@ -5,13 +5,12 @@ import {
   Box,
   Button,
   Pagination,
-  Paper,
   Stack,
   Tab,
   Tabs,
   Typography,
 } from "@mui/material";
-import { colors, space } from "@skate-route-mapper/shared/design";
+import { space } from "@skate-route-mapper/shared/design";
 import { useEffect, useMemo, useState } from "react";
 import {
   useAdminResources,
@@ -23,7 +22,8 @@ import {
 import { entityViewFor } from "../features/entities/entityViewRegistry";
 import { AddOrEditEntityDialog } from "../components/entities/AddOrEditEntityDialog";
 import { EntityTable } from "../components/entities/EntityTable";
-import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
+import { PageCard } from "../components/common/PageCard";
+import { adminLayout, px } from "../theme/adminTheme";
 import type { AdminSession, EntityPayload, EntityRecord, EntitySort } from "../types";
 
 const entityPageSize = 25;
@@ -148,203 +148,175 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   }, [entityPage, pagination]);
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        ...surfaceSx({ shadow: true }),
-        maxWidth: "100%",
-        minWidth: 0,
-        overflow: "hidden",
-        width: "100%",
-      }}
-    >
-      <Stack sx={{ gap: px(adminLayout.containerGap), minWidth: 0 }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={2}
+    <Stack sx={{ gap: px(adminLayout.containerGap), minWidth: 0 }}>
+      <PageCard padding={space.sm}>
+        <Tabs
+          onChange={(_, nextValue: string) => openResource(nextValue)}
+          scrollButtons="auto"
           sx={{
-            alignItems: { xs: "stretch", md: "center" },
-            justifyContent: "space-between",
-          }}
-        >
-          <Box>
-            <Typography variant="h2">Entity management</Typography>
-            <Typography color="text.secondary">
-              Generic tables and forms generated from the Prisma datamodel.
-            </Typography>
-          </Box>
-          <Button onClick={refreshRecords} startIcon={<RefreshIcon />} variant="outlined">
-            Refresh
-          </Button>
-        </Stack>
-
-        <Box sx={surfaceSx({ bgcolor: colors.surfaceMuted, level: radiusLevel.inner, padding: space.sm })}>
-          <Tabs
-            onChange={(_, nextValue: string) => openResource(nextValue)}
-            scrollButtons="auto"
-            sx={{
+            minHeight: 56,
+            "& .MuiTabs-indicator": {
+              display: "none",
+            },
+            "& .MuiTabs-flexContainer": {
+              gap: px(space.sm),
+            },
+            "& .MuiTab-root": {
+              color: "text.secondary",
               minHeight: 56,
-              "& .MuiTabs-indicator": {
-                display: "none",
-              },
-              "& .MuiTabs-flexContainer": {
-                gap: px(space.sm),
-              },
-              "& .MuiTab-root": {
-                color: "text.secondary",
-                minHeight: 56,
-                px: px(space.lg),
-              },
-              "& .Mui-selected": {
-                bgcolor: "background.paper",
-                color: "primary.main",
-              },
-            }}
-            value={resource?.name ?? false}
-            variant="scrollable"
-          >
-            {resources.map((item) => (
-              <Tab key={item.name} label={item.labelPlural} value={item.name} />
-            ))}
-          </Tabs>
-        </Box>
+              px: px(space.lg),
+            },
+            "& .MuiTab-root.Mui-selected": {
+              bgcolor: "primary.main",
+              color: "primary.contrastText",
+            },
+          }}
+          value={resource?.name ?? false}
+          variant="scrollable"
+        >
+          {resources.map((item) => (
+            <Tab key={item.name} label={item.labelPlural} value={item.name} />
+          ))}
+        </Tabs>
+      </PageCard>
 
-        {error ? (
-          <Alert severity="error">{error instanceof Error ? error.message : "Request failed"}</Alert>
-        ) : null}
+      {error ? (
+        <Alert severity="error">{error instanceof Error ? error.message : "Request failed"}</Alert>
+      ) : null}
 
-        {resource ? (
-          <Box sx={{ display: "grid", gap: px(adminLayout.containerGap), minWidth: 0 }}>
-            <Paper
-              elevation={0}
-              sx={{
-                ...surfaceSx({ bgcolor: colors.surfaceMuted, level: radiusLevel.inner, padding: space.md }),
-                minHeight: 520,
-                minWidth: 0,
-                overflow: "hidden",
-                width: "100%",
-              }}
-            >
-              <Stack spacing={2} sx={{ minWidth: 0 }}>
-                <Stack direction="row" spacing={2} sx={{ justifyContent: "space-between" }}>
+      {resource ? (
+        <>
+          <PageCard>
+            <Stack spacing={2} sx={{ minWidth: 0 }}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={2}
+                sx={{
+                  alignItems: { xs: "stretch", sm: "center" },
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box>
                   <Typography variant="h3">{resource.labelPlural}</Typography>
-                  <Stack direction="row" spacing={1}>
-                    <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
-                      {entityView?.list?.summary
-                        ?? (isLoading ? "Loading" : `${pagination?.total ?? records.length} total`)}
-                    </Typography>
-                    {resource.canCreate && !listLoadsOwnRecords ? (
-                      <Button
-                        onClick={() => {
-                          setSelectedRecord(null);
-                          setUpsertOpen(true);
-                        }}
-                        startIcon={<AddIcon />}
-                        sx={{ borderRadius: controlRadiusPx(radiusLevel.embedded) }}
-                        variant="contained"
-                      >
-                        Add
-                      </Button>
-                    ) : null}
-                  </Stack>
-                </Stack>
-                {ListView ? (
-                  <ListView
-                    focusRecordId={handoff?.resourceName === resource.name ? handoff.recordId : null}
-                    onEditRecord={(record) => {
-                      setSelectedRecord(record);
-                      setUpsertOpen(canOpenUpsertDialog);
-                    }}
-                    onOpenResource={openResource}
-                    onSortChange={changeSort}
-                    records={records}
-                    resource={resource}
-                    resources={resources}
-                    session={session}
-                    sort={entitySort}
-                  />
-                ) : (
-                  <>
-                    <EntityTable
-                      onSelectRecord={(record) => {
-                        setSelectedRecord(record);
-
-                        // A registered detail view owns the record interaction,
-                        // so selecting a row reveals it instead of the dialog.
-                        if (!DetailView) {
-                          setUpsertOpen(canOpenUpsertDialog);
-                        }
-                      }}
-                      onSortChange={changeSort}
-                      records={records}
-                      resource={resource}
-                      selectedRecord={selectedFreshRecord}
-                      sort={entitySort}
-                    />
-                    {DetailView && selectedFreshRecord ? (
-                      <DetailView
-                        onEditRecord={() => setUpsertOpen(canOpenUpsertDialog)}
-                        record={selectedFreshRecord}
-                        resource={resource}
-                        session={session}
-                      />
-                    ) : null}
-                  </>
-                )}
-                {!listLoadsOwnRecords && pagination && pagination.pageCount > 1 ? (
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={1}
-                    sx={{
-                      alignItems: { xs: "stretch", sm: "center" },
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
-                      Page {pagination.page} of {pagination.pageCount}
-                    </Typography>
-                    <Pagination
-                      color="primary"
-                      count={pagination.pageCount}
-                      onChange={(_, nextPage) => {
-                        setEntityPage(nextPage);
+                  <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
+                    {entityView?.list?.summary
+                      ?? (isLoading ? "Loading" : `${pagination?.total ?? records.length} total`)}
+                  </Typography>
+                </Box>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  <Button onClick={refreshRecords} startIcon={<RefreshIcon />} variant="outlined">
+                    Refresh
+                  </Button>
+                  {resource.canCreate && !listLoadsOwnRecords ? (
+                    <Button
+                      onClick={() => {
                         setSelectedRecord(null);
+                        setUpsertOpen(true);
                       }}
-                      page={entityPage}
-                    />
-                  </Stack>
-                ) : null}
+                      startIcon={<AddIcon />}
+                      variant="contained"
+                    >
+                      Add
+                    </Button>
+                  ) : null}
+                </Stack>
               </Stack>
-            </Paper>
+              {ListView ? (
+                <ListView
+                  focusRecordId={handoff?.resourceName === resource.name ? handoff.recordId : null}
+                  onEditRecord={(record) => {
+                    setSelectedRecord(record);
+                    setUpsertOpen(canOpenUpsertDialog);
+                  }}
+                  onOpenResource={openResource}
+                  onSortChange={changeSort}
+                  records={records}
+                  resource={resource}
+                  resources={resources}
+                  session={session}
+                  sort={entitySort}
+                />
+              ) : (
+                <EntityTable
+                  onSelectRecord={(record) => {
+                    setSelectedRecord(record);
 
-            <AddOrEditEntityDialog
-              onClose={closeUpsertDialog}
-              {...(selectedFreshRecord && resource.canDelete ? {
-                onDelete: async () => {
-                  await deleteRecord();
-                  setUpsertOpen(false);
-                },
-              } : {})}
-              onSubmit={async (payload) => {
-                if (selectedFreshRecord) {
-                  await updateRecord(payload);
-                } else {
-                  await createRecord(payload);
-                }
+                    // A registered detail view owns the record interaction,
+                    // so selecting a row reveals it instead of the dialog.
+                    if (!DetailView) {
+                      setUpsertOpen(canOpenUpsertDialog);
+                    }
+                  }}
+                  onSortChange={changeSort}
+                  records={records}
+                  resource={resource}
+                  selectedRecord={selectedFreshRecord}
+                  sort={entitySort}
+                />
+              )}
+              {!listLoadsOwnRecords && pagination && pagination.pageCount > 1 ? (
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  sx={{
+                    alignItems: { xs: "stretch", sm: "center" },
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Typography color="text.secondary" sx={{ fontWeight: 800 }} variant="body2">
+                    Page {pagination.page} of {pagination.pageCount}
+                  </Typography>
+                  <Pagination
+                    color="primary"
+                    count={pagination.pageCount}
+                    onChange={(_, nextPage) => {
+                      setEntityPage(nextPage);
+                      setSelectedRecord(null);
+                    }}
+                    page={entityPage}
+                  />
+                </Stack>
+              ) : null}
+            </Stack>
+          </PageCard>
 
-                setUpsertOpen(false);
-              }}
-              open={upsertOpen}
+          {/* A detail view brings its own cards, so it is not wrapped in one. */}
+          {DetailView && selectedFreshRecord ? (
+            <DetailView
+              onEditRecord={() => setUpsertOpen(canOpenUpsertDialog)}
               record={selectedFreshRecord}
               resource={resource}
+              session={session}
             />
-          </Box>
-        ) : !error ? (
-          <Typography color="text.secondary" sx={{ fontWeight: 800 }}>
-            Loading datamodel resources...
-          </Typography>
-        ) : null}
-      </Stack>
-    </Paper>
+          ) : null}
+
+          <AddOrEditEntityDialog
+            onClose={closeUpsertDialog}
+            {...(selectedFreshRecord && resource.canDelete ? {
+              onDelete: async () => {
+                await deleteRecord();
+                setUpsertOpen(false);
+              },
+            } : {})}
+            onSubmit={async (payload) => {
+              if (selectedFreshRecord) {
+                await updateRecord(payload);
+              } else {
+                await createRecord(payload);
+              }
+
+              setUpsertOpen(false);
+            }}
+            open={upsertOpen}
+            record={selectedFreshRecord}
+            resource={resource}
+          />
+        </>
+      ) : !error ? (
+        <Typography color="primary.contrastText" sx={{ fontWeight: 800 }}>
+          Loading datamodel resources...
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }

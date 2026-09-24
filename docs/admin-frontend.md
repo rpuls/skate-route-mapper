@@ -96,22 +96,36 @@ function EntityTable() {
 
 ## MUI And Styling
 
-Use MUI components for forms, buttons, layout primitives, tables, tabs, alerts, and cards. Use `sx` for local layout and spacing. Do not invent raw colors, shadows, radii, or button styles.
+Use MUI components for forms, buttons, layout primitives, tables, tabs, alerts,
+and cards. Use `sx` for local layout and spacing. Do not invent raw colors,
+shadows, radii, or button styles, and do not write down what the system looks
+like here: it is published to Claude Design, which is the single source of that
+truth (https://claude.ai/design/p/1b289219-57b8-4ced-8011-9bca7af6ad4b). The
+values come from `shared/src/design.ts`.
 
-Use nested radius levels from `admin/src/theme/adminTheme.ts` instead of hard-coded radii:
+### One surface level
 
-- `radiusLevel.outer`: floating page tiles, `32px`
-- `radiusLevel.inner`: panels and controls one level inside a tile, `24px`
-- `radiusLevel.embedded`: controls or tables inside an inner panel, `16px`
-- `radiusLevel.utility`: tiny nested utility elements, `8px`
+A page is a stack of `components/common/PageCard.tsx`, and a card never holds
+another card. A section that needs separating from its neighbours inside a card
+gets a `Divider`. The shell renders the page title, so a page does not repeat
+it.
 
-Prefer `surfaceSx()` for Paper/Card-like surfaces and `controlRadiusPx()` for controls that need to step down inside nested panels.
+This is why the entity viewer renders the resource picker, the list and the
+selected record's detail as sibling cards, and why a detail view with two things
+to say returns two cards rather than splitting one.
+
+Radii come from `radiusLevel` in `admin/src/theme/adminTheme.ts`, one step per
+level of nesting: `outer` for a page card, `inner` for a table, map or control
+inside it, `embedded` for a control inside that, `utility` below. Use
+`surfaceSx()` for surfaces and `controlRadiusPx()` for controls, never a
+literal.
 
 When changing visual language:
 
-1. Update `shared/src/design.ts`.
-2. Update `admin/src/theme/adminTheme.ts` if MUI mapping changes.
-3. Update `docs/design-guide.md` if the design rule changes.
+1. Update `shared/src/design.ts`, which holds the values.
+2. Update the specimens in `.design-sync/foundations.tsx` and re-publish if the
+   rule itself changed; see `.design-sync/NOTES.md`.
+3. Update `admin/src/theme/adminTheme.ts` if the MUI mapping changes.
 
 ## Entity Viewer
 
@@ -175,10 +189,11 @@ A registered view is one of:
   when the view queries its own data, which also drops the generic list query,
   its pagination, and the create button; `summary` then replaces the record
   count caption.
-- `detail` renders under the generated table for the selected record. Selecting
-  a row reveals the detail view rather than opening the edit dialog, so the view
-  owns the record interaction and offers its own edit affordance if the resource
-  is writable.
+- `detail` renders under the generated list card for the selected record.
+  Selecting a row reveals the detail view rather than opening the edit dialog,
+  so the view owns the record interaction and offers its own edit affordance if
+  the resource is writable. The viewer does not wrap it, so the view brings its
+  own `PageCard`s.
 
 Views receive `records`, `resource`, `resources`, `session`, and `sort` as
 props, plus `onEditRecord` to open the shared dialog, `onOpenResource` to hand a
@@ -200,6 +215,8 @@ It answers two questions about a capture, and the second matters as much as the
 first: a spectrum means one thing over cobbles at walking pace and another over
 asphalt at twenty.
 
+- The inspector is two cards: the capture itself, with its label, actions, note,
+  surface photo and GPS track, and then the signal analysis of the recording.
 - `components/research/ResearchCaptureSite.tsx` shows the surface photo and the
   GPS track together with the speed over the recorded window. It is
   presentational; the inspector fetches and decodes.

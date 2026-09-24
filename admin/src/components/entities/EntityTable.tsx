@@ -117,7 +117,7 @@ export function EntityTable({
     <TableContainer
       component={Box}
       sx={{
-        ...surfaceSx({ level: radiusLevel.embedded, padding: space.none }),
+        ...surfaceSx({ level: radiusLevel.inner, padding: space.none }),
         maxWidth: "100%",
         overflowX: "auto",
         width: "100%",

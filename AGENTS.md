@@ -60,15 +60,17 @@ layers, and it matters which one you touch:
 absent from a fresh clone. Check they exist before assuming the design system is
 missing, and never conclude from `git ls-files` that there is no design system.
 
-- Do not invent one-off colors, radii, shadows, or button styles in app screens.
-- Import tokens from `@skate-route-mapper/shared/design` where possible.
-- When a rule is about how the brand looks, put it in a specimen. When it is
-  about how this app's screens are assembled, put it in `docs/design-guide.md`.
+- **Never write down how the UI looks — not in a repo document, not in a code
+  comment, not in this file.** Claude Design is the single source of that
+  truth, and a second copy is a copy that goes stale while still being
+  believed. A comment explains what the code is for; if it needs a visual rule,
+  it links the design system instead of restating it.
+- When a rule is about how the brand looks, it goes in a specimen. When it is
+  about how this app's screens are assembled, it goes in `docs/design-guide.md`.
   If you are unsure, it is probably a brand rule.
-- Use predefined `buttonVariants`; do not create random button styles.
-- Information containers use faint fills and no visible borders.
-- Borders are reserved for interactive controls, outlined buttons, and selected states.
-- Compact selected controls can use filled orange; large selected information tiles should use faint fill plus orange border.
+- Do not invent one-off colors, radii, shadows, or button styles in app screens.
+- Import tokens from `@skate-route-mapper/shared/design` where possible, and use
+  the predefined `buttonVariants`.
 
 ## Mobile Notes
 
@@ -82,8 +84,7 @@ missing, and never conclude from `git ls-files` that there is no design system.
   reached and left. A page drilled into from another screen (live detail, a
   saved ride) passes `back` to `Page` for a back arrow. Do not mix the two.
 - A control that navigates away uses the `openInNew` icon, never a chevron —
-  chevrons mean "expands in place". Do not colour it `link` unless the
-  destination really is the point of the screen.
+  chevrons mean "expands in place".
 - A screen-specific control belongs in the screen's content, next to whatever
   it is about, not in the page frame.
 - Never let a drop shadow be clipped. A scrolling viewport never carries the

@@ -24,7 +24,6 @@ import {
   Divider,
   FormControlLabel,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -54,8 +53,9 @@ import {
   productionStreamRateHz,
   type SignalAnalysis,
 } from "../../features/research/signalAnalysis";
-import { controlRadiusPx, px, radiusLevel, radiusPx, surfaceSx } from "../../theme/adminTheme";
+import { adminLayout, px, radiusLevel, radiusPx, surfaceSx } from "../../theme/adminTheme";
 import { DetailItem } from "../common/DetailItem";
+import { PageCard } from "../common/PageCard";
 import { ResearchCaptureSite } from "../research/ResearchCaptureSite";
 import {
   ChartLegend,
@@ -214,7 +214,7 @@ function SignalFigure({ analysis }: { analysis: SignalAnalysis }) {
 
       <Stack spacing={1} sx={{ minWidth: 0 }}>
         <Typography sx={{ fontWeight: 900 }}>Energy by frequency band</Typography>
-        <Box sx={{ ...surfaceSx({ level: radiusLevel.embedded, padding: space.none }), overflowX: "auto" }}>
+        <Box sx={{ ...surfaceSx({ level: radiusLevel.inner, padding: space.none }), overflowX: "auto" }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -368,7 +368,6 @@ function CaptureDetailsEditor({
         <Button
           onClick={onClose}
           startIcon={<CloseIcon />}
-          sx={{ borderRadius: controlRadiusPx(radiusLevel.embedded) }}
           variant="outlined"
         >
           Cancel
@@ -376,7 +375,6 @@ function CaptureDetailsEditor({
         <Button
           disabled={updateMutation.isPending}
           startIcon={<SaveIcon />}
-          sx={{ borderRadius: controlRadiusPx(radiusLevel.embedded) }}
           type="submit"
           variant="contained"
         >
@@ -462,91 +460,83 @@ export function ResearchCaptureInspector({
   const category = textOf(record.category);
 
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        ...surfaceSx({
-          bgcolor: colors.surface,
-          level: radiusLevel.embedded,
-          padding: space.lg,
-        }),
-        minWidth: 0,
-      }}
-    >
-      <Stack spacing={2} sx={{ minWidth: 0 }}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={2}
-          sx={{ justifyContent: "space-between" }}
-        >
-          <Box>
-            <Typography variant="h3">
-              {textOf(record.label) ?? `Research capture ${recordId}`}
-            </Typography>
-            <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
-              {[category ? researchCategoryLabel(category) : null, capturedLabel]
-                .filter(Boolean)
-                .join(" - ")}
-            </Typography>
-          </Box>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            {resource.canEdit && !isEditing ? (
+    <Stack sx={{ gap: px(adminLayout.containerGap), minWidth: 0 }}>
+      <PageCard>
+        <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            sx={{ justifyContent: "space-between" }}
+          >
+            <Box>
+              <Typography variant="h3">
+                {textOf(record.label) ?? `Research capture ${recordId}`}
+              </Typography>
+              <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+                {[category ? researchCategoryLabel(category) : null, capturedLabel]
+                  .filter(Boolean)
+                  .join(" - ")}
+              </Typography>
+            </Box>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              {resource.canEdit && !isEditing ? (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  startIcon={<EditIcon />}
+                  variant="outlined"
+                >
+                  Edit details
+                </Button>
+              ) : null}
+              {hasPhoto ? (
+                <Button
+                  onClick={() => download("photo")}
+                  startIcon={<DownloadIcon />}
+                  variant="outlined"
+                >
+                  Download photo
+                </Button>
+              ) : null}
               <Button
-                onClick={() => setIsEditing(true)}
-                startIcon={<EditIcon />}
-                variant="outlined"
-              >
-                Edit details
-              </Button>
-            ) : null}
-            {hasPhoto ? (
-              <Button
-                onClick={() => download("photo")}
+                onClick={() => download("recording")}
                 startIcon={<DownloadIcon />}
-                variant="outlined"
+                variant="contained"
               >
-                Download photo
+                Download recording
               </Button>
-            ) : null}
-            <Button
-              onClick={() => download("recording")}
-              startIcon={<DownloadIcon />}
-              variant="contained"
-            >
-              Download recording
-            </Button>
+            </Stack>
           </Stack>
-        </Stack>
 
-        {isEditing ? (
-          <CaptureDetailsEditor
-            key={recordId}
-            onClose={() => setIsEditing(false)}
-            record={record}
-            resource={resource}
-            session={session}
+          {isEditing ? (
+            <CaptureDetailsEditor
+              key={recordId}
+              onClose={() => setIsEditing(false)}
+              record={record}
+              resource={resource}
+              session={session}
+            />
+          ) : textOf(record.note) ? (
+            <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
+              {textOf(record.note)}
+            </Typography>
+          ) : null}
+
+          {downloadError ? <Alert severity="error">{downloadError}</Alert> : null}
+
+          <Divider />
+
+          <ResearchCaptureSite
+            field={field ?? emptyCaptureField}
+            photoError={photoQuery.error instanceof Error ? photoQuery.error.message : null}
+            photoPending={hasPhoto && photoQuery.isPending}
+            photoUrl={photoUrl}
           />
-        ) : textOf(record.note) ? (
-          <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
-            {textOf(record.note)}
-          </Typography>
-        ) : null}
+        </Stack>
+      </PageCard>
 
-        {downloadError ? <Alert severity="error">{downloadError}</Alert> : null}
-
-        <Divider />
-
-        <ResearchCaptureSite
-          field={field ?? emptyCaptureField}
-          photoError={photoQuery.error instanceof Error ? photoQuery.error.message : null}
-          photoPending={hasPhoto && photoQuery.isPending}
-          photoUrl={photoUrl}
-        />
-
-        <Divider />
-
+      <PageCard>
         {recordingQuery.isPending ? (
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", py: px(space.lg) }}>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
             <CircularProgress size={20} />
             <Typography color="text.secondary" sx={{ fontWeight: 800 }}>
               Loading recording and running the signal analysis...
@@ -563,7 +553,7 @@ export function ResearchCaptureInspector({
         ) : analysis?.analysis ? (
           <SignalFigure analysis={analysis.analysis} />
         ) : null}
-      </Stack>
-    </Paper>
+      </PageCard>
+    </Stack>
   );
 }

@@ -314,7 +314,7 @@ export const adminTheme = createTheme({
     MuiTab: {
       styleOverrides: {
         root: {
-          borderRadius: controlRadiusPx(radiusLevel.embedded),
+          borderRadius: controlRadiusPx(radiusLevel.inner),
           fontWeight: Number(typography.weights.heavy),
           minHeight: componentStyles.primaryButton.minHeight,
           textTransform: "none",

@@ -58,7 +58,7 @@ function PhotoPlaceholder({ children }: { children: ReactNode }) {
       sx={{
         alignItems: "center",
         bgcolor: colors.surfaceMuted,
-        borderRadius: radiusPx(radiusLevel.utility),
+        borderRadius: radiusPx(radiusLevel.inner),
         color: colors.textMuted,
         height: panelHeight,
         justifyContent: "center",
@@ -87,7 +87,7 @@ function SurfacePhoto({
         src={url}
         sx={{
           bgcolor: colors.surfaceMuted,
-          borderRadius: radiusPx(radiusLevel.utility),
+          borderRadius: radiusPx(radiusLevel.inner),
           cursor: "zoom-in",
           display: "block",
           height: panelHeight,

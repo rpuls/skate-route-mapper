@@ -9,10 +9,10 @@ import AddIcon from "@mui/icons-material/Add";
 import CenterFocusStrongIcon from "@mui/icons-material/CenterFocusStrong";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { Box, IconButton, Stack, Typography } from "@mui/material";
-import { colors, shadows, space } from "@skate-route-mapper/shared/design";
+import { colors, shadows } from "@skate-route-mapper/shared/design";
 import type { PointerEvent as ReactPointerEvent, WheelEvent } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { px, radiusLevel, radiusPx } from "../../theme/adminTheme";
+import { radiusLevel, radiusPx } from "../../theme/adminTheme";
 import {
   applyMapInteraction,
   mapPoint,
@@ -164,7 +164,7 @@ export function TrackMap({
       ref={containerRef}
       sx={{
         bgcolor: colors.surfaceMuted,
-        borderRadius: radiusPx(radiusLevel.utility),
+        borderRadius: radiusPx(radiusLevel.inner),
         cursor: "grab",
         height,
         overflow: "hidden",
@@ -239,7 +239,7 @@ export function TrackMap({
         spacing={0.5}
         sx={{
           bgcolor: colors.surface,
-          borderRadius: px(space.sm),
+          borderRadius: radiusPx(radiusLevel.embedded),
           boxShadow: `0 8px 20px ${shadows.tile.shadowColor}`,
           p: 0.5,
           position: "absolute",
@@ -273,7 +273,7 @@ export function TrackMap({
       <Typography
         sx={{
           bgcolor: colors.surface,
-          borderRadius: px(space.sm),
+          borderRadius: radiusPx(radiusLevel.embedded),
           bottom: 8,
           color: colors.textMuted,
           fontWeight: 800,

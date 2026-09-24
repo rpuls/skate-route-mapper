@@ -182,7 +182,7 @@ export function SamplesExplorer({ focusRecordId, resources, session }: EntityLis
         <TableContainer
           component={Box}
           sx={{
-            ...surfaceSx({ level: radiusLevel.embedded, padding: space.none }),
+            ...surfaceSx({ level: radiusLevel.inner, padding: space.none }),
             maxWidth: "100%",
             overflowX: "auto",
             width: "100%",
@@ -250,7 +250,7 @@ export function SamplesExplorer({ focusRecordId, resources, session }: EntityLis
       ) : (
         <Box
           sx={{
-            ...surfaceSx({ level: radiusLevel.embedded, padding: space.lg }),
+            ...surfaceSx({ level: radiusLevel.inner, padding: space.lg }),
           }}
         >
           <Typography color="text.secondary" sx={{ fontWeight: 800 }}>
