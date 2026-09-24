@@ -52,6 +52,10 @@ export function parseResponse(bytes: Uint8Array): ResearchResponse;
 export function parseStatus(response: ResearchResponse): ResearchStatus;
 export function analyzeCapture(meta: ResearchStatus, raw: Uint8Array, summaries: Uint8Array): Record<string, unknown>;
 export function encodeRecording(meta: ResearchStatus & Record<string, unknown>, raw: Uint8Array, summaries: Uint8Array): Uint8Array;
+export function decodeRecordingHeader(bytes: Uint8Array): {
+  meta: ResearchStatus & Record<string, unknown>;
+  headerLength: number;
+};
 export function decodeRecording(bytes: Uint8Array): {
   meta: ResearchStatus & Record<string, unknown>;
   raw: Uint8Array;

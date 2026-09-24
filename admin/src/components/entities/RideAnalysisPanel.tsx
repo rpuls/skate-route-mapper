@@ -28,10 +28,21 @@ import type {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";
+import {
+  applyMapInteraction,
+  mapPoint as coordinateMapPoint,
+  mapTileSize,
+  mapTiles,
+  mapViewForCoordinates,
+  restingInteraction,
+  tileAttribution,
+  zoomedInteraction,
+  type MapInteraction,
+  type MapViewState,
+} from "../maps/tileMap";
 
 const playbackSpeeds = [0.5, 1, 2, 5] as const;
 const playbackTickMs = 120;
-const mapTileSize = 256;
 const defaultMapWidth = 760;
 const chartColors = {
   currentMarker: colors.text,
@@ -46,20 +57,6 @@ const chartColors = {
 } as const;
 
 type ChartSeries = "filtered" | "normalized" | "raw" | "roughness" | "smoothed";
-
-type MapViewState = {
-  centerX: number;
-  centerY: number;
-  height: number;
-  width: number;
-  zoom: number;
-};
-
-type MapInteraction = {
-  panX: number;
-  panY: number;
-  zoomOffset: number;
-};
 
 type AnalysisSample = {
   ax: number;
@@ -236,19 +233,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function lngLatToWorld(longitude: number, latitude: number, zoom: number) {
-  const sinLatitude = Math.sin((clamp(latitude, -85.05112878, 85.05112878) * Math.PI) / 180);
-  const scale = mapTileSize * 2 ** zoom;
-
-  return {
-    x: ((longitude + 180) / 360) * scale,
-    y:
-      (0.5 -
-        Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI)) *
-      scale,
-  };
-}
-
+/** A sample's place on the map, or null when it carried no position. */
 function mapPoint(
   sample: AnalysisSample,
   mapView: MapViewState
@@ -257,119 +242,10 @@ function mapPoint(
     return null;
   }
 
-  const world = lngLatToWorld(sample.longitude, sample.latitude, mapView.zoom);
-
-  return {
-    x: world.x - mapView.centerX + mapView.width / 2,
-    y: world.y - mapView.centerY + mapView.height / 2,
-  };
-}
-
-function mapViewForSamples(
-  samples: AnalysisSample[],
-  width: number,
-  height: number
-): MapViewState {
-  const geoSamples = samples.filter(
-    (sample) => sample.latitude !== null && sample.longitude !== null
+  return coordinateMapPoint(
+    { latitude: sample.latitude, longitude: sample.longitude },
+    mapView
   );
-
-  if (geoSamples.length === 0) {
-    const center = lngLatToWorld(12.5683, 55.6761, 12);
-
-    return {
-      centerX: center.x,
-      centerY: center.y,
-      height,
-      width,
-      zoom: 12,
-    };
-  }
-
-  const latitudes = geoSamples.map((sample) => sample.latitude as number);
-  const longitudes = geoSamples.map((sample) => sample.longitude as number);
-  const minLatitude = Math.min(...latitudes);
-  const maxLatitude = Math.max(...latitudes);
-  const minLongitude = Math.min(...longitudes);
-  const maxLongitude = Math.max(...longitudes);
-  const centerLatitude = (minLatitude + maxLatitude) / 2;
-  const centerLongitude = (minLongitude + maxLongitude) / 2;
-  const minWorld = lngLatToWorld(minLongitude, maxLatitude, 0);
-  const maxWorld = lngLatToWorld(maxLongitude, minLatitude, 0);
-  const worldSpanX = Math.max(0.000001, Math.abs(maxWorld.x - minWorld.x));
-  const worldSpanY = Math.max(0.000001, Math.abs(maxWorld.y - minWorld.y));
-  const padding = 80;
-  const zoom = clamp(
-    Math.floor(
-      Math.log2(
-        Math.min(
-          Math.max(1, width - padding) / worldSpanX,
-          Math.max(1, height - padding) / worldSpanY
-        )
-      )
-    ),
-    3,
-    18
-  );
-  const center = lngLatToWorld(centerLongitude, centerLatitude, zoom);
-
-  return {
-    centerX: center.x,
-    centerY: center.y,
-    height,
-    width,
-    zoom,
-  };
-}
-
-function mapTiles(mapView: MapViewState) {
-  const halfWidth = mapView.width / 2;
-  const halfHeight = mapView.height / 2;
-  const startTileX = Math.floor((mapView.centerX - halfWidth) / mapTileSize) - 1;
-  const endTileX = Math.floor((mapView.centerX + halfWidth) / mapTileSize) + 1;
-  const startTileY = Math.floor((mapView.centerY - halfHeight) / mapTileSize) - 1;
-  const endTileY = Math.floor((mapView.centerY + halfHeight) / mapTileSize) + 1;
-  const maxTile = 2 ** mapView.zoom;
-  const tiles: Array<{
-    key: string;
-    url: string;
-    x: number;
-    y: number;
-  }> = [];
-
-  for (let tileX = startTileX; tileX <= endTileX; tileX += 1) {
-    for (let tileY = startTileY; tileY <= endTileY; tileY += 1) {
-      if (tileY < 0 || tileY >= maxTile) {
-        continue;
-      }
-
-      const wrappedTileX = ((tileX % maxTile) + maxTile) % maxTile;
-
-      tiles.push({
-        key: `${mapView.zoom}-${tileX}-${tileY}`,
-        url: `https://tile.openstreetmap.org/${mapView.zoom}/${wrappedTileX}/${tileY}.png`,
-        x: tileX * mapTileSize - mapView.centerX + halfWidth,
-        y: tileY * mapTileSize - mapView.centerY + halfHeight,
-      });
-    }
-  }
-
-  return tiles;
-}
-
-function applyMapInteraction(
-  baseMapView: MapViewState,
-  interaction: MapInteraction
-): MapViewState {
-  const zoom = clamp(baseMapView.zoom + interaction.zoomOffset, 3, 19);
-  const zoomScale = 2 ** (zoom - baseMapView.zoom);
-
-  return {
-    ...baseMapView,
-    centerX: baseMapView.centerX * zoomScale - interaction.panX,
-    centerY: baseMapView.centerY * zoomScale - interaction.panY,
-    zoom,
-  };
 }
 
 function qualityColor(score: number) {
@@ -538,11 +414,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
     roughness: true,
     smoothed: true,
   });
-  const [mapInteraction, setMapInteraction] = useState<MapInteraction>({
-    panX: 0,
-    panY: 0,
-    zoomOffset: 0,
-  });
+  const [mapInteraction, setMapInteraction] = useState<MapInteraction>(restingInteraction);
   const [mapWidth, setMapWidth] = useState(defaultMapWidth);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -567,8 +439,16 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
   );
   const geoSamples = useMemo(() => geoPath(analysisSamples), [analysisSamples]);
   const baseMapView = useMemo(
-    () => mapViewForSamples(analysisSamples, mapWidth, mapHeight),
-    [analysisSamples, mapWidth]
+    () =>
+      mapViewForCoordinates(
+        geoSamples.map((sample) => ({
+          latitude: sample.latitude as number,
+          longitude: sample.longitude as number,
+        })),
+        mapWidth,
+        mapHeight
+      ),
+    [geoSamples, mapWidth]
   );
   const mapView = useMemo(
     () => applyMapInteraction(baseMapView, mapInteraction),
@@ -604,11 +484,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
   }, [samples]);
 
   useEffect(() => {
-    setMapInteraction({
-      panX: 0,
-      panY: 0,
-      zoomOffset: 0,
-    });
+    setMapInteraction(restingInteraction);
   }, [samples]);
 
   useLayoutEffect(() => {
@@ -782,18 +658,11 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
   }
 
   function zoomMap(delta: number) {
-    setMapInteraction((current) => ({
-      ...current,
-      zoomOffset: clamp(current.zoomOffset + delta, -5, 5),
-    }));
+    setMapInteraction((current) => zoomedInteraction(current, delta));
   }
 
   function resetMapView() {
-    setMapInteraction({
-      panX: 0,
-      panY: 0,
-      zoomOffset: 0,
-    });
+    setMapInteraction(restingInteraction);
   }
 
   function handleMapPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1082,7 +951,7 @@ export function RideAnalysisPanel({ samples }: { samples: EntityRecord[] }) {
               }}
               variant="caption"
             >
-              OpenStreetMap
+              {tileAttribution}
             </Typography>
           </Box>
 

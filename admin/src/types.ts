@@ -19,3 +19,11 @@ export type EntityPagination = {
   pageSize: number;
   total: number;
 };
+
+export type EntitySortDirection = "asc" | "desc";
+
+/** The column ordering a generic list is asking the API for. */
+export type EntitySort = {
+  field: string;
+  direction: EntitySortDirection;
+};

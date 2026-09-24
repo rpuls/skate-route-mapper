@@ -357,6 +357,47 @@ npm run dev:web
 The web target is for layout checks. BLE, sensors, GPS, camera, SQLite, and maps
 must be tested on a physical device.
 
+### Research Dataset
+
+Signal analysis and the road surface work run against real captures, so there is
+one command that pulls the dataset out of the API and onto disk:
+
+```bash
+npm run research:fetch
+```
+
+It reads two values, from a real environment variable first and the repo's
+`.env` second:
+
+- `RESEARCH_API_BASE_URL`: which API to fetch from. Falls back to
+  `VITE_API_BASE_URL`, then to `http://localhost:3001`. Point it at the deployed
+  service to fetch production captures.
+- `ADMIN_API_KEY`: the key that API is running with. It is the existing
+  machine-to-machine admin key, so nothing new has to be added to Railway.
+  `RESEARCH_API_KEY` is read first if the export is ever given a key of its own.
+
+The result lands in `research-data/`, which is gitignored because the recordings
+are large, already live in the database, and are one command away:
+
+```text
+research-data/
+  manifest.json                       every capture's row, as one file
+  captures/<id>/capture.json          that capture's row, written last
+  captures/<id>/recording.skateresearch
+  captures/<id>/surface.jpg           when the capture has a photo
+```
+
+`capture.json` is written only after both binaries land, so it doubles as the
+"complete" marker: an interrupted run is simply re-run, and a capture whose
+`updatedAt` is unchanged is skipped. Use `npm run research:fetch -- --force` to
+re-download everything.
+
+Each row carries the whole `metadata` column, which is what the analysis needs
+and what the entity viewer does not show: the GPS track over the recording
+window, its speed summary, the before and after context fixes, and the board's
+own validation report. Decode a recording with `decodeRecording` from
+`@skate-route-mapper/shared/xiaoResearch`.
+
 ### Design System
 
 The design system is intentionally lightweight. There is no UI framework dependency such as Tamagui yet.

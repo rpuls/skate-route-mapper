@@ -85,3 +85,61 @@ export function getResearchCaptureAsset(id: string) {
     },
   });
 }
+
+/**
+ * Every stored capture except the bytes, newest first.
+ *
+ * This is the dataset the road surface work is built on, so it carries the
+ * whole `metadata` column rather than the trimmed view the entity viewer gets:
+ * the GPS track, the speed summary over the recording window and the board's
+ * own report all live in there, and a roughness figure cannot be normalised
+ * without them.
+ *
+ * Recordings and photos are fetched per capture through the existing asset
+ * endpoints instead of being inlined here. A page of base64 blobs would be tens
+ * of megabytes, could not be resumed, and would be re-sent in full every time
+ * one capture changed.
+ *
+ * Paged for the same reason every other admin list is: the caller loops rather
+ * than assuming one response holds the lot.
+ */
+export async function listResearchCaptureExport(page: { limit: number; offset: number }) {
+  const [rows, total] = await Promise.all([
+    prisma.researchCapture.findMany({
+      orderBy: [{ capturedAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        userId: true,
+        captureId: true,
+        capturedAt: true,
+        category: true,
+        label: true,
+        note: true,
+        durationSeconds: true,
+        rateHz: true,
+        sampleCount: true,
+        metadata: true,
+        photoContentType: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      skip: page.offset,
+      take: page.limit,
+    }),
+    prisma.researchCapture.count(),
+  ]);
+
+  return {
+    total,
+    captures: rows.map((row) => ({
+      ...row,
+      // The board's capture id is a uint32, so a number is exact here and is
+      // what an analysis script wants. Dates go out as ISO strings.
+      captureId: Number(row.captureId),
+      capturedAt: row.capturedAt.toISOString(),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      hasPhoto: row.photoContentType !== null,
+    })),
+  };
+}

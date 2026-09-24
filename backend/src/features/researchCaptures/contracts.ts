@@ -29,3 +29,8 @@ export const researchCaptureUploadSchema = z.object({
 export const researchCaptureParamsSchema = z.object({
   researchCaptureId: z.string().uuid(),
 });
+
+export const researchCaptureExportQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(200).default(50),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});

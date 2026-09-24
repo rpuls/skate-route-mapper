@@ -50,6 +50,13 @@ The phone retrieves the capture after it is complete. The shared codec rejects
 bad lengths, missing/overlapping summary coverage, raw or summary CRC mismatch,
 and unsupported board metadata before the collection is saved.
 
+Uploaded captures are reviewed in the admin entity viewer, which shows the
+surface photo, the GPS track on a map and the signal analysis together, and
+which is where a label, category or note is corrected. For offline work,
+`npm run research:fetch` pulls the whole dataset — rows, recordings and photos —
+into the gitignored `research-data/` folder. See the README for the command and
+`docs/api.md` for the endpoint it calls.
+
 The first outdoor set should keep the enclosure position and sensor orientation
 fixed. Record at least two repeat runs for each condition:
 

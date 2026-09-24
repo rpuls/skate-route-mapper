@@ -12,7 +12,7 @@
 // contract without creating a cycle back through the registry.
 import type { AdminResource } from "@skate-route-mapper/shared/adminResources";
 import type { ComponentType } from "react";
-import type { AdminSession, EntityRecord } from "../../types";
+import type { AdminSession, EntityRecord, EntitySort } from "../../types";
 
 /** Replaces the generic table for one resource. */
 export type EntityListViewProps = {
@@ -25,12 +25,22 @@ export type EntityListViewProps = {
   onEditRecord: (record: EntityRecord) => void;
   /** Switches the viewer to another resource, optionally handing over one record. */
   onOpenResource: (resourceName: string, recordId?: string) => void;
+  /**
+   * Asks the viewer for a different column ordering, or null for the default.
+   *
+   * Ordering belongs to whoever runs the list query, which for a view without
+   * `loadsOwnRecords` is the viewer. A view that does load its own records
+   * ignores this pair and orders however it likes.
+   */
+  onSortChange: (sort: EntitySort | null) => void;
   /** The current page of records, empty when the view loads its own. */
   records: EntityRecord[];
   resource: AdminResource;
   /** Every resource the API exposes, for views that need to cross-reference. */
   resources: AdminResource[];
   session: AdminSession;
+  /** The ordering `records` arrived in, or null for the API default. */
+  sort: EntitySort | null;
 };
 
 /** Rendered below the generic table for the selected record. */

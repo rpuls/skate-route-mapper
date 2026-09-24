@@ -24,7 +24,7 @@ import { entityViewFor } from "../features/entities/entityViewRegistry";
 import { AddOrEditEntityDialog } from "../components/entities/AddOrEditEntityDialog";
 import { EntityTable } from "../components/entities/EntityTable";
 import { adminLayout, controlRadiusPx, px, radiusLevel, surfaceSx } from "../theme/adminTheme";
-import type { AdminSession, EntityPayload, EntityRecord } from "../types";
+import type { AdminSession, EntityPayload, EntityRecord, EntitySort } from "../types";
 
 const entityPageSize = 25;
 
@@ -37,6 +37,9 @@ type EntityHandoff = {
 export function EntityManagementPage({ session }: { session: AdminSession }) {
   const [resourceName, setResourceName] = useState<string | null>(null);
   const [entityPage, setEntityPage] = useState(1);
+  // Null is the API's own ordering. Sorting is a property of the list query
+  // rather than of the table, because the table only ever holds one page.
+  const [entitySort, setEntitySort] = useState<EntitySort | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(null);
   const [handoff, setHandoff] = useState<EntityHandoff | null>(null);
   const [upsertOpen, setUpsertOpen] = useState(false);
@@ -56,6 +59,7 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
   const recordsQuery = useEntityRecords(session, listLoadsOwnRecords ? null : resource, {
     page: entityPage,
     pageSize: entityPageSize,
+    sort: entitySort,
   });
   const createMutation = useCreateEntityRecord(session, resource);
   const deleteMutation = useDeleteEntityRecord(session, resource);
@@ -111,8 +115,19 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
     setResourceName(nextResourceName);
     setHandoff(recordId ? { resourceName: nextResourceName, recordId } : null);
     setEntityPage(1);
+    setEntitySort(null);
     setSelectedRecord(null);
     setUpsertOpen(false);
+  }
+
+  /**
+   * A new ordering renumbers every page, so the one being looked at no longer
+   * means anything and the selected row may not even be on it.
+   */
+  function changeSort(nextSort: EntitySort | null) {
+    setEntitySort(nextSort);
+    setEntityPage(1);
+    setSelectedRecord(null);
   }
 
   function closeUpsertDialog() {
@@ -241,10 +256,12 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                       setUpsertOpen(canOpenUpsertDialog);
                     }}
                     onOpenResource={openResource}
+                    onSortChange={changeSort}
                     records={records}
                     resource={resource}
                     resources={resources}
                     session={session}
+                    sort={entitySort}
                   />
                 ) : (
                   <>
@@ -258,9 +275,11 @@ export function EntityManagementPage({ session }: { session: AdminSession }) {
                           setUpsertOpen(canOpenUpsertDialog);
                         }
                       }}
+                      onSortChange={changeSort}
                       records={records}
                       resource={resource}
                       selectedRecord={selectedFreshRecord}
+                      sort={entitySort}
                     />
                     {DetailView && selectedFreshRecord ? (
                       <DetailView

@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "hardware:test": "node --test hardware/research.test.mjs",
+    "research:fetch": "node scripts/fetch-research.mjs",
     "app": "docker compose up --build --detach --wait && node scripts/docker-ready.mjs",
     "logs": "docker compose logs -f",
     "dev:mobile": "npm run start --workspace @skate-route-mapper/mobile --",

@@ -50,8 +50,16 @@ function selectVisibleFields(resource: AdminResource) {
 }
 
 function coerceEntityValue(value: unknown, field: AdminResource["fields"][number]) {
-  if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined) {
     return null;
+  }
+
+  // An emptied box means null for a column that accepts one. A required text
+  // column cannot hold null, so there it means the empty string instead: an
+  // administrator clearing a research note is asking for a blank note, not for
+  // a write that the database rejects.
+  if (value === "") {
+    return field.required && (field.type === "string" || field.type === "email") ? "" : null;
   }
 
   if (field.type === "boolean") {
@@ -120,32 +128,69 @@ function coerceEntityId(resource: AdminResource, rawId: string) {
   return rawId;
 }
 
+export type AdminEntitySort = {
+  field: string;
+  direction: "asc" | "desc";
+};
+
+/**
+ * Column ordering for a generic list.
+ *
+ * The field name arrives from a browser and goes straight into a Prisma
+ * `orderBy`, so it is matched against the datamodel rather than trusted: only a
+ * field the resource actually lists can be sorted on, and anything else falls
+ * back to the id ordering the viewer has always used. Prisma sorts each column
+ * in its own type, so dates order chronologically, numbers numerically and text
+ * by the database collation without the caller saying which is which.
+ *
+ * The id is appended as a tie-breaker. Without it a column full of duplicates —
+ * a category, a vehicle type — leaves the row order undefined, and paging
+ * through such a list can repeat and skip records.
+ */
+function entityOrderBy(resource: AdminResource, sort: AdminEntitySort | null | undefined) {
+  const isSortable = Boolean(
+    sort && resource.fields.some((field) => field.list && field.name === sort.field)
+  );
+
+  if (!sort || !isSortable) {
+    return { [resource.idField]: "desc" };
+  }
+
+  if (sort.field === resource.idField) {
+    return { [sort.field]: sort.direction };
+  }
+
+  return [
+    { [sort.field]: sort.direction },
+    { [resource.idField]: "desc" },
+  ];
+}
+
 export async function listAdminEntity(
   resource: AdminResource,
   delegate: string,
-  pagination: {
+  options: {
     page: number;
     pageSize: number;
+    sort?: AdminEntitySort | null;
   }
 ) {
   const modelDelegate = getDelegate(delegate);
   const [items, total] = await Promise.all([
     modelDelegate.findMany({
-    orderBy: {
-      [resource.idField]: "desc",
-    },
-    select: selectVisibleFields(resource),
-      skip: (pagination.page - 1) * pagination.pageSize,
-      take: pagination.pageSize,
+      orderBy: entityOrderBy(resource, options.sort),
+      select: selectVisibleFields(resource),
+      skip: (options.page - 1) * options.pageSize,
+      take: options.pageSize,
     }),
     modelDelegate.count(),
   ]);
 
   return {
     items: items.map((item) => serializeEntityValue(item)),
-    page: pagination.page,
-    pageCount: Math.max(1, Math.ceil(total / pagination.pageSize)),
-    pageSize: pagination.pageSize,
+    page: options.page,
+    pageCount: Math.max(1, Math.ceil(total / options.pageSize)),
+    pageSize: options.pageSize,
     total,
   };
 }

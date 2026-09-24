@@ -33,6 +33,22 @@ const readOnlyModels = new Set([
   "ResearchCapture",
 ]);
 
+/**
+ * Fields a read-only model still lets an administrator write.
+ *
+ * A research capture is evidence: the recording, the photo, the sample count
+ * and the board's own numbers must stay exactly as the board and the phone
+ * produced them. What the rider typed about it is not evidence, and it is
+ * typed one-handed at the roadside, so the label, category and note are
+ * correctable from the admin app while everything measured stays frozen.
+ *
+ * Read-only models still refuse creation and deletion; this only reopens named
+ * fields for editing.
+ */
+const editableFieldsByReadOnlyModel: Record<string, string[]> = {
+  ResearchCapture: ["category", "label", "note"],
+};
+
 function sentenceCase(value: string) {
   return value
     .replace(/([A-Z])/g, " $1")
@@ -87,7 +103,7 @@ function fieldType(field: RuntimeField): AdminResourceField["type"] {
 
 function isFieldWritable(model: RuntimeModel, field: RuntimeField) {
   if (readOnlyModels.has(model.name)) {
-    return false;
+    return Boolean(editableFieldsByReadOnlyModel[model.name]?.includes(field.name));
   }
 
   return !field.isId && !field.isReadOnly && !field.isUpdatedAt;

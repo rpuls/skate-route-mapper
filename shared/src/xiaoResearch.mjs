@@ -138,7 +138,10 @@ export function encodeRecording(meta, raw, summaries) {
   output.set(header, 12); output.set(raw, 12 + header.length); output.set(summaries, 12 + header.length + raw.length);
   return output;
 }
-export function decodeRecording(bytes) {
+// The header alone, for a reader that wants what the phone recorded about a
+// capture without paying for the sample block. Same framing and same checks as
+// a full decode, so a file either reads here and there or in neither place.
+export function decodeRecordingHeader(bytes) {
   if (bytes.length < 12 || MAGIC.some((v, i) => bytes[i] !== v)) throw new Error("Not a skate research recording");
   const headerLength = view(bytes).getUint32(8, true);
   if (headerLength > 65536 || bytes.length < 12 + headerLength) throw new Error("Invalid recording header length");
@@ -146,6 +149,10 @@ export function decodeRecording(bytes) {
   if (meta.format !== "skate-research-v1" || !Number.isInteger(meta.count) || meta.count < 0 || meta.count > 99960 ||
       !Number.isInteger(meta.windows) || meta.windows < 0 || meta.windows > 301 ||
       bytes.length !== 12 + headerLength + meta.count * 6 + meta.windows * 24) throw new Error("Invalid recording layout");
+  return { meta, headerLength };
+}
+export function decodeRecording(bytes) {
+  const { meta, headerLength } = decodeRecordingHeader(bytes);
   const raw = bytes.slice(12 + headerLength, 12 + headerLength + meta.count * 6);
   const summaries = bytes.slice(12 + headerLength + meta.count * 6);
   return { meta, raw, summaries, report: analyzeCapture(meta, raw, summaries) };

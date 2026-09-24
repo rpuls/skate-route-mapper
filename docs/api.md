@@ -168,6 +168,7 @@ Use `ADMIN_API_KEY` or an admin session token for:
 - `GET /v1/admin/users`
 - `POST /v1/admin/users`
 - `PATCH /v1/admin/users/:adminUserId`
+- `GET /v1/admin/research-captures/export`
 - `GET /v1/admin/research-captures/:researchCaptureId/recording`
 - `GET /v1/admin/research-captures/:researchCaptureId/photo`
 
@@ -357,8 +358,21 @@ Query params:
 
 - `page`: optional, default `1`
 - `pageSize`: optional, max `100`, default `25`
+- `sortField`: optional, the name of a field the resource lists
+- `sortDirection`: optional, `asc` or `desc`, default `asc`
 
 Success responses include `items`, `total`, `page`, `pageSize`, and `pageCount`.
+
+Ordering is server side because paging is: sorting a page in the browser would
+only reorder the rows that happened to arrive. `sortField` is matched against
+the resource's own listed fields before it reaches the database, and an unknown
+name falls back to the default ordering rather than failing the request. Each
+column sorts in its own type, so dates order chronologically, numbers
+numerically, and text by the database collation. The id field is always applied
+as a secondary sort, so paging through a column full of duplicates cannot repeat
+or skip records.
+
+Without `sortField` the default remains newest id first.
 
 Examples:
 
@@ -375,6 +389,13 @@ Create a record for resources that allow generic creation. The accepted fields c
 ### `PATCH /v1/admin/entities/:resourceName/:entityId`
 
 Update a record for resources that allow generic edits. The accepted fields come from `GET /v1/admin/resources`.
+
+A model can be read-only overall and still expose named writable fields. A
+research capture is the current case: the recording, the photo and every
+measured figure are frozen, while `label`, `category` and `note` stay editable
+because a rider types them at the roadside. Creation and deletion remain
+refused. An emptied value clears a nullable column to null, and a required text
+column to the empty string.
 
 ### `DELETE /v1/admin/entities/:resourceName/:entityId`
 
@@ -978,6 +999,66 @@ Success response:
 
 Returns `404` when the ride does not exist. An unfinished ride is measured up
 to its last sample.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `GET /v1/admin/research-captures/export`
+
+Export the research dataset for offline analysis. This is what
+`npm run research:fetch` calls; see the README for the command and the on-disk
+layout it produces.
+
+Query params:
+
+- `limit`: optional, max `200`, default `50`
+- `offset`: optional, default `0`
+
+Returns `exportedAt`, `total`, `limit`, `offset`, `count` and `captures`,
+newest capture first. Callers page with `offset` until they hold `total` rows.
+
+Each capture carries every stored column except the two binary ones, including
+the whole `metadata` object: the GPS track over the recording window, its speed
+summary, the context fixes taken before and after, and the board's validation
+report. `captureId` is a number rather than a string, because the board's
+capture id is a uint32 and analysis code wants it as a number. `hasPhoto` says
+whether the photo endpoint will answer for that capture.
+
+Recordings and photos are not inlined. A page of base64 blobs would be tens of
+megabytes, could not be resumed, and would be re-sent whole whenever one capture
+changed, so the bytes are fetched per capture through the two endpoints below.
+
+```json
+{
+  "exportedAt": "2026-09-24T10:12:00.000Z",
+  "total": 42,
+  "limit": 50,
+  "offset": 0,
+  "count": 42,
+  "captures": [
+    {
+      "id": "6f1c...",
+      "userId": "ckz...",
+      "captureId": 17,
+      "capturedAt": "2026-09-20T09:14:02.000Z",
+      "category": "rough-asphalt",
+      "label": "Amager strandpark, run 2",
+      "note": "85a wheels, same mounting as run 1",
+      "durationSeconds": 30,
+      "rateHz": 1666,
+      "sampleCount": 49980,
+      "metadata": { "startLocation": {}, "endLocation": {}, "track": {}, "report": {} },
+      "photoContentType": "image/jpeg",
+      "hasPhoto": true,
+      "createdAt": "2026-09-20T09:20:41.000Z",
+      "updatedAt": "2026-09-20T09:20:41.000Z"
+    }
+  ]
+}
+```
 
 Auth:
 

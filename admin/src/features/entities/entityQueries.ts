@@ -10,7 +10,7 @@ import {
   updateEntityRecord,
 } from "../../api/adminApi";
 import { queryKeys } from "../../query/queryKeys";
-import type { AdminSession, EntityPayload } from "../../types";
+import type { AdminSession, EntityPayload, EntitySort } from "../../types";
 
 export function useAdminResources(session: AdminSession) {
   return useQuery({
@@ -23,28 +23,31 @@ export function useAdminResources(session: AdminSession) {
 export function useEntityRecords(
   session: AdminSession,
   resource: AdminResource | null,
-  pagination = {
+  query: {
+    page: number;
+    pageSize: number;
+    /** Null asks for the API's default ordering, newest id first. */
+    sort?: EntitySort | null;
+  } = {
     page: 1,
     pageSize: 25,
   }
 ) {
   return useQuery({
     enabled: Boolean(resource),
-    queryKey: resource
-      ? queryKeys.entityRecords(resource.name, pagination.page, pagination.pageSize)
-      : queryKeys.entityRecords("none", pagination.page, pagination.pageSize),
+    queryKey: queryKeys.entityRecords(resource?.name ?? "none", query),
     queryFn: () => {
       if (!resource) {
         return {
           items: [],
-          page: pagination.page,
+          page: query.page,
           pageCount: 1,
-          pageSize: pagination.pageSize,
+          pageSize: query.pageSize,
           total: 0,
         };
       }
 
-      return listEntityRecords(session, resource, pagination);
+      return listEntityRecords(session, resource, query);
     },
     placeholderData: (previousData) => previousData,
   });

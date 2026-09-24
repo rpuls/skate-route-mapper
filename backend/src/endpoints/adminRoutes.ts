@@ -18,6 +18,11 @@ const adminEntityItemParamsSchema = adminEntityParamsSchema.extend({
 const adminEntityListQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(25),
+  // The column an admin clicked. It is checked against the resource's own
+  // listed fields before it reaches Prisma, so an unknown name orders by id
+  // rather than failing the request.
+  sortField: z.string().min(1).max(64).optional(),
+  sortDirection: z.enum(["asc", "desc"]).default("asc"),
 });
 
 const entityPayloadSchema = z.record(z.string(), z.unknown());
@@ -50,7 +55,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     preHandler: requireAdmin,
   }, async (request, reply) => {
     const { resourceName } = adminEntityParamsSchema.parse(request.params);
-    const pagination = adminEntityListQuerySchema.parse(request.query);
+    const query = adminEntityListQuerySchema.parse(request.query);
     const resourceContext = AdminResources.getAdminResource(resourceName);
 
     if (!resourceContext) {
@@ -63,7 +68,13 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     return AdminResources.listAdminEntity(
       resourceContext.resource,
       resourceContext.delegateName,
-      pagination
+      {
+        page: query.page,
+        pageSize: query.pageSize,
+        sort: query.sortField
+          ? { field: query.sortField, direction: query.sortDirection }
+          : null,
+      }
     );
   });
 
@@ -271,6 +282,26 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       ok: true,
       rideId,
     });
+  });
+
+  // The research dataset, for the offline road surface work. Metadata only:
+  // the recordings and photos are fetched per capture through the two asset
+  // endpoints below, so a fetch can be resumed and an unchanged capture is not
+  // downloaded twice. scripts/fetch-research.mjs is the client.
+  app.get("/v1/admin/research-captures/export", {
+    preHandler: requireAdmin,
+  }, async (request) => {
+    const page = ResearchCaptures.researchCaptureExportQuerySchema.parse(request.query);
+    const { captures, total } = await ResearchCaptures.listResearchCaptureExport(page);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      total,
+      limit: page.limit,
+      offset: page.offset,
+      count: captures.length,
+      captures,
+    };
   });
 
   app.get("/v1/admin/research-captures/:researchCaptureId/recording", {

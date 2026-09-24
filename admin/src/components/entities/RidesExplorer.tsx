@@ -95,9 +95,11 @@ function RouteMetricItem({
 export function RidesExplorer({
   onEditRecord,
   onOpenResource,
+  onSortChange,
   records,
   resource,
   session,
+  sort,
 }: EntityListViewProps) {
   const [selectedRecord, setSelectedRecord] = useState<EntityRecord | null>(
     records[0] ?? null
@@ -128,9 +130,11 @@ export function RidesExplorer({
     <Stack spacing={2} sx={{ minWidth: 0 }}>
       <EntityTable
         onSelectRecord={setSelectedRecord}
+        onSortChange={onSortChange}
         records={records}
         resource={resource}
         selectedRecord={selectedRecord}
+        sort={sort}
       />
 
       <Paper

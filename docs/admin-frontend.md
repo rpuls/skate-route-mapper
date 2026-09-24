@@ -16,6 +16,8 @@ The admin app should stay predictable. This matters because most development wil
 admin/src/
   api/          Raw HTTP client functions only
   components/   Reusable presentational components
+    common/     Small shared pieces such as DetailItem
+    maps/       Slippy-map arithmetic and the map components built on it
   features/     Feature query hooks and feature-level helpers
   pages/        Route/view-level composition
   query/        Query client and query keys
@@ -46,14 +48,23 @@ Example:
 ```ts
 export const queryKeys = {
   adminResources: ["admin", "resources"] as const,
-  entityRecords: (resourceName: string) => ["admin", "entities", resourceName] as const,
+  entityRecords: (
+    resourceName: string,
+    query?: { page: number; pageSize: number; sort?: EntitySort | null }
+  ) =>
+    query
+      ? (["admin", "entities", resourceName, { ...query }] as const)
+      : (["admin", "entities", resourceName] as const),
 };
 ```
 
 When a mutation changes server data, invalidate the specific affected query key.
 
-Generic entity list queries are paginated. Include `page` and `pageSize` in the
-query key so changing pages does not overwrite a different page in the cache.
+Generic entity list queries are paginated and ordered by the API. Include
+`page`, `pageSize` and the sort in the query key so changing pages or columns
+does not overwrite a different answer in the cache. The resource name stays the
+first segment after `entities`, so a mutation can invalidate every page and
+ordering of one resource with `queryKeys.entityRecords(resource.name)`.
 
 ## API Client Rules
 
@@ -125,6 +136,26 @@ code must not hard-code a model as editable or read-only.
 
 Custom product workflows can get their own pages later, but the generic entity viewer should remain datamodel-driven.
 
+### Sorting
+
+Column headers in `EntityTable` are sortable, and the sort is server side for
+the same reason paging is: reordering the twenty-five rows that happened to
+arrive is not sorting the table. `EntityManagementPage` owns the sort state and
+passes it to the list query; the table only renders the controls and reports
+clicks.
+
+- A column cycles through its natural direction, then the reverse, then back to
+  the resource default, so there is always a way out of a sort.
+- The natural direction comes from the field type: dates and numbers start
+  newest and largest first, text starts at A.
+- Changing the sort returns to page one and clears the selected row, because a
+  new ordering renumbers every page.
+- A list view that replaces the table receives `sort` and `onSortChange` and
+  forwards them to whatever it renders. A view with `loadsOwnRecords` ignores
+  them and orders its own query.
+- Nothing about sorting is per model. The API decides which fields can be sorted
+  on, from the same datamodel metadata that decides which ones are listed.
+
 ### Custom Entity Views
 
 Some resources need more than a generated table. They get a purpose-built
@@ -149,20 +180,44 @@ A registered view is one of:
   owns the record interaction and offers its own edit affordance if the resource
   is writable.
 
-Views receive `records`, `resource`, `resources`, and `session` as props, plus
-`onEditRecord` to open the shared dialog and `onOpenResource` to hand a record
-to another resource. The receiving view reads that record as `focusRecordId`.
+Views receive `records`, `resource`, `resources`, `session`, and `sort` as
+props, plus `onEditRecord` to open the shared dialog, `onOpenResource` to hand a
+record to another resource, and `onSortChange` to ask for a different column
+ordering. The receiving view reads a handed-over record as `focusRecordId`.
 
 Current views: `RidesExplorer` (ride detail and analysis), `SamplesExplorer`
 (server-side filtering instead of paging millions of rows), and
 `ResearchCaptureInspector` (signal analysis of a stored capture).
 
-### Research Signal Analysis
+### Research Capture Inspector
 
 `ResearchCaptureInspector` downloads a stored `.skateresearch` container through
 the existing admin asset endpoint, decodes it with the shared
 `xiaoResearch` reader, and analyses it in the browser. No analysis endpoint
 exists or is needed; recordings are at most about a megabyte.
+
+It answers two questions about a capture, and the second matters as much as the
+first: a spectrum means one thing over cobbles at walking pace and another over
+asphalt at twenty.
+
+- `components/research/ResearchCaptureSite.tsx` shows the surface photo and the
+  GPS track together with the speed over the recorded window. It is
+  presentational; the inspector fetches and decodes.
+- `features/research/captureField.ts` reads the phone's field notes — the track
+  and the capture's positions — out of the recording's own JSON header with
+  `decodeRecordingHeader`, so no second request and no sample-block decode are
+  needed. Every member is parsed defensively: captures saved before the track
+  existed carry none of it, and a missing member reads as "not recorded" rather
+  than as an error.
+- The surface photo is fetched as a blob because the asset endpoint is behind
+  the admin bearer token, which an `<img src>` cannot send. The view owns the
+  object URL it makes and revokes it when the selected capture changes.
+- The label, category and note are edited inline rather than through
+  `AddOrEditEntityDialog`, because a note runs to four thousand characters and
+  needs a box it fits in. The form still only offers fields the API marked
+  editable, and the categories come from `researchCategories` in
+  `shared/src/researchContracts.ts`, so the admin app and the phone file
+  captures under the same names.
 
 - `features/research/signalAnalysis.ts` is the numerical core: Welch PSD and
   spectrogram, pure functions with no React, no DOM, and no network. It
@@ -175,6 +230,22 @@ exists or is needed; recordings are at most about a megabyte.
   pixel setup, tick selection, axes, and the viridis ramp used for the heat map.
   A perceptually uniform colour ramp is data encoding rather than decoration, so
   it is not part of the brand palette in `shared/src/design.ts`.
+
+### Maps
+
+Maps are inline SVG over OpenStreetMap raster tiles. There is no map library.
+
+- `components/maps/tileMap.ts` holds the arithmetic: Web Mercator projection,
+  the view that frames a set of coordinates, the tiles covering that view, and
+  how a drag and a wheel move it. Pure functions, no React and no DOM, so every
+  map in the app projects and frames identically.
+- `components/maps/TrackMap.tsx` draws one recorded path with optional markers.
+  Use it for a path that is simply where something happened.
+- `components/entities/RideAnalysisPanel.tsx` keeps its own map because it
+  colours the route by roughness and carries a playback marker, but it uses the
+  same arithmetic.
+- OpenStreetMap's tile usage policy requires visible attribution. Show
+  `tileAttribution` on any map frame rather than writing the credit by hand.
 
 ## Hardware Bench
 

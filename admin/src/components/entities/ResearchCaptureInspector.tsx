@@ -1,11 +1,20 @@
 // Research capture detail view, registered for the researchCaptures resource in
 // features/entities/entityViewRegistry.ts.
 //
-// It reproduces hardware/research-signal-analysis.py in the browser so a stored
-// capture can be read without exporting it: the recording is downloaded once,
-// decoded with the shared container reader, and analysed client side.
+// It answers two questions about a stored capture. What the board measured: the
+// recording is downloaded once, decoded with the shared container reader, and
+// analysed client side, reproducing hardware/research-signal-analysis.py in the
+// browser. And what was being measured: the surface photo and the GPS track,
+// which come from the same download and say whether a spectrum describes
+// cobbles at walking pace or smooth asphalt at twenty.
+//
+// The label, category and note are the only writable parts of a capture, and
+// they are edited here rather than through the generic dialog because a note
+// runs to four thousand characters and deserves a box it fits in.
+import CloseIcon from "@mui/icons-material/Close";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
+import SaveIcon from "@mui/icons-material/Save";
 import {
   Alert,
   Box,
@@ -14,6 +23,7 @@ import {
   CircularProgress,
   Divider,
   FormControlLabel,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -21,20 +31,32 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from "@mui/material";
 import { colors, space } from "@skate-route-mapper/shared/design";
+import {
+  researchCategories,
+  researchCategoryLabel,
+} from "@skate-route-mapper/shared/researchContracts";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { downloadResearchCaptureAsset } from "../../api/adminApi";
+import { useUpdateEntityRecord } from "../../features/entities/entityQueries";
 import type { EntityDetailViewProps } from "../../features/entities/entityViewContract";
-import { useResearchCaptureRecording } from "../../features/research/researchQueries";
+import { emptyCaptureField, readCaptureField } from "../../features/research/captureField";
+import {
+  useResearchCapturePhoto,
+  useResearchCaptureRecording,
+} from "../../features/research/researchQueries";
 import {
   analyzeRecording,
   productionStreamRateHz,
   type SignalAnalysis,
 } from "../../features/research/signalAnalysis";
-import { px, radiusLevel, radiusPx, surfaceSx } from "../../theme/adminTheme";
+import { controlRadiusPx, px, radiusLevel, radiusPx, surfaceSx } from "../../theme/adminTheme";
+import { DetailItem } from "../common/DetailItem";
+import { ResearchCaptureSite } from "../research/ResearchCaptureSite";
 import {
   ChartLegend,
   PowerSpectrumChart,
@@ -48,17 +70,6 @@ const seriesColors = [colors.link, colors.accent, colors.success] as const;
 
 function textOf(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <Box>
-      <Typography color="text.secondary" sx={{ fontWeight: 900 }} variant="caption">
-        {label}
-      </Typography>
-      <Typography sx={{ fontWeight: 800, overflowWrap: "anywhere" }}>{value}</Typography>
-    </Box>
-  );
 }
 
 function ChartPanel({
@@ -249,16 +260,146 @@ function SignalFigure({ analysis }: { analysis: SignalAnalysis }) {
   );
 }
 
+/**
+ * The three fields a capture lets an administrator correct.
+ *
+ * Which fields those are is still the API's answer, not this component's: the
+ * datamodel marks them editable and the form only offers what it is given, so a
+ * capture that the API later froze would show nothing to edit rather than
+ * offering a save that fails.
+ */
+function CaptureDetailsEditor({
+  onClose,
+  record,
+  resource,
+  session,
+}: {
+  onClose: () => void;
+  record: EntityDetailViewProps["record"];
+  resource: EntityDetailViewProps["resource"];
+  session: EntityDetailViewProps["session"];
+}) {
+  const updateMutation = useUpdateEntityRecord(session, resource);
+  const editableFields = new Set(
+    resource.fields.filter((field) => field.edit).map((field) => field.name)
+  );
+  const [label, setLabel] = useState(textOf(record.label) ?? "");
+  const [category, setCategory] = useState(textOf(record.category) ?? "");
+  const [note, setNote] = useState(textOf(record.note) ?? "");
+  const knownCategory = researchCategories.some((option) => option.value === category);
+
+  async function save() {
+    await updateMutation.mutateAsync({
+      id: String(record[resource.idField]),
+      payload: {
+        ...(editableFields.has("label") ? { label } : {}),
+        ...(editableFields.has("category") ? { category } : {}),
+        ...(editableFields.has("note") ? { note } : {}),
+      },
+    });
+
+    onClose();
+  }
+
+  return (
+    <Stack
+      component="form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void save();
+      }}
+      spacing={2}
+      sx={{ minWidth: 0 }}
+    >
+      <Box
+        sx={{
+          display: "grid",
+          gap: px(space.lg),
+          gridTemplateColumns: { xs: "1fr", md: "minmax(0, 2fr) minmax(0, 1fr)" },
+        }}
+      >
+        {editableFields.has("label") ? (
+          <TextField
+            label="Title"
+            onChange={(event) => setLabel(event.target.value)}
+            required
+            value={label}
+          />
+        ) : null}
+        {editableFields.has("category") ? (
+          <TextField
+            label="Category"
+            onChange={(event) => setCategory(event.target.value)}
+            select
+            value={category}
+          >
+            {researchCategories.map((option) => (
+              <MenuItem key={option.value} value={option.value}>
+                {option.label}
+              </MenuItem>
+            ))}
+            {knownCategory || category === "" ? null : (
+              <MenuItem value={category}>{category}</MenuItem>
+            )}
+          </TextField>
+        ) : null}
+      </Box>
+
+      {editableFields.has("note") ? (
+        <TextField
+          label="Notes"
+          maxRows={16}
+          minRows={4}
+          multiline
+          onChange={(event) => setNote(event.target.value)}
+          value={note}
+        />
+      ) : null}
+
+      {updateMutation.error ? (
+        <Alert severity="error">
+          {updateMutation.error instanceof Error
+            ? updateMutation.error.message
+            : "Unable to save this capture"}
+        </Alert>
+      ) : null}
+
+      <Stack direction={{ xs: "column-reverse", sm: "row" }} spacing={1}>
+        <Button
+          onClick={onClose}
+          startIcon={<CloseIcon />}
+          sx={{ borderRadius: controlRadiusPx(radiusLevel.embedded) }}
+          variant="outlined"
+        >
+          Cancel
+        </Button>
+        <Button
+          disabled={updateMutation.isPending}
+          startIcon={<SaveIcon />}
+          sx={{ borderRadius: controlRadiusPx(radiusLevel.embedded) }}
+          type="submit"
+          variant="contained"
+        >
+          {updateMutation.isPending ? "Saving..." : "Save details"}
+        </Button>
+      </Stack>
+    </Stack>
+  );
+}
+
 export function ResearchCaptureInspector({
-  onEditRecord,
   record,
   resource,
   session,
 }: EntityDetailViewProps) {
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const recordId = String(record[resource.idField] ?? "");
   const recordingQuery = useResearchCaptureRecording(session, recordId || null);
   const recording = recordingQuery.data;
+  const hasPhoto = Boolean(record.photoContentType);
+  const photoQuery = useResearchCapturePhoto(session, recordId || null, hasPhoto);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   const analysis = useMemo(() => {
     if (!recording) {
@@ -275,6 +416,37 @@ export function ResearchCaptureInspector({
     }
   }, [recording]);
 
+  // The GPS track and the capture's positions travel in the recording's own
+  // header, so reading them costs one more parse of bytes already in hand
+  // rather than another request.
+  const field = useMemo(() => (recording ? readCaptureField(recording) : null), [recording]);
+
+  // The browser frees an object URL only when it is told to, and an admin
+  // selects a different capture every time they click a row.
+  useEffect(() => {
+    const blob = photoQuery.data;
+
+    if (!blob) {
+      setPhotoUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+
+    setPhotoUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+      setPhotoUrl(null);
+    };
+  }, [photoQuery.data]);
+
+  // A different capture is a different record, not a half-finished edit of this one.
+  useEffect(() => {
+    setIsEditing(false);
+    setDownloadError(null);
+  }, [recordId]);
+
   async function download(asset: "recording" | "photo") {
     setDownloadError(null);
 
@@ -287,6 +459,7 @@ export function ResearchCaptureInspector({
 
   const capturedAt = textOf(record.capturedAt);
   const capturedLabel = capturedAt ? new Date(capturedAt).toLocaleString() : "Not set";
+  const category = textOf(record.category);
 
   return (
     <Paper
@@ -311,16 +484,22 @@ export function ResearchCaptureInspector({
               {textOf(record.label) ?? `Research capture ${recordId}`}
             </Typography>
             <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
-              {[textOf(record.category), capturedLabel].filter(Boolean).join(" - ")}
+              {[category ? researchCategoryLabel(category) : null, capturedLabel]
+                .filter(Boolean)
+                .join(" - ")}
             </Typography>
           </Box>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-            {resource.canEdit || resource.canDelete ? (
-              <Button onClick={onEditRecord} startIcon={<EditIcon />} variant="outlined">
-                Edit record
+            {resource.canEdit && !isEditing ? (
+              <Button
+                onClick={() => setIsEditing(true)}
+                startIcon={<EditIcon />}
+                variant="outlined"
+              >
+                Edit details
               </Button>
             ) : null}
-            {record.photoContentType ? (
+            {hasPhoto ? (
               <Button
                 onClick={() => download("photo")}
                 startIcon={<DownloadIcon />}
@@ -339,11 +518,30 @@ export function ResearchCaptureInspector({
           </Stack>
         </Stack>
 
-        {textOf(record.note) ? (
-          <Typography color="text.secondary">{textOf(record.note)}</Typography>
+        {isEditing ? (
+          <CaptureDetailsEditor
+            key={recordId}
+            onClose={() => setIsEditing(false)}
+            record={record}
+            resource={resource}
+            session={session}
+          />
+        ) : textOf(record.note) ? (
+          <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
+            {textOf(record.note)}
+          </Typography>
         ) : null}
 
         {downloadError ? <Alert severity="error">{downloadError}</Alert> : null}
+
+        <Divider />
+
+        <ResearchCaptureSite
+          field={field ?? emptyCaptureField}
+          photoError={photoQuery.error instanceof Error ? photoQuery.error.message : null}
+          photoPending={hasPhoto && photoQuery.isPending}
+          photoUrl={photoUrl}
+        />
 
         <Divider />
 

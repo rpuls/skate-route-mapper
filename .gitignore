@@ -103,6 +103,11 @@ ds-bundle/
 # Playwright MCP session dumps
 .playwright-mcp/
 
+# Research dataset pulled down by `npm run research:fetch`. Recordings and
+# surface photos are large, they already live in the database, and the fetch is
+# one command away, so they are never committed.
+research-data/
+
 # Python analysis artifacts
 __pycache__/
 *.pyc

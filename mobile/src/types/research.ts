@@ -1,89 +1,23 @@
-export const researchCategories = [
-  { value: "airborne-contact", label: "Airborne / road contact" },
-  { value: "smooth-asphalt", label: "Smooth asphalt" },
-  { value: "rough-asphalt", label: "Rough asphalt" },
-  { value: "paving-joints", label: "Paving / joints" },
-  { value: "isolated-bump", label: "Bump / obstacle" },
-  { value: "other", label: "Other experiment" },
-] as const;
+// A capture's categories and its GPS track are shared contracts: the phone
+// writes both, and the admin app reads them back and offers the same categories
+// when correcting a capture. They live in shared and are re-exported here for
+// the mobile code that has always imported them from this module.
+export { researchCategories } from "@skate-route-mapper/shared/researchContracts";
 
-export type ResearchCategory = (typeof researchCategories)[number]["value"];
+export type { ResearchCategory } from "@skate-route-mapper/shared/researchContracts";
 
-/**
- * One phone position report taken while the board was recording.
- *
- * Deliberately small, with values rounded to the precision the sensors
- * actually have: the whole track travels inside the `.skateresearch` header,
- * which the shared codec refuses above 64 kB.
- */
-export type ResearchTrackFix = {
-  /** Phone clock in milliseconds, for the moment the fix describes. */
-  t: number;
-  latitude: number;
-  longitude: number;
-  /** Horizontal accuracy in metres, or null when the platform gave none. */
-  accuracy: number | null;
-  altitude: number | null;
-  /** Ground speed in m/s as the platform reported it; null when unreported. */
-  speed: number | null;
-  heading: number | null;
-};
+export type {
+  ResearchLocation,
+  ResearchTrack,
+  ResearchTrackFix,
+  ResearchTrackSpeed,
+} from "@skate-route-mapper/shared/researchContracts";
 
-/**
- * How fast the rider was going over the capture window.
- *
- * Both answers are kept because they fail differently. The reported figures
- * come from the platform's own ground speed, which is Doppler-derived and the
- * better measurement over a short run; the distance-based ones come from the
- * same filter and maths a ride uses, and are the cross-check that says whether
- * the reported speeds were plausible at all.
- */
-export type ResearchTrackSpeed = {
-  fixCount: number;
-  /** Fixes the shared ride filter kept. */
-  acceptedFixCount: number;
-  rejectedFixCount: number;
-  /** Fixes that carried a usable platform speed. */
-  reportedFixCount: number;
-  reportedMeanMps: number | null;
-  reportedMedianMps: number | null;
-  reportedMinMps: number | null;
-  reportedMaxMps: number | null;
-  distanceMeters: number;
-  movingSeconds: number;
-  /** Distance over moving time. */
-  avgSpeedMps: number;
-  maxSpeedMps: number;
-  /** Worst horizontal accuracy over the window, in metres. */
-  worstAccuracyMeters: number | null;
-};
-
-/**
- * The phone's GPS log for exactly the window the board was recording.
- *
- * Bounded to that window on purpose: the transfer that follows a capture can
- * run for minutes with the rider standing still, and those fixes would flatten
- * every speed figure the capture is judged by.
- */
-export type ResearchTrack = {
-  /** Phone clock when logging started, just before the board was told to record. */
-  startedAt: number;
-  /** Phone clock when logging stopped, i.e. the end of the capture window. */
-  endedAt: number | null;
-  fixes: ResearchTrackFix[];
-  speed: ResearchTrackSpeed;
-  /** Why the track is thin or empty, when it is. */
-  error: string | null;
-};
-
-export type ResearchLocation = {
-  latitude: number;
-  longitude: number;
-  accuracy: number | null;
-  altitude: number | null;
-  speed: number | null;
-  timestamp: number;
-};
+import type {
+  ResearchCategory,
+  ResearchLocation,
+  ResearchTrack,
+} from "@skate-route-mapper/shared/researchContracts";
 
 export type ResearchCollection = {
   id: string;

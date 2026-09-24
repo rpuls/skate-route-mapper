@@ -5,6 +5,7 @@ import type {
   EntityPagination,
   EntityPayload,
   EntityRecord,
+  EntitySort,
 } from "../types";
 
 type LoginResponse = AdminSession & {
@@ -95,12 +96,20 @@ export async function listAdminResources(session: AdminSession) {
 export async function listEntityRecords(
   session: AdminSession,
   resource: AdminResource,
-  pagination: Pick<EntityPagination, "page" | "pageSize">
+  pagination: Pick<EntityPagination, "page" | "pageSize"> & { sort?: EntitySort | null }
 ) {
   const query = new URLSearchParams({
     page: String(pagination.page),
     pageSize: String(pagination.pageSize),
   });
+
+  // Ordering is the API's job because paging is: sorting the page in the
+  // browser would only reorder the twenty-five rows that happened to arrive.
+  if (pagination.sort) {
+    query.set("sortField", pagination.sort.field);
+    query.set("sortDirection", pagination.sort.direction);
+  }
+
   const response = await fetch(`${apiBaseUrl}${resource.endpoint}?${query}`, {
     headers: authHeaders(session),
   });
@@ -213,6 +222,22 @@ export async function getResearchCaptureRecording(
   const response = await researchCaptureAsset(session, researchCaptureId, "recording");
 
   return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * The stored surface photo, as bytes rather than a URL.
+ *
+ * The asset endpoint wants a bearer token, which an `<img src>` cannot carry,
+ * so the photo is fetched here and the view turns the blob into an object URL
+ * it owns and revokes.
+ */
+export async function getResearchCapturePhoto(
+  session: AdminSession,
+  researchCaptureId: string
+) {
+  const response = await researchCaptureAsset(session, researchCaptureId, "photo");
+
+  return response.blob();
 }
 
 export async function downloadResearchCaptureAsset(
