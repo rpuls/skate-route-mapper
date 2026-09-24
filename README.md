@@ -419,11 +419,22 @@ are large, already live in the database, and are one command away:
 
 ```text
 research-data/
-  manifest.json                       every capture's row, as one file
-  captures/<id>/capture.json          that capture's row, written last
-  captures/<id>/recording.skateresearch
-  captures/<id>/surface.jpg           when the capture has a photo
+  manifest.json                            every capture's row, as one file
+  captures/2026-09-24-1804-smooth-asphalt-bike-lane-test-ec0a0a/
+    capture.json                           that capture's row, written last
+    recording.skateresearch
+    surface.jpg                            when the capture has a photo
 ```
+
+Folders are named local date, then time, then category, then label, then six
+characters of the id. Date first so a listing reads chronologically, the rest so
+a run is recognisable without opening anything, and the id because two short
+runs of the same experiment can land in the same minute.
+
+The name is a browsing aid, not the identity — the id inside `capture.json` is.
+Category and label are editable in the admin app, so a relabelled capture is
+found by id and its folder renamed, rather than re-downloaded beside the stale
+one.
 
 `capture.json` is written only after both binaries land, so it doubles as the
 "complete" marker: an interrupted run is simply re-run, and a capture whose

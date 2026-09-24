@@ -14,7 +14,7 @@
 // No dependencies, because a data-fetching script that needs an install step is
 // one more thing to go wrong on a laptop that just wants the data.
 import { createWriteStream } from "node:fs";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
@@ -169,6 +169,40 @@ async function downloadAsset(settings, captureId, asset, destination) {
   await rename(partial, destination);
 }
 
+function slug(value, limit) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, limit)
+    .replace(/-+$/g, "");
+}
+
+/**
+ * A folder name a person can scan.
+ *
+ * Date first so a directory listing is chronological, then the category and
+ * label so a run is recognisable without opening anything, then six characters
+ * of the id because two 10-second runs of the same experiment can land in the
+ * same minute and because it is the way back to the row.
+ *
+ * The timestamp is local rather than UTC: it is a browsing aid, and "the
+ * Tuesday evening session" is how the person who recorded it thinks. The exact
+ * instant is in capture.json either way.
+ */
+function captureFolderName(capture) {
+  const at = new Date(capture.capturedAt);
+  const pad = (value) => String(value).padStart(2, "0");
+  const stamp = Number.isNaN(at.getTime())
+    ? "undated"
+    : `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}` +
+      `-${pad(at.getHours())}${pad(at.getMinutes())}`;
+
+  return [stamp, slug(capture.category, 24), slug(capture.label, 32), capture.id.slice(0, 6)]
+    .filter(Boolean)
+    .join("-");
+}
+
 /** What was already fetched for this capture, if the last run finished it. */
 async function readStoredCapture(folder) {
   try {
@@ -178,8 +212,52 @@ async function readStoredCapture(folder) {
   }
 }
 
-async function fetchCapture(settings, capture) {
-  const folder = join(capturesRoot, capture.id);
+/**
+ * Every capture already on disk, by id, whatever its folder is called.
+ *
+ * The folder name carries the category and label, and both are editable in the
+ * admin app, so the name a capture had last time is not the name it wants now.
+ * The id inside capture.json is what identifies it, so folders are found by
+ * that and renamed rather than left behind as stale duplicates of a capture
+ * that was only relabelled. This also migrates the flat uuid folders older runs
+ * wrote. Built once, because reading every folder for every capture would be
+ * quadratic on a dataset that is meant to grow.
+ */
+async function indexExistingFolders() {
+  const byId = new Map();
+  let entries;
+
+  try {
+    entries = await readdir(capturesRoot, { withFileTypes: true });
+  } catch {
+    return byId;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const folder = join(capturesRoot, entry.name);
+    const stored = await readStoredCapture(folder);
+
+    if (stored?.id) {
+      byId.set(stored.id, folder);
+    }
+  }
+
+  return byId;
+}
+
+async function fetchCapture(settings, capture, existingFolders) {
+  const folder = join(capturesRoot, captureFolderName(capture));
+  const existing = existingFolders.get(capture.id);
+
+  if (existing && existing !== folder) {
+    await rename(existing, folder);
+    existingFolders.set(capture.id, folder);
+  }
+
   const stored = await readStoredCapture(folder);
 
   if (!force && stored?.updatedAt === capture.updatedAt) {
@@ -219,7 +297,8 @@ function summarize(captures) {
     .sort((left, right) => right[1].count - left[1].count)
     .map(
       ([category, entry]) =>
-        `  ${category}: ${entry.count} captures, ${entry.seconds}s recorded, ${entry.photos} with a photo`
+        `  ${category}: ${entry.count} capture${entry.count === 1 ? "" : "s"}, ` +
+        `${entry.seconds}s recorded, ${entry.photos} with a photo`
     );
 }
 
@@ -237,15 +316,16 @@ async function main() {
   );
 
   const counts = { added: 0, skipped: 0, updated: 0 };
+  const existingFolders = await indexExistingFolders();
 
   for (const [index, capture] of captures.entries()) {
     const position = `${index + 1}/${captures.length}`;
 
     try {
-      const outcome = await fetchCapture(settings, capture);
+      const outcome = await fetchCapture(settings, capture, existingFolders);
 
       counts[outcome] += 1;
-      console.log(`${position} ${outcome.padEnd(7)} ${capture.category} - ${capture.label}`);
+      console.log(`${position} ${outcome.padEnd(7)} ${captureFolderName(capture)}`);
     } catch (error) {
       // One unreadable capture should not cost the other ninety-nine.
       console.error(
