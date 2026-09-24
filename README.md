@@ -318,6 +318,14 @@ else — `npm run dev`, the contract tests, the admin build, Metro — keeps rea
 `shared/src`, so editing a shared file during development still takes effect
 immediately with no rebuild.
 
+**`production` is nested under `node` for a reason.** Vite sets a bare
+`production` condition on its own production builds, so an un-nested condition
+sends the admin bundle to `shared/dist` — which only the backend image ever
+builds, so `vite build` fails to resolve it inside Docker. Bundlers do not set
+`node`, so nesting keeps them on the source. When changing this, verify the
+admin build with `shared/dist` deleted: a stale `dist/` on your machine makes a
+broken exports map look like it works.
+
 Two rules follow:
 
 - `backend/Dockerfile` must build `shared` and copy `shared/dist` into the
@@ -325,8 +333,13 @@ Two rules follow:
 - `shared/src/xiaoResearch` stays exempt. It already ships as real `.mjs` with a
   hand-written `.d.ts`, so Node loads it under every condition.
 
-If the backend ever fails its Railway healthcheck with
-`ERR_UNKNOWN_FILE_EXTENSION ".ts"`, this is what broke.
+Two failure signatures point here:
+
+- backend fails its Railway healthcheck with `ERR_UNKNOWN_FILE_EXTENSION ".ts"`
+  — the container is resolving shared to source.
+- admin build fails with `Rollup failed to resolve import
+  "@skate-route-mapper/shared/..."` — a bundler is resolving shared to a `dist/`
+  its image never built.
 
 What happens on startup:
 

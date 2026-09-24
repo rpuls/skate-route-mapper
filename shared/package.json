@@ -5,35 +5,59 @@
   "type": "module",
   "exports": {
     ".": {
-      "production": "./dist/index.js",
+      "node": {
+        "production": "./dist/index.js",
+        "default": "./src/index.ts"
+      },
       "default": "./src/index.ts"
     },
     "./adminResources": {
-      "production": "./dist/adminResources.js",
+      "node": {
+        "production": "./dist/adminResources.js",
+        "default": "./src/adminResources.ts"
+      },
       "default": "./src/adminResources.ts"
     },
     "./contracts": {
-      "production": "./dist/contracts.js",
+      "node": {
+        "production": "./dist/contracts.js",
+        "default": "./src/contracts.ts"
+      },
       "default": "./src/contracts.ts"
     },
     "./design": {
-      "production": "./dist/design.js",
+      "node": {
+        "production": "./dist/design.js",
+        "default": "./src/design.ts"
+      },
       "default": "./src/design.ts"
     },
     "./mobileContracts": {
-      "production": "./dist/mobileContracts.js",
+      "node": {
+        "production": "./dist/mobileContracts.js",
+        "default": "./src/mobileContracts.ts"
+      },
       "default": "./src/mobileContracts.ts"
     },
     "./researchContracts": {
-      "production": "./dist/researchContracts.js",
+      "node": {
+        "production": "./dist/researchContracts.js",
+        "default": "./src/researchContracts.ts"
+      },
       "default": "./src/researchContracts.ts"
     },
     "./rideTracking": {
-      "production": "./dist/rideTracking.js",
+      "node": {
+        "production": "./dist/rideTracking.js",
+        "default": "./src/rideTracking.ts"
+      },
       "default": "./src/rideTracking.ts"
     },
     "./xiaoBle": {
-      "production": "./dist/xiaoBle.js",
+      "node": {
+        "production": "./dist/xiaoBle.js",
+        "default": "./src/xiaoBle.ts"
+      },
       "default": "./src/xiaoBle.ts"
     },
     "./xiaoResearch": {
