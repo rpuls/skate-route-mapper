@@ -3,6 +3,39 @@
 The Expo React Native app records ordinary rides and controls labelled XIAO
 high-rate research captures. Ride and research data are stored locally first.
 
+## Route recording
+
+A ride keeps recording with the screen locked, on both platforms, through one
+registered `expo-location` background task. It writes GPS fixes to SQLite
+without a component being mounted, which is the point: the OS can background or
+even restart the app mid-ride.
+
+- `src/recording/backgroundLocation.ts` registers the task and asks for
+  permission. Foreground permission comes first, then background: iOS will not
+  grant "always" before "when in use". A rider who refuses the second prompt
+  still gets a ride recorded while the app is open, and the recording screen
+  says so.
+- `src/recording/rideRecorder.ts` owns the recording: which ride is active, what
+  it has covered, and which samples are waiting to be written. It reads that
+  from storage rather than remembering it, so a fix delivered to a cold-started
+  app is still recorded. Storage arrives as a port, so the lifecycle can be
+  tested without a device; `src/recording/recorder.ts` wires the real one.
+- `../shared/src/rideTracking.ts` decides which fixes to keep and turns them
+  into distance, moving time and speed. See `../docs/ride-tracking.md`.
+- `src/recording/sampleBuffer.ts` batches samples so a long ride does not queue
+  one upload operation per sample.
+- `src/sync/autoSync.ts` uploads the queue on ride finish, on app foreground,
+  and on a retry timer. `src/sync/syncLoop.ts` holds the drain loop itself,
+  with storage and the network as ports so its failure behaviour is tested.
+
+`sensorSource: "phone"` is a GPS-only ride. The phone's own accelerometer is no
+longer recorded: it is too slow and too dependent on where the phone is
+carried, and pavement vibration is the XIAO board's job.
+
+**Background recording is build-time configuration.** The iOS background mode
+and the always-on location permission live in `app.json`, so picking this up
+needs `npm run iphone:build`, not just a reload.
+
 ## Research collections
 
 `Research Collections` is the field-data workflow for the XIAO ESP32S3 and
@@ -117,8 +150,18 @@ npm run dev:web
 The web target uses localStorage and native-component fallbacks. It cannot use
 the XIAO BLE research workflow.
 
-Android background route recording has a native foreground service. The XIAO
-research workflow uses the same board-first capture design on both platforms.
+Web route recording falls back to `Location.watchPositionAsync`, because
+`expo-task-manager` has no web implementation. A browser tab cannot record with
+the screen off; use a device for anything beyond layout.
+
+On Android, `expo-location` raises the foreground service the OS requires for
+background location. The hand-written service in `modules/background-recorder/`
+is no longer used by the app, and its fix filter has been ported to
+`../shared/src/rideTracking.ts`. The module is still in the tree pending the
+Android developer's decision — see `../docs/development-plan.md`.
+
+The XIAO research workflow uses the same board-first capture design on both
+platforms.
 
 ## Key files
 
@@ -127,7 +170,14 @@ research workflow uses the same board-first capture design on both platforms.
 - `src/research/researchFiles.ts`: durable recording/photo/metadata files
 - `src/database/db.ts`: ride and research-collection indexes
 - `src/screens/HomeScreen.tsx`: normal ride setup and research entry point
-- `src/screens/RecordingScreen.tsx`: normal route recording
+- `src/screens/RecordingScreen.tsx`: live ride figures and GPS state
+- `src/recording/backgroundLocation.ts`: background location task and permissions
+- `src/recording/rideRecorder.ts`: active ride, running totals, sample buffer
+- `src/recording/recorder.ts`: the app's single recorder, wired to the database
+- `src/sync/syncLoop.ts`: the upload drain loop, over ports
+- `src/sync/syncBatching.ts`: request sizing and per-ride ordering
+- `src/sync/backoff.ts`: how long a failed operation waits
+- `src/sync/autoSync.ts`: automatic upload triggers
 - `../shared/src/xiaoResearch.mjs`: recording validation and file codec
 
 ## Validation
@@ -141,3 +191,11 @@ npm run dev:web
 
 BLE, camera permissions, GPS, physical capture, interrupted transfer recovery,
 and sharing must also be checked on the signed iPhone development build.
+
+For route recording specifically, check on a device:
+
+- recording continues with the screen locked, and for a walk around the block
+- the recorded distance is close to a known course
+- the background permission prompt appears and is honoured
+- a XIAO ride still pairs vibration readings with position
+- the ride uploads itself after you press stop

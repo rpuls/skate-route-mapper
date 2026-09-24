@@ -60,6 +60,8 @@ Project docs:
 - `docs/data-model.md` explains the Prisma datamodel.
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
+- `docs/ride-tracking.md` explains how GPS fixes become a ride's distance,
+  moving time and speed, and why each rule exists.
 - `docs/vibration-roughness-plan.md` plans high-frequency sensor capture, compact vibration features, and route roughness segmentation.
 - `docs/development-plan.md` records the current gaps and the planned order of work.
 - `mobile/README.md` covers the one-command iPhone workflow, device registration, native rebuilds, and web testing.
@@ -72,11 +74,15 @@ There are two data paths.
 **Ride recording** is the product flow:
 
 1. A user starts a ride in the mobile app.
-2. The app collects GPS fixes, plus vibration samples when a XIAO board is
-   connected.
-3. Samples are stored locally on-device in SQLite.
-4. A signed-in user syncs pending changes to the backend.
-5. The admin dashboard inspects rides and derived metrics from the database.
+2. A registered background task collects GPS fixes, plus vibration samples when
+   a XIAO board is connected. Recording continues with the screen locked.
+3. Fixes are filtered, folded into the ride's distance, moving time and speed,
+   and stored locally on-device in SQLite in batches.
+4. A signed-in user's queue uploads itself on ride finish, on app foreground,
+   and on a retry timer.
+5. Finishing a ride recomputes its route figures server-side from the samples
+   that arrived, so the stored distance always matches the stored route.
+6. The admin dashboard inspects rides and derived metrics from the database.
 
 **Research capture** is the algorithm-development flow, and does not run during
 an ordinary ride:
@@ -98,6 +104,7 @@ Core backend endpoints:
 - `POST /v1/mobile/research-captures`
 - `GET /v1/admin/rides`
 - `GET /v1/admin/rides/:rideId`
+- `POST /v1/admin/rides/:rideId/recompute-metrics`
 - `GET /v1/admin/research-captures/:researchCaptureId/recording`
 - `GET /v1/admin/research-captures/:researchCaptureId/photo`
 - `POST /v1/admin/mobile/rides/start`
@@ -391,7 +398,14 @@ Key files:
 
 - `mobile/src/store/measurementStore.ts` manages the ride lifecycle in the app.
 - `mobile/src/database/db.ts` stores local rides and samples in SQLite.
-- `mobile/src/screens/RecordingScreen.tsx` handles live sensor and GPS collection.
+- `mobile/src/recording/backgroundLocation.ts` registers the background location
+  task and owns location permissions.
+- `mobile/src/recording/rideRecorder.ts` owns the recording itself: active ride,
+  running totals, and the sample buffer.
+- `shared/src/rideTracking.ts` decides which GPS fixes to keep and turns them
+  into distance, moving time and speed. Used by the phone and the backend.
+- `mobile/src/sync/autoSync.ts` uploads the queue without being asked.
+- `mobile/src/screens/RecordingScreen.tsx` shows the live ride.
 - `backend/src/server.ts` starts the API process.
 - `backend/src/app.ts` creates the Fastify app and registers route modules.
 - `backend/src/endpoints/` owns HTTP paths, auth guards, and response shaping.
@@ -409,7 +423,12 @@ The API is deployed and healthy at
 
 What already works:
 
-- mobile ride recording with GPS and local SQLite persistence
+- background ride recording with GPS on both platforms, through one
+  `expo-location` task, with the screen locked
+- distance, moving time, current, average and top speed, computed live on the
+  phone and recomputed server-side from the synced samples
+- GPS fix filtering shared by the phone and the backend, with unit tests
+- batched, automatic sync with exponential backoff and per-ride ordering
 - optional mobile signup/sign-in
 - offline-first pending-change sync from mobile SQLite to the backend
 - mobile web layout preview with native fallbacks
@@ -425,19 +444,23 @@ What already works:
 - shared design tokens and design guide
 - Docker-based local stack for API, Postgres, and admin
 
+What is not verified on a device yet:
+
+- background recording is native configuration, so it needs a fresh
+  `npm run iphone:build` and an outdoor ride with the screen locked before it
+  can be called done
+- the ride-tracking thresholds are reasoned, not measured. Check a recorded
+  distance against a known course before trusting them
+
 What is not wired up yet:
 
 - **the core product promise**: no route scoring, no colour-coded surface
-  quality on a map for end users, and no server-side processing of ride data
+  quality on a map for end users
 - normal-ride compact feature frames from the XIAO. The board currently streams
   the 20-byte live preview packet; the on-board roughness features described in
   `docs/vibration-roughness-plan.md` are not implemented in firmware
 - manual road-section rating by users
 - route planning over known-good surfaces
-- background route recording on iOS. `mobile/app.json` declares only the
-  `bluetooth-central` background mode, so recording stops when the screen locks
-- batched sync. Each sample currently becomes its own `pending_changes` row,
-  which makes a long ride impractical to upload
 - paginated/downsampled deep analysis for very large ride sample sets
 - calibrated surface scoring. The roughness figure in the admin ride analysis
   is an unvalidated broadband-RMS heuristic used for eyeballing data, not a
@@ -462,14 +485,13 @@ That keeps responsibilities clean:
 
 ## Next Development Priorities
 
-1. Collect labelled outdoor XIAO captures. Every algorithm decision below is
+1. Verify background recording and ride distance on a device. Build with
+   `npm run iphone:build`, ride a known course with the screen locked, and check
+   the recorded distance.
+2. Collect labelled outdoor XIAO captures. Every algorithm decision below is
    blocked on real road data.
-2. Fix background route recording on iOS and batch the mobile sync queue, so a
-   full ride can actually be recorded and uploaded.
-3. Build the phone-only route tracker experience: a rider without a XIAO should
-   get a normal sports-tracker ride with route, distance, duration and speed.
-4. From the captured data, choose the feature set and sample rate, then move
+3. From the captured data, choose the feature set and sample rate, then move
    roughness computation onto the board as compact BLE feature frames.
-5. Add route scoring, colour-coded segments, and manual road-section rating.
-6. Harden admin ride analysis for large rides with pagination, downsampling, and
+4. Add route scoring, colour-coded segments, and manual road-section rating.
+5. Harden admin ride analysis for large rides with pagination, downsampling, and
    backend summaries.

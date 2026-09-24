@@ -132,8 +132,19 @@ model Ride {
   deviceModel   String?      @map("device_model")
   sampleCount   Int          @default(0) @map("sample_count")
   gpsPointCount Int          @default(0) @map("gps_point_count")
+  // Only the samples that actually measured vibration, so the running average
+  // is not diluted by the GPS-only samples of a phone-tracked ride.
+  vibrationSampleCount Int   @default(0) @map("vibration_sample_count")
   avgVibration  Float?       @map("avg_vibration")
   maxVibration  Float?       @map("max_vibration")
+  // Route figures, recomputed from the ride's GPS samples when it finishes.
+  // Null means not computed rather than zero.
+  distanceMeters   Float?    @map("distance_meters")
+  movingSeconds    Float?    @map("moving_seconds")
+  avgSpeedMps      Float?    @map("avg_speed_mps")
+  maxSpeedMps      Float?    @map("max_speed_mps")
+  acceptedFixCount Int?      @map("accepted_fix_count")
+  rejectedFixCount Int?      @map("rejected_fix_count")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
   user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)

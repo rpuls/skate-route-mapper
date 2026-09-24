@@ -203,6 +203,37 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     return ride;
   });
 
+  // Re-run the ride tracking algorithm over a ride that is already stored.
+  //
+  // Rides recorded before ride tracking existed have no route figures at all,
+  // and the thresholds it uses are reasoned rather than measured — they will be
+  // tuned once there is real outdoor data. Both cases need a way to recompute
+  // from samples the backend already holds.
+  app.post("/v1/admin/rides/:rideId/recompute-metrics", {
+    preHandler: requireAdmin,
+  }, async (request, reply) => {
+    const { rideId } = Rides.rideParamsSchema.parse(request.params);
+
+    try {
+      const metrics = await Rides.recomputeRideMetrics(rideId);
+
+      return reply.code(200).send({
+        ok: true,
+        rideId,
+        metrics,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Ride not found") {
+        return reply.code(404).send({
+          ok: false,
+          message: "Ride not found",
+        });
+      }
+
+      throw error;
+    }
+  });
+
   app.post("/v1/admin/mobile/rides/start", {
     preHandler: requireAdmin,
   }, async (request, reply) => {
@@ -234,7 +265,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { rideId } = Rides.rideParamsSchema.parse(request.params);
     const payload = Rides.rideFinishSchema.parse(request.body);
-    await Rides.finishRide(rideId, payload.endedAt);
+    await Rides.finishRide(rideId, payload.endedAt, {}, payload.metrics);
 
     return reply.code(200).send({
       ok: true,

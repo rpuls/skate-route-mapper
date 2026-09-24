@@ -122,6 +122,7 @@ export async function registerMobileRoutes(app: FastifyInstance) {
   });
 
   app.post("/v1/mobile/rides/:rideId/samples", {
+    bodyLimit: 8 * 1024 * 1024,
     preHandler: requireMobileUserOrIngestionOrAdmin,
   }, async (request, reply) => {
     const { rideId } = Rides.rideParamsSchema.parse(request.params);
@@ -142,9 +143,14 @@ export async function registerMobileRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { rideId } = Rides.rideParamsSchema.parse(request.params);
     const payload = Rides.rideFinishSchema.parse(request.body);
-    await Rides.finishRide(rideId, payload.endedAt, {
-      userId: getMobileUserId(request),
-    });
+    await Rides.finishRide(
+      rideId,
+      payload.endedAt,
+      {
+        userId: getMobileUserId(request),
+      },
+      payload.metrics
+    );
 
     return reply.code(200).send({
       ok: true,
@@ -153,6 +159,10 @@ export async function registerMobileRoutes(app: FastifyInstance) {
   });
 
   app.post("/v1/mobile/sync", {
+    // A sync request carries batched samples, not a single reading. The phone
+    // keeps a request to roughly 2,000 samples, but Fastify's 1 MB default
+    // would still reject a large ride's catch-up upload.
+    bodyLimit: 8 * 1024 * 1024,
     preHandler: requireMobileUserOrIngestionOrAdmin,
   }, async (request, reply) => {
     const payload = Sync.syncRequestSchema.parse(request.body);

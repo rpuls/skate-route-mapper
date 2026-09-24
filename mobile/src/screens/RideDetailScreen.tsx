@@ -12,6 +12,12 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { LineChart } from "react-native-chart-kit";
 import dayjs from "dayjs";
 
+import {
+  formatDistance,
+  formatDuration,
+  formatSpeedKmh,
+  rideTrackingDefaults,
+} from "@skate-route-mapper/shared/rideTracking";
 import { getRide, getSamplesForRide } from "../database/db";
 import RideRouteMap from "../components/RideRouteMap";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
@@ -22,7 +28,11 @@ type RouteParams = {
 };
 
 const MAX_TRUSTED_LOCATION_AGE_MS = 2500;
-const MAX_TRUSTED_LOCATION_ACCURACY_METERS = 25;
+// The recorder is now the one place that decides whether a fix is good enough
+// to keep, so the map draws everything it kept rather than applying a second,
+// stricter rule that would hide part of a route the distance already counts.
+const MAX_TRUSTED_LOCATION_ACCURACY_METERS =
+  rideTrackingDefaults.maxAcceptedAccuracyMeters;
 const PLAYBACK_TICK_MS = 100;
 const CHART_SAMPLE_WINDOW = 40;
 const PLAYBACK_SPEEDS = [1, 2, 4] as const;
@@ -228,13 +238,47 @@ export default function RideDetailScreen() {
           </Text>
         </View>
 
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryPrimary}>
+            <Text style={styles.summaryLabel}>Distance</Text>
+            <Text style={styles.summaryValue}>
+              {formatDistance(ride.distanceMeters)}
+            </Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Moving</Text>
+              <Text style={styles.summaryItemValue}>
+                {formatDuration(ride.movingSeconds)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Average</Text>
+              <Text style={styles.summaryItemValue}>
+                {formatSpeedKmh(
+                  ride.movingSeconds > 0 ? ride.distanceMeters / ride.movingSeconds : 0
+                )}
+              </Text>
+            </View>
+
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Max</Text>
+              <Text style={styles.summaryItemValue}>
+                {formatSpeedKmh(ride.maxSpeedMps)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.mapCard}>
           <RideRouteMap
             currentCoordinate={currentCoordinate}
             currentMarkerDescription={`Vibration: ${
               currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"
             }`}
-            currentMarkerTitle={formatDuration(elapsedMs)}
+            currentMarkerTitle={formatDuration(elapsedMs / 1000)}
             initialRegion={initialRegion}
             startCoordinate={coordinates[0]}
             visibleCoordinates={visibleCoordinates}
@@ -244,7 +288,7 @@ export default function RideDetailScreen() {
             <View style={styles.replayHeader}>
               <Text style={styles.replayTitle}>Route replay</Text>
               <Text style={styles.replayTime}>
-                {formatDuration(elapsedMs)} / {formatDuration(totalDurationMs)}
+                {formatDuration(elapsedMs / 1000)} / {formatDuration(totalDurationMs / 1000)}
               </Text>
             </View>
 
@@ -406,27 +450,46 @@ function isTrustedGeoSample(sample: MeasurementSample) {
   );
 }
 
-function formatDuration(durationMs: number) {
-  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${padTimePart(minutes)}:${padTimePart(seconds)}`;
-  }
-
-  return `${padTimePart(minutes)}:${padTimePart(seconds)}`;
-}
-
-function padTimePart(value: number) {
-  return value.toString().padStart(2, "0");
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.page,
+  },
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    gap: space.lg,
+    padding: space.xl,
+    ...shadows.tile,
+  },
+  summaryPrimary: {
+    gap: space.xs,
+  },
+  summaryValue: {
+    color: colors.text,
+    fontSize: 40,
+    fontWeight: "900",
+    lineHeight: 46,
+  },
+  summaryRow: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: space.md,
+  },
+  summaryItem: {
+    gap: space.xxs,
+  },
+  summaryLabel: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  summaryItemValue: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "900",
   },
   scroll: {
     flex: 1,

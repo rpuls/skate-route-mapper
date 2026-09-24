@@ -9,6 +9,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - API contract: `docs/api.md`
 - Data model: `docs/data-model.md`
 - Admin frontend architecture: `docs/admin-frontend.md`
+- Ride tracking (GPS filtering, distance, speed): `docs/ride-tracking.md`
 - Vibration roughness planning: `docs/vibration-roughness-plan.md`
 - Current development plan and known gaps: `docs/development-plan.md`
 - Design system guide: `docs/design-guide.md`
@@ -23,6 +24,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
   `@skate-route-mapper/shared/mobileContracts`,
   `@skate-route-mapper/shared/researchContracts`,
   `@skate-route-mapper/shared/design`,
+  `@skate-route-mapper/shared/rideTracking`,
   `@skate-route-mapper/shared/adminResources`,
   `@skate-route-mapper/shared/xiaoBle`, and
   `@skate-route-mapper/shared/xiaoResearch` over importing from the root package.
@@ -48,11 +50,25 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 
 ## Mobile Notes
 
+- Route recording lives in `mobile/src/recording/`. `backgroundLocation.ts` owns
+  the `expo-location` task and permissions; `rideRecorder.ts` owns the active
+  ride and its running totals; both read state from SQLite rather than React,
+  because fixes arrive with no component mounted.
+- `rideRecorder.ts` and `mobile/src/sync/syncLoop.ts` take storage and the
+  network as ports, and `recorder.ts` / `syncService.ts` wire the real ones.
+  Keep it that way: importing `../database/db` into them would make the
+  recording and upload lifecycles untestable again, since it pulls in
+  `expo-sqlite`.
+- GPS fix filtering and ride distance/speed maths live in
+  `shared/src/rideTracking.ts` and are shared with the backend. Change them
+  there, not per platform.
 - Native SQLite storage lives in `mobile/src/database/db.ts`.
 - Web storage fallback lives in `mobile/src/database/db.web.ts`.
 - Native maps live in `mobile/src/components/RideRouteMap.tsx`.
 - Web map fallback lives in `mobile/src/components/RideRouteMap.web.tsx`.
 - Web font setup lives in `mobile/src/setupFonts.web.ts` and `mobile/src/web.css`.
+- Web background-recording fallback lives in
+  `mobile/src/recording/backgroundLocation.web.ts`.
 - Do not remove platform-specific `.web.tsx` or `.web.ts` files just because the native file exists.
 - `npm run dev:web` is for UI/layout checks and uses native fallbacks.
 - Full device behavior for sensors, GPS, maps, and BLE must be checked on a physical device or development build.

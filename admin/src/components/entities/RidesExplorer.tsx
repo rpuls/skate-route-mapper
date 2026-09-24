@@ -1,5 +1,6 @@
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import EditIcon from "@mui/icons-material/Edit";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Alert,
   Box,
@@ -10,9 +11,17 @@ import {
   Typography,
 } from "@mui/material";
 import { colors, space } from "@skate-route-mapper/shared/design";
+import {
+  formatDistance,
+  formatDuration,
+  formatSpeedKmh,
+} from "@skate-route-mapper/shared/rideTracking";
 import { useEffect, useMemo, useState } from "react";
 import type { EntityListViewProps } from "../../features/entities/entityViewContract";
-import { useAdminRideDetail } from "../../features/entities/entityQueries";
+import {
+  useAdminRideDetail,
+  useRecomputeRideMetrics,
+} from "../../features/entities/entityQueries";
 import { px, radiusLevel, surfaceSx } from "../../theme/adminTheme";
 import type { EntityRecord } from "../../types";
 import { EntityTable } from "./EntityTable";
@@ -58,6 +67,31 @@ function DetailItem({ label, value }: { label: string; value: unknown }) {
   );
 }
 
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Route figures are computed when a ride finishes, so a ride recorded before
+ * ride tracking existed has none. "Not recorded" is the honest answer; a zero
+ * would read as a ride that went nowhere.
+ */
+function RouteMetricItem({
+  label,
+  value,
+  format,
+}: {
+  label: string;
+  value: unknown;
+  format: (value: number) => string;
+}) {
+  const numeric = numberValue(value);
+
+  return (
+    <DetailItem label={label} value={numeric === null ? "Not recorded" : format(numeric)} />
+  );
+}
+
 export function RidesExplorer({
   onEditRecord,
   onOpenResource,
@@ -70,6 +104,7 @@ export function RidesExplorer({
   );
   const selectedRideId = stringValue(selectedRecord?.[resource.idField]);
   const rideDetailQuery = useAdminRideDetail(session, selectedRideId);
+  const recomputeMetrics = useRecomputeRideMetrics(session);
   const detail = rideDetailQuery.data?.ride ?? selectedRecord;
   const sampleCount = useMemo(
     () => detail?.sampleCount ?? rideDetailQuery.data?.samples.length ?? 0,
@@ -124,6 +159,16 @@ export function RidesExplorer({
               </Box>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                 <Button
+                  disabled={!selectedRideId || recomputeMetrics.isPending}
+                  onClick={() =>
+                    selectedRideId && recomputeMetrics.mutate(selectedRideId)
+                  }
+                  startIcon={<RefreshIcon />}
+                  variant="outlined"
+                >
+                  {recomputeMetrics.isPending ? "Recomputing" : "Recompute route"}
+                </Button>
+                <Button
                   disabled={!selectedRecord}
                   onClick={() => selectedRecord && onEditRecord(selectedRecord)}
                   startIcon={<EditIcon />}
@@ -160,10 +205,39 @@ export function RidesExplorer({
               <DetailItem label="Ended" value={detail.endedAt} />
               <DetailItem label="Vehicle" value={detail.vehicleType} />
               <DetailItem label="Sensor" value={detail.sensorSource} />
+              <RouteMetricItem
+                format={formatDistance}
+                label="Distance"
+                value={detail.distanceMeters}
+              />
+              <RouteMetricItem
+                format={formatDuration}
+                label="Moving time"
+                value={detail.movingSeconds}
+              />
+              <RouteMetricItem
+                format={(value) => formatSpeedKmh(value)}
+                label="Average speed"
+                value={detail.avgSpeedMps}
+              />
+              <RouteMetricItem
+                format={(value) => formatSpeedKmh(value)}
+                label="Max speed"
+                value={detail.maxSpeedMps}
+              />
               <DetailItem label="Samples" value={sampleCount} />
               <DetailItem label="GPS points" value={detail.gpsPointCount} />
+              <DetailItem
+                label="Fixes kept / dropped"
+                value={
+                  numberValue(detail.acceptedFixCount) === null
+                    ? "Not recorded"
+                    : `${detail.acceptedFixCount} / ${detail.rejectedFixCount ?? 0}`
+                }
+              />
               <DetailItem label="Average vibration" value={detail.avgVibration} />
               <DetailItem label="Max vibration" value={detail.maxVibration} />
+              <DetailItem label="Vibration samples" value={detail.vibrationSampleCount} />
               <DetailItem label="User ID" value={detail.userId} />
               <DetailItem label="Device ID" value={detail.deviceId} />
               <DetailItem label="Client ID" value={detail.clientId} />
@@ -171,6 +245,14 @@ export function RidesExplorer({
             </Box>
 
             <Divider />
+
+            {recomputeMetrics.isError ? (
+              <Alert severity="error">
+                {recomputeMetrics.error instanceof Error
+                  ? recomputeMetrics.error.message
+                  : "Unable to recompute this ride."}
+              </Alert>
+            ) : null}
 
             <RideAnalysisPanel samples={rideDetailQuery.data?.samples ?? []} />
             {rideDetailQuery.data?.samplesTruncated ? (

@@ -1,7 +1,12 @@
 import { z } from "zod";
 import {
+  maxOperationsPerSyncRequest,
+  maxSamplesPerSyncOperation,
+} from "@skate-route-mapper/shared/mobileContracts";
+import {
   measurementSampleSchema,
   rideFinishSchema,
+  rideMetricsSchema,
   rideStartSchema,
 } from "../rides/contracts.js";
 
@@ -19,7 +24,7 @@ export const syncOperationSchema = z.discriminatedUnion("type", [
     type: z.literal("ride.samples"),
     payload: z.object({
       rideId: z.string().min(1),
-      samples: z.array(measurementSampleSchema).min(1).max(1000),
+      samples: z.array(measurementSampleSchema).min(1).max(maxSamplesPerSyncOperation),
     }),
   }),
   syncOperationBaseSchema.extend({
@@ -27,11 +32,12 @@ export const syncOperationSchema = z.discriminatedUnion("type", [
     payload: z.object({
       rideId: z.string().min(1),
       endedAt: rideFinishSchema.shape.endedAt,
+      metrics: rideMetricsSchema.optional(),
     }),
   }),
 ]);
 
 export const syncRequestSchema = z.object({
-  operations: z.array(syncOperationSchema).max(100),
+  operations: z.array(syncOperationSchema).max(maxOperationsPerSyncRequest),
   since: z.number().int().nonnegative().nullable().optional(),
 });

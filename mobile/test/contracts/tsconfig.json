@@ -1,14 +1,23 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "noEmit": true
   },
   "include": [
     "../../src/database/db.web.ts",
+    "../../src/recording/recordingSamples.ts",
+    "../../src/recording/rideRecorder.ts",
+    "../../src/recording/sampleBuffer.ts",
+    "../../src/sync/backoff.ts",
+    "../../src/sync/syncLoop.ts",
+    "../../src/sync/syncBatching.ts",
     "../../src/types/measurement.ts",
     "../../src/types/research.ts",
     "../../../shared/src/mobileContracts.ts",
+    "../../../shared/src/rideTracking.ts",
     "*.contract.test.ts"
   ]
 }

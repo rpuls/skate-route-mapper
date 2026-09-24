@@ -6,6 +6,18 @@ export type VehicleType = (typeof vehicleTypes)[number];
 export type SensorSource = (typeof sensorSources)[number];
 export type MeasurementStatus = (typeof measurementStatuses)[number];
 
+/**
+ * How many samples one `ride.samples` operation may carry.
+ *
+ * The phone buffers samples and flushes them in batches; the backend rejects a
+ * batch larger than this. Both sides read the same constant so a flush can
+ * never be sized past what the API will take.
+ */
+export const maxSamplesPerSyncOperation = 1000;
+
+/** How many operations one `POST /v1/mobile/sync` request may carry. */
+export const maxOperationsPerSyncRequest = 100;
+
 // A GPS-only ride has no IMU data: the phone tracks the route and the external
 // XIAO board owns vibration, so every motion field can legitimately be null.
 export type MeasurementSample = {
@@ -25,6 +37,20 @@ export type MeasurementSample = {
   locationAgeMs?: number | null | undefined;
 };
 
+/**
+ * What a ride covered, stored alongside the ride so a list of rides never has
+ * to walk the sample table.
+ *
+ * The phone computes these live while recording. The backend recomputes them
+ * from the synced samples, using the same shared code, so the server's copy
+ * does not depend on trusting the client.
+ */
+export type RideMetricsPayload = {
+  distanceMeters: number;
+  movingSeconds: number;
+  maxSpeedMps: number;
+};
+
 export type Ride = {
   id: string;
   startedAt: number;
@@ -32,6 +58,11 @@ export type Ride = {
   vehicleType: VehicleType;
   sensorSource: SensorSource;
   sampleCount: number;
+  distanceMeters: number;
+  movingSeconds: number;
+  maxSpeedMps: number;
+  acceptedFixCount: number;
+  rejectedFixCount: number;
 };
 
 export type RideStartPayload = {
@@ -50,6 +81,7 @@ export type RideSamplesPayload = {
 
 export type RideFinishPayload = {
   endedAt: number;
+  metrics?: RideMetricsPayload | undefined;
 };
 
 export type SyncOperation =
@@ -75,6 +107,7 @@ export type SyncOperation =
       payload: {
         rideId: string;
         endedAt: number;
+        metrics?: RideMetricsPayload | undefined;
       };
     };
 

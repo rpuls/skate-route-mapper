@@ -1,13 +1,17 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "noEmit": true
   },
   "include": [
     "../../src/features/rides/contracts.ts",
+    "../../src/features/rides/metrics.ts",
     "../../src/features/mobileUsers/contracts.ts",
     "../../src/features/researchCaptures/contracts.ts",
+    "../../../shared/src/rideTracking.ts",
     "../../../shared/src/mobileContracts.ts",
     "../../../shared/src/researchContracts.ts",
     "*.contract.test.ts"

@@ -63,10 +63,30 @@ Main fields:
 - `deviceModel`
 - `sampleCount`
 - `gpsPointCount`
+- `vibrationSampleCount`
 - `avgVibration`
 - `maxVibration`
+- `distanceMeters`
+- `movingSeconds`
+- `avgSpeedMps`
+- `maxSpeedMps`
+- `acceptedFixCount`
+- `rejectedFixCount`
 - `createdAt`
 - `updatedAt`
+
+Route figures — `distanceMeters` through `rejectedFixCount` — are recomputed
+from the ride's GPS samples when it finishes, using the shared module described
+in `docs/ride-tracking.md`. They live on the ride so a list of rides never has
+to walk the sample table, which a 30-minute XIAO ride makes expensive.
+
+They are nullable because they are *unknown*, not zero, for rides recorded
+before ride tracking existed. A zero would read as a ride that went nowhere.
+
+`vibrationSampleCount` counts only the samples that actually measured
+vibration. The running `avgVibration` is weighted by it rather than by
+`sampleCount`: weighting by every sample let hundreds of GPS-only rows dilute a
+handful of genuine board readings.
 
 ### AdminUser
 

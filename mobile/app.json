@@ -17,12 +17,14 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.rasmuspuls.skateroutemapper",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSBluetoothAlwaysUsageDescription": "Skate Route Mapper connects to external BLE IMU sensors for accelerometer and gyroscope data.",
         "NSCameraUsageDescription": "Skate Route Mapper attaches a surface photo to a research collection.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Skate Route Mapper keeps recording your route while the screen is locked.",
         "NSLocationWhenInUseUsageDescription": "Skate Route Mapper records the location of rides and research collections.",
-        "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
-          "bluetooth-central"
+          "bluetooth-central",
+          "location"
         ]
       }
     },
@@ -63,7 +65,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Skate Route Mapper to record the location of rides and research collections."
+          "locationWhenInUsePermission": "Allow Skate Route Mapper to record the location of rides and research collections.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Skate Route Mapper to keep recording your route while the screen is locked.",
+          "locationAlwaysPermission": "Allow Skate Route Mapper to keep recording your route while the screen is locked.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

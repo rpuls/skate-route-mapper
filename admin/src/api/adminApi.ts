@@ -37,6 +37,20 @@ type AdminRideDetailResponse = {
   message?: string;
 };
 
+type RecomputeRideMetricsResponse = {
+  ok: boolean;
+  rideId: string;
+  metrics: {
+    distanceMeters: number;
+    movingSeconds: number;
+    avgSpeedMps: number;
+    maxSpeedMps: number;
+    acceptedFixCount: number;
+    rejectedFixCount: number;
+  };
+  message?: string;
+};
+
 async function parseJson<T>(response: Response) {
   const body = await response.json();
 
@@ -159,6 +173,21 @@ export async function getAdminRideDetail(session: AdminSession, rideId: string) 
   });
 
   return parseJson<AdminRideDetailResponse>(response);
+}
+
+export async function recomputeAdminRideMetrics(
+  session: AdminSession,
+  rideId: string
+) {
+  const response = await fetch(
+    `${apiBaseUrl}/v1/admin/rides/${rideId}/recompute-metrics`,
+    {
+      method: "POST",
+      headers: authHeaders(session),
+    }
+  );
+
+  return parseJson<RecomputeRideMetricsResponse>(response);
 }
 
 async function researchCaptureAsset(

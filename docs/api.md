@@ -161,6 +161,7 @@ Use `ADMIN_API_KEY` or an admin session token for:
 - `DELETE /v1/admin/entities/:resourceName/:entityId`
 - `GET /v1/admin/rides`
 - `GET /v1/admin/rides/:rideId`
+- `POST /v1/admin/rides/:rideId/recompute-metrics`
 - `POST /v1/admin/mobile/rides/start`
 - `POST /v1/admin/mobile/rides/:rideId/samples`
 - `POST /v1/admin/mobile/rides/:rideId/finish`
@@ -203,6 +204,12 @@ Recommended batching:
 - send batches instead of one request per sample
 - keep a local queue in case the network is temporarily unavailable
 - a good first batch size is `25` to `100` samples
+
+The mobile app buffers samples in memory and writes one queued operation per
+flush, at 250 samples or 20 seconds, whichever comes first. Both limits are
+below the contract ceiling of `maxSamplesPerSyncOperation`, exported from
+`shared/src/mobileContracts.ts` so the phone and the API cannot disagree about
+how large a batch may be.
 
 ## Offline Sync
 
@@ -270,10 +277,11 @@ Notes:
 - The backend persists `locationTimestamp`, `locationAccuracy`, and
   `locationAgeMs` when provided so backend processing can use the same GPS
   confidence metadata as the mobile route replay.
-- Mobile route replay currently treats a sample as trusted only when
-  `locationAgeMs <= 2500` and `locationAccuracy <= 25`. Tune these proof-of-
-  concept thresholds in `mobile/src/screens/RideDetailScreen.tsx` via
-  `MAX_TRUSTED_LOCATION_AGE_MS` and `MAX_TRUSTED_LOCATION_ACCURACY_METERS`.
+- `locationAgeMs` is `0` for a sample that *is* a GPS fix, and non-zero only
+  for a board reading stamped with an older fix. It measures staleness of the
+  attached position, not how long the OS took to deliver the fix.
+- Whether a fix is trustworthy enough to keep at all is decided once, in
+  `shared/src/rideTracking.ts`. See `docs/ride-tracking.md`.
 - For `sensorSource: "external"`, accelerometer and gyroscope may come from an
   external XIAO BLE IMU, while GPS still comes from the phone.
 
@@ -727,9 +735,16 @@ Request body:
 
 ```json
 {
-  "endedAt": 1760000900000
+  "endedAt": 1760000900000,
+  "metrics": {
+    "distanceMeters": 4218.4,
+    "movingSeconds": 1042.5,
+    "maxSpeedMps": 9.2
+  }
 }
 ```
+
+`metrics` is optional and reports what the phone measured while recording.
 
 Success response:
 
@@ -751,6 +766,13 @@ Body:
 Important:
 
 - After a ride is finished, later sample uploads for that ride will be rejected.
+- Finishing a ride recomputes `distanceMeters`, `movingSeconds`, `avgSpeedMps`,
+  `maxSpeedMps`, `acceptedFixCount` and `rejectedFixCount` from the GPS samples
+  the backend actually holds, using the same shared code as the phone. The
+  server's own figures win, so a client cannot report a distance its route does
+  not support. Reported `metrics` are used only when the backend holds no
+  position data for the ride at all — a ride whose samples never arrived still
+  deserves a distance rather than a zero.
 
 ### `POST /v1/mobile/sync`
 
@@ -811,7 +833,12 @@ Request body:
       "createdAt": 1778760300000,
       "payload": {
         "rideId": "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
-        "endedAt": 1778760300000
+        "endedAt": 1778760300000,
+        "metrics": {
+          "distanceMeters": 4218.4,
+          "movingSeconds": 1042.5,
+          "maxSpeedMps": 9.2
+        }
       }
     }
   ]
@@ -824,6 +851,14 @@ Rules:
 - `ride.samples` operations may contain at most `1000` samples.
 - Operations are applied in request order inside one backend transaction.
 - Already processed `operationId` values are returned as duplicates.
+- A ride's operations must be sent in the order they were queued. The backend
+  refuses samples for a finished ride, so a `ride.finish` that overtook its own
+  samples would cost the end of that ride permanently. The mobile queue
+  enforces this: an operation waiting out a retry backoff also holds back
+  everything queued behind it *for the same ride*, while other rides continue.
+- `POST /v1/mobile/sync` and `POST /v1/mobile/rides/:rideId/samples` accept
+  bodies up to 8 MB. Fastify's 1 MB default is too small for a batched ride
+  catching up after a spell offline.
 
 Success response:
 
@@ -905,6 +940,44 @@ Query params:
 - `sampleOffset`: optional, default `0`
 
 The response includes `samplesTruncated` when more samples exist than were returned.
+
+Auth:
+
+```http
+Authorization: Bearer <ADMIN_API_KEY>
+```
+
+### `POST /v1/admin/rides/:rideId/recompute-metrics`
+
+Re-run ride tracking over a ride the backend already holds, and store the
+result.
+
+Rides recorded before ride tracking existed carry no route figures, and the
+thresholds in `rideTrackingDefaults` are reasoned rather than measured, so they
+will be tuned once there is labelled outdoor data. Both cases need a way to
+recompute from stored samples rather than only from new rides.
+
+Takes no request body.
+
+Success response:
+
+```json
+{
+  "ok": true,
+  "rideId": "0d4c61cf-1d7a-4ca8-9e56-fd4185dd0df8",
+  "metrics": {
+    "distanceMeters": 4218.4,
+    "movingSeconds": 1042.5,
+    "avgSpeedMps": 4.05,
+    "maxSpeedMps": 9.2,
+    "acceptedFixCount": 612,
+    "rejectedFixCount": 9
+  }
+}
+```
+
+Returns `404` when the ride does not exist. An unfinished ride is measured up
+to its last sample.
 
 Auth:
 

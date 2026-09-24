@@ -1,11 +1,14 @@
 import { Prisma } from "../../../generated/prisma/index.js";
 import type {
-  MeasurementSample,
   SyncOperation,
   SyncOperationResult,
 } from "@skate-route-mapper/shared/mobileContracts";
 import { prisma } from "../../db/prisma.js";
-import { nextVibrationAggregate } from "../rides/index.js";
+import {
+  computeRideMetrics,
+  rideAggregateSelection,
+  rideSampleStatsUpdate,
+} from "../rides/index.js";
 
 type SyncAccess = {
   userId?: string | null;
@@ -53,15 +56,7 @@ async function applyRideSamples(
     where: {
       id: operation.payload.rideId,
     },
-    select: {
-      id: true,
-      userId: true,
-      endedAt: true,
-      sampleCount: true,
-      gpsPointCount: true,
-      avgVibration: true,
-      maxVibration: true,
-    },
+    select: rideAggregateSelection,
   });
 
   if (!ride) {
@@ -97,40 +92,11 @@ async function applyRideSamples(
     })),
   });
 
-  await updateRideSampleStats(tx, ride, operation.payload.samples);
-}
-
-async function updateRideSampleStats(
-  tx: Prisma.TransactionClient,
-  ride: {
-    id: string;
-    sampleCount: number;
-    gpsPointCount: number;
-    avgVibration: number | null;
-    maxVibration: number | null;
-  },
-  samples: MeasurementSample[]
-) {
-  const sampleCount = samples.length;
-  const gpsPointCount = samples.filter(
-    (sample) => sample.latitude !== null && sample.longitude !== null
-  ).length;
-  const vibration = nextVibrationAggregate(ride, samples);
-
   await tx.ride.update({
     where: {
       id: ride.id,
     },
-    data: {
-      sampleCount: {
-        increment: sampleCount,
-      },
-      gpsPointCount: {
-        increment: gpsPointCount,
-      },
-      avgVibration: vibration.avgVibration,
-      maxVibration: vibration.maxVibration,
-    },
+    data: rideSampleStatsUpdate(ride, operation.payload.samples),
   });
 }
 
@@ -145,6 +111,7 @@ async function applyRideFinish(
     },
     select: {
       userId: true,
+      startedAt: true,
     },
   });
 
@@ -154,12 +121,23 @@ async function applyRideFinish(
 
   assertRideWriteAccess(ride, access);
 
+  // The sample operations for this ride are queued ahead of the finish, so by
+  // the time it applies the server holds the whole route and can work out what
+  // the ride actually covered.
+  const metrics = await computeRideMetrics(tx, {
+    rideId: operation.payload.rideId,
+    startedAt: ride.startedAt,
+    endedAt: operation.payload.endedAt,
+    reportedMetrics: operation.payload.metrics,
+  });
+
   await tx.ride.update({
     where: {
       id: operation.payload.rideId,
     },
     data: {
       endedAt: new Date(operation.payload.endedAt),
+      ...metrics,
     },
   });
 }

@@ -9,7 +9,16 @@ import {
 } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import dayjs from "dayjs";
-import { getPendingChangeCount, getRides } from "../database/db";
+import {
+  formatDistance,
+  formatDuration,
+  formatSpeedKmh,
+} from "@skate-route-mapper/shared/rideTracking";
+import {
+  getPendingChangeSummary,
+  getPendingRideIds,
+  getRides,
+} from "../database/db";
 import type { Ride } from "../types/measurement";
 import {
   buttonVariants,
@@ -23,17 +32,29 @@ import { ScreenHeader } from "../components/AppMenu";
 import { useMobileAuth } from "../auth/MobileAuthContext";
 import { syncPendingChanges } from "../sync/syncService";
 
+type PendingSummary = ReturnType<typeof getPendingChangeSummary>;
+
+const emptySummary: PendingSummary = {
+  pending: 0,
+  due: 0,
+  failing: 0,
+  nextAttemptAt: null,
+  lastError: null,
+};
+
 export default function RidesScreen() {
   const navigation = useNavigation<any>();
   const { token } = useMobileAuth();
   const [rides, setRides] = useState<Ride[]>([]);
-  const [pendingChangeCount, setPendingChangeCount] = useState(0);
+  const [summary, setSummary] = useState<PendingSummary>(emptySummary);
+  const [pendingRideIds, setPendingRideIds] = useState<Set<string>>(new Set());
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
 
   const refreshLocalState = useCallback(() => {
     setRides(getRides());
-    setPendingChangeCount(getPendingChangeCount());
+    setSummary(getPendingChangeSummary());
+    setPendingRideIds(new Set(getPendingRideIds()));
   }, []);
 
   useFocusEffect(
@@ -48,20 +69,27 @@ export default function RidesScreen() {
     }
 
     setSyncing(true);
-    setSyncMessage("Syncing...");
+    setSyncMessage("Uploading...");
 
-    const result = await syncPendingChanges({ token });
+    // A ride is many operations now that samples are batched, so the count
+    // climbing is the only sign that a long upload is working.
+    const result = await syncPendingChanges({
+      token,
+      onProgress: ({ sentOperations, totalOperations }) => {
+        setSyncMessage(`Uploaded ${sentOperations} of ${totalOperations} changes...`);
+      },
+    });
 
     refreshLocalState();
 
     if (result.ok) {
       setSyncMessage(
         result.synced === 0
-          ? "Everything is already synced."
-          : `Synced ${result.synced} pending change${result.synced === 1 ? "" : "s"}.`
+          ? "Everything is already uploaded."
+          : `Uploaded ${result.synced} change${result.synced === 1 ? "" : "s"}.`
       );
     } else if (result.reason === "missing-auth-token") {
-      setSyncMessage("Sign in before syncing saved rides.");
+      setSyncMessage("Sign in before uploading saved rides.");
     } else {
       setSyncMessage(result.message);
     }
@@ -69,7 +97,13 @@ export default function RidesScreen() {
     setSyncing(false);
   };
 
-  const canSync = pendingChangeCount > 0 && !syncing;
+  const canSync = summary.due > 0 && !syncing;
+  const waitingMessage =
+    summary.due === 0 && summary.pending > 0 && summary.nextAttemptAt !== null
+      ? `Retrying in ${formatDuration(
+          Math.max(0, (summary.nextAttemptAt - Date.now()) / 1000)
+        )}`
+      : null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -81,8 +115,12 @@ export default function RidesScreen() {
 
         <View style={styles.syncPanel}>
           <View>
-            <Text style={styles.syncCount}>{pendingChangeCount}</Text>
-            <Text style={styles.syncLabel}>pending sync changes</Text>
+            <Text style={styles.syncCount}>{summary.pending}</Text>
+            <Text style={styles.syncLabel}>
+              {summary.failing > 0
+                ? `pending · ${summary.failing} retrying`
+                : "pending uploads"}
+            </Text>
           </View>
 
           <Pressable
@@ -91,12 +129,15 @@ export default function RidesScreen() {
             style={[styles.syncButton, !canSync && styles.buttonDisabled]}
           >
             <Text style={styles.syncButtonText}>
-              {syncing ? "Syncing" : "Sync"}
+              {syncing ? "Uploading" : "Upload"}
             </Text>
           </Pressable>
         </View>
 
         {syncMessage ? <Text style={styles.syncMessage}>{syncMessage}</Text> : null}
+        {waitingMessage ? (
+          <Text style={styles.syncMessage}>{waitingMessage}</Text>
+        ) : null}
 
         <FlatList
           data={rides}
@@ -119,18 +160,43 @@ export default function RidesScreen() {
                 })
               }
             >
-              <View>
-                <Text style={styles.rideTitle}>
-                  {dayjs(item.startedAt).format("DD MMM YYYY - HH:mm")}
-                </Text>
-                <Text style={styles.rideMeta}>
-                  {item.vehicleType} - {item.sensorSource}
-                </Text>
+              <View style={styles.rideHeader}>
+                <View>
+                  <Text style={styles.rideTitle}>
+                    {dayjs(item.startedAt).format("DD MMM YYYY - HH:mm")}
+                  </Text>
+                  <Text style={styles.rideMeta}>
+                    {item.vehicleType} - {item.sensorSource}
+                  </Text>
+                </View>
+
+                <View style={styles.rideStats}>
+                  <Text style={styles.sampleCount}>
+                    {formatDistance(item.distanceMeters)}
+                  </Text>
+                  <Text style={styles.sampleLabel}>
+                    {formatDuration(item.movingSeconds)} moving
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.rideStats}>
-                <Text style={styles.sampleCount}>{item.sampleCount}</Text>
-                <Text style={styles.sampleLabel}>samples</Text>
+              {pendingRideIds.has(item.id) ? (
+                <Text style={styles.pendingTag}>Waiting to upload</Text>
+              ) : null}
+
+              <View style={styles.rideFooter}>
+                <Text style={styles.footerMetric}>
+                  Avg{" "}
+                  {formatSpeedKmh(
+                    item.movingSeconds > 0
+                      ? item.distanceMeters / item.movingSeconds
+                      : 0
+                  )}
+                </Text>
+                <Text style={styles.footerMetric}>
+                  Max {formatSpeedKmh(item.maxSpeedMps)}
+                </Text>
+                <Text style={styles.footerMetric}>{item.sampleCount} samples</Text>
               </View>
             </Pressable>
           )}
@@ -204,10 +270,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     padding: space.lg,
+    gap: space.md,
+    ...shadows.tile,
+  },
+  rideHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    ...shadows.tile,
   },
   rideTitle: {
     color: colors.text,
@@ -232,6 +301,26 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: "700",
+  },
+  pendingTag: {
+    color: colors.accentStrong,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  rideFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  footerMetric: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: "800",
   },
   emptyCard: {
     backgroundColor: colors.surface,

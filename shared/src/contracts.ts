@@ -3,6 +3,7 @@ export type {
   MeasurementStatus,
   Ride,
   RideFinishPayload,
+  RideMetricsPayload,
   RideSamplesPayload,
   RideStartPayload,
   SensorSource,
@@ -10,6 +11,8 @@ export type {
 } from "./mobileContracts.js";
 
 export {
+  maxOperationsPerSyncRequest,
+  maxSamplesPerSyncOperation,
   measurementStatuses,
   sensorSources,
   vehicleTypes,

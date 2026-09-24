@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { maxSamplesPerSyncOperation } from "@skate-route-mapper/shared/mobileContracts";
 
 export const acceptedVehicleTypes = ["skates", "skateboard", "longboard"] as const;
 export const acceptedSensorSources = ["phone", "external"] as const;
@@ -38,11 +39,21 @@ export const measurementSampleSchema = z.object({
 });
 
 export const rideSamplesSchema = z.object({
-  samples: z.array(measurementSampleSchema).min(1).max(1000),
+  samples: z.array(measurementSampleSchema).min(1).max(maxSamplesPerSyncOperation),
+});
+
+// What the phone measured while it was recording. The backend recomputes the
+// same figures from the synced samples and prefers its own, so these are a
+// fallback for a ride whose samples never made it up.
+export const rideMetricsSchema = z.object({
+  distanceMeters: z.number().nonnegative(),
+  movingSeconds: z.number().nonnegative(),
+  maxSpeedMps: z.number().nonnegative(),
 });
 
 export const rideFinishSchema = z.object({
   endedAt: z.number().int().nonnegative(),
+  metrics: rideMetricsSchema.optional(),
 });
 
 export const ridesQuerySchema = z.object({

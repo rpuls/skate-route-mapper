@@ -80,6 +80,11 @@ const rideSamplesFixture = {
 
 const rideFinishFixture = {
   endedAt: 1760000900000,
+  metrics: {
+    distanceMeters: 4218.4,
+    movingSeconds: 1042.5,
+    maxSpeedMps: 9.2,
+  },
 } satisfies RideFinishPayload;
 
 const syncRequestFixture = {
@@ -106,6 +111,7 @@ const syncRequestFixture = {
       payload: {
         rideId: rideStartFixture.rideId,
         endedAt: rideFinishFixture.endedAt,
+        metrics: rideFinishFixture.metrics,
       },
     },
   ],
@@ -198,6 +204,37 @@ describe("mobile ride contract", () => {
 
   it("accepts the mobile ride finish fixture", () => {
     assert.equal(rideFinishSchema.safeParse(rideFinishFixture).success, true);
+  });
+
+  it("keeps ride metrics optional, so an older app can still finish a ride", () => {
+    assert.equal(rideFinishSchema.safeParse({ endedAt: 1760000900000 }).success, true);
+  });
+
+  it("rejects a ride that claims to have travelled a negative distance", () => {
+    const result = rideFinishSchema.safeParse({
+      ...rideFinishFixture,
+      metrics: { ...rideFinishFixture.metrics, distanceMeters: -1 },
+    });
+
+    assert.equal(result.success, false);
+  });
+
+  it("accepts a sample batch exactly as large as the phone is allowed to flush", () => {
+    const samples = Array.from(
+      { length: mobileContracts.maxSamplesPerSyncOperation },
+      (_unused, index) => ({
+        ...rideSamplesFixture.samples[0],
+        timestamp: 1760000001000 + index,
+      })
+    );
+
+    assert.equal(rideSamplesSchema.safeParse({ samples }).success, true);
+    assert.equal(
+      rideSamplesSchema.safeParse({
+        samples: [...samples, rideSamplesFixture.samples[0]],
+      }).success,
+      false
+    );
   });
 
   it("accepts mobile sync operation fixtures", () => {

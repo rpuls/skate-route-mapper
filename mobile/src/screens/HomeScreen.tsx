@@ -2,6 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
+import {
+  formatDistance,
+  formatDuration,
+  formatSpeedKmh,
+} from "@skate-route-mapper/shared/rideTracking";
 import { XIAO_BLE_DEVICE_NAME, type XiaoImuPacket } from "@skate-route-mapper/shared/xiaoBle";
 import { ScreenHeader } from "../components/AppMenu";
 import * as XiaoBle from "../native/XiaoBle";
@@ -18,8 +23,8 @@ const vehicleOptions: { label: string; value: VehicleType }[] = [
 ];
 
 const sensorOptions: { label: string; value: SensorSource; description: string }[] = [
-  { label: "Phone sensors", value: "phone", description: "Use this phone for motion and GPS." },
-  { label: "XIAO + phone GPS", value: "external", description: "Use the XIAO live BLE preview with GPS from this phone." },
+  { label: "Phone GPS only", value: "phone", description: "Record route, distance and speed. No pavement measurement." },
+  { label: "XIAO + phone GPS", value: "external", description: "Add measured pavement vibration from the board to the same route." },
 ];
 
 export default function HomeScreen() {
@@ -28,9 +33,13 @@ export default function HomeScreen() {
     vehicleType, sensorSource, status, setVehicleType, setSensorSource,
     setExternalImuDevice, setLatestExternalImuSample, startRecording,
   } = useMeasurementStore();
+  const activeRecording = useMeasurementStore((state) => state.recording);
+  const lastRideMetrics = useMeasurementStore((state) => state.lastRideMetrics);
   const [xiaoStatus, setXiaoStatus] = useState<XiaoStatus>(XiaoBle.isXiaoBleSupported() ? "idle" : "unsupported");
   const [message, setMessage] = useState(XiaoBle.isXiaoBleSupported() ? "Ready to connect." : "BLE needs the native iPhone development build.");
   const [latest, setLatest] = useState<XiaoImuPacket | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const connection = useRef<XiaoBleConnection | null>(null);
 
   useEffect(() => () => {
@@ -93,7 +102,33 @@ export default function HomeScreen() {
     navigation.navigate("Research");
   };
 
-  const canStart = sensorSource === "phone" || xiaoStatus === "connected";
+  // Starting a ride now asks for location permission, which the rider can
+  // refuse, so the button has to wait for an answer rather than navigating
+  // straight to a screen that would show nothing.
+  const beginRide = async () => {
+    if (starting) {
+      return;
+    }
+
+    setStarting(true);
+    setStartError(null);
+
+    const result = await startRecording();
+
+    setStarting(false);
+
+    if (!result.ok) {
+      setStartError(result.message);
+      return;
+    }
+
+    navigation.navigate("Recording");
+  };
+
+  const canStart =
+    !starting &&
+    !activeRecording &&
+    (sensorSource === "phone" || xiaoStatus === "connected");
   const magnitude = latest ? Math.hypot(latest.ax, latest.ay, latest.az) : null;
 
   return (
@@ -101,6 +136,34 @@ export default function HomeScreen() {
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Map a New Ride" subtitle="Record a route, or collect labelled high-rate sensor data for algorithm research." />
+
+        {!activeRecording && lastRideMetrics ? (
+          <Pressable onPress={() => navigation.navigate("Rides")} style={styles.researchCard}>
+            <Text style={styles.eyebrow}>RIDE SAVED</Text>
+            <Text style={styles.researchTitle}>
+              {formatDistance(lastRideMetrics.distanceMeters)} in{" "}
+              {formatDuration(lastRideMetrics.movingSeconds)}
+            </Text>
+            <Text style={styles.researchBody}>
+              Average {formatSpeedKmh(lastRideMetrics.avgSpeedMps)} · top{" "}
+              {formatSpeedKmh(lastRideMetrics.maxSpeedMps)}.
+            </Text>
+            <Text style={styles.researchLink}>See saved rides →</Text>
+          </Pressable>
+        ) : null}
+
+        {activeRecording ? (
+          <Pressable onPress={() => navigation.navigate("Recording")} style={styles.resumeCard}>
+            <Text style={styles.eyebrow}>RIDE IN PROGRESS</Text>
+            <Text style={styles.researchTitle}>
+              {formatDistance(activeRecording.metrics.distanceMeters)} so far
+            </Text>
+            <Text style={styles.researchBody}>
+              Recording is still running in the background.
+            </Text>
+            <Text style={styles.researchLink}>Back to this ride →</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable onPress={openResearch} style={styles.researchCard}>
           <Text style={styles.eyebrow}>XIAO FIELD RESEARCH</Text>
@@ -137,9 +200,16 @@ export default function HomeScreen() {
           })}
         </View>
 
-        <Pressable disabled={!canStart} onPress={() => { startRecording(); navigation.navigate("Recording"); }} style={[styles.startButton, !canStart && styles.disabled]}>
-          <Text style={styles.startText}>Start route scan</Text>
+        <Pressable disabled={!canStart} onPress={beginRide} style={[styles.startButton, !canStart && styles.disabled]}>
+          <Text style={styles.startText}>
+            {starting
+              ? "Starting..."
+              : activeRecording
+              ? "Ride already recording"
+              : "Start route scan"}
+          </Text>
         </Pressable>
+        {startError ? <Text style={styles.startError}>{startError}</Text> : null}
         <Text style={styles.status}>Status: {status}</Text>
       </ScrollView>
     </SafeAreaView>
@@ -151,6 +221,7 @@ const styles = StyleSheet.create({
   content: { padding: space.lg, paddingBottom: 60, gap: space.lg },
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.lg, gap: space.md, ...shadows.tile },
   researchCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: space.xl, gap: space.sm, ...shadows.tile },
+  resumeCard: { backgroundColor: colors.surface, borderColor: colors.accent, borderRadius: radius.xl, borderWidth: 2, padding: space.xl, gap: space.sm, ...shadows.tile },
   eyebrow: { color: colors.accent, fontSize: 12, fontWeight: "900", letterSpacing: 1.2 },
   researchTitle: { color: colors.text, fontSize: 25, fontWeight: "900", lineHeight: 30 },
   researchBody: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
@@ -173,5 +244,6 @@ const styles = StyleSheet.create({
   startButton: { alignItems: "center", backgroundColor: colors.text, borderRadius: radius.lg, justifyContent: "center", minHeight: 60, ...shadows.tile },
   startText: { color: colors.surface, fontSize: 18, fontWeight: "900" },
   disabled: { opacity: 0.45 },
+  startError: { color: colors.textOnOrange, fontSize: 14, fontWeight: "800", lineHeight: 20, textAlign: "center" },
   status: { color: colors.textOnOrange, fontSize: 13, textAlign: "center", fontWeight: "800" },
 });

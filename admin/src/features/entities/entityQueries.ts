@@ -6,6 +6,7 @@ import {
   getAdminRideDetail,
   listAdminResources,
   listEntityRecords,
+  recomputeAdminRideMetrics,
   updateEntityRecord,
 } from "../../api/adminApi";
 import { queryKeys } from "../../query/queryKeys";
@@ -59,6 +60,24 @@ export function useAdminRideDetail(session: AdminSession, rideId: string | null)
       }
 
       return getAdminRideDetail(session, rideId);
+    },
+  });
+}
+
+/**
+ * Re-run ride tracking over a ride the backend already has.
+ *
+ * Both the stored ride row and the detail view change, so both caches are
+ * invalidated rather than patched.
+ */
+export function useRecomputeRideMetrics(session: AdminSession) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (rideId: string) => recomputeAdminRideMetrics(session, rideId),
+    onSuccess: (_result, rideId) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.rideDetail(rideId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.rides });
     },
   });
 }

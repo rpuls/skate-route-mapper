@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   CurrentMobileUser,
   MobileAuthResponse,
@@ -7,6 +14,7 @@ import {
   getCurrentMobileUser,
   InvalidMobileSessionError,
 } from "../api/mobileAuth";
+import { startAutoSync, stopAutoSync } from "../sync/autoSync";
 import {
   clearStoredMobileSession,
   loadStoredMobileSession,
@@ -27,6 +35,19 @@ export function MobileAuthProvider({ children }: { children: React.ReactNode }) 
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<CurrentMobileUser | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
+  // Auto sync reads the token when it runs rather than capturing it, so a
+  // sign-in or sign-out does not have to restart the scheduler.
+  const tokenRef = useRef<string | null>(null);
+
+  tokenRef.current = token;
+
+  useEffect(() => {
+    startAutoSync({ getToken: () => tokenRef.current });
+
+    return () => {
+      stopAutoSync();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;

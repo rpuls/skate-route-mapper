@@ -10,6 +10,7 @@
     "./design": "./src/design.ts",
     "./mobileContracts": "./src/mobileContracts.ts",
     "./researchContracts": "./src/researchContracts.ts",
+    "./rideTracking": "./src/rideTracking.ts",
     "./xiaoBle": "./src/xiaoBle.ts",
     "./xiaoResearch": {
       "types": "./src/xiaoResearch.d.ts",

@@ -5,6 +5,7 @@ export const queryKeys = {
       ? (["admin", "entities", resourceName, { page, pageSize }] as const)
       : (["admin", "entities", resourceName] as const),
   rideDetail: (rideId: string) => ["admin", "rides", rideId] as const,
+  rides: ["admin", "entities", "rides"] as const,
   researchCaptureRecording: (researchCaptureId: string) =>
     ["admin", "research-captures", researchCaptureId, "recording"] as const,
 };
