@@ -13,6 +13,8 @@ export const brandColors = {
   blue: "#1677ff",
   green: "#19a974",
   red: "#e5484d",
+  stone: "#c9b8ab",
+  sand: "#e4d8ce",
 } as const;
 
 export const colors = {
@@ -30,7 +32,15 @@ export const colors = {
   link: brandColors.blue,
   success: brandColors.green,
   danger: brandColors.red,
+  /** An indicator that is off rather than bad: an unpaired sensor, an idle dot. */
+  neutral: brandColors.stone,
+  /** The unfilled half of a switch, slider or progress rail. */
+  track: brandColors.sand,
+  /** A faint fill for a control sitting directly on the orange page. */
+  surfaceOnPage: "rgba(255, 255, 255, 0.18)",
   shadow: "rgba(23, 17, 12, 0.16)",
+  /** Dim behind a sheet or drawer so the layer above reads as the active one. */
+  scrim: "rgba(23, 17, 12, 0.45)",
 } as const;
 
 export const space = {
@@ -55,13 +65,32 @@ export const radius = {
   pill: 999,
 } as const;
 
+/**
+ * Tap-target heights.
+ *
+ * A screen is read by importance, so the size of a control is a statement
+ * about it. One action per screen may be `xl`; everything else steps down.
+ */
+export const controlSize = {
+  /** Compact chips, close buttons, status pills. */
+  xs: 36,
+  /** Icon buttons and segmented controls. */
+  sm: 44,
+  /** Ordinary buttons and text inputs. */
+  md: 52,
+  /** Paired primary actions sharing a row. */
+  lg: 60,
+  /** The one dominant action on a screen. */
+  xl: 68,
+} as const;
+
 export const borderWidth = {
   thin: 1,
   thick: 2,
 } as const;
 
 export const typography = {
-  family: "\"Open Sans\", system-ui, sans-serif",
+  family: '"Open Sans", system-ui, sans-serif',
   sizes: {
     caption: 12,
     small: 14,
@@ -94,11 +123,77 @@ export const shadows = {
     },
     elevation: 6,
   },
+  /**
+   * A small control floating over other content.
+   *
+   * Deliberately tighter than `tile`: these sit inside clipping containers —
+   * a map frame with rounded corners, say — where the room available for a
+   * shadow is whatever inset the control was given. Its bleed fits a `space.lg`
+   * inset on every side.
+   */
+  control: {
+    shadowColor: colors.shadow,
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
+  },
+  /** A sheet sits above the page, so its lift points upward. */
+  sheet: {
+    shadowColor: colors.shadow,
+    shadowOpacity: 1,
+    shadowRadius: 32,
+    shadowOffset: {
+      width: 0,
+      height: -8,
+    },
+    elevation: 16,
+  },
+} as const;
+
+/**
+ * How far a shadow spreads past the element casting it, on each side.
+ *
+ * This exists because a shadow is drawn outside its element's box, and a
+ * scrolling container clips to its own bounds. Put a full-width tile in a
+ * scroll view whose padding is smaller than this and the soft warm shadow is
+ * sliced off flat against the tile's edge — a hard line, on whichever side ran
+ * out of room. It is the ugliest thing the app can do and it had to be fixed
+ * three times in three places before being written down.
+ *
+ * So it is computed from the shadow rather than typed out: raising a shadow's
+ * radius widens the space reserved for it automatically, and the two cannot
+ * drift apart.
+ */
+function bleedFor(shadow: {
+  shadowRadius: number;
+  shadowOffset: { height: number };
+}) {
+  return {
+    top: Math.max(0, shadow.shadowRadius - shadow.shadowOffset.height),
+    bottom: Math.max(0, shadow.shadowRadius + shadow.shadowOffset.height),
+    horizontal: shadow.shadowRadius,
+  } as const;
+}
+
+export const shadowBleed = {
+  tile: bleedFor(shadows.tile),
+  control: bleedFor(shadows.control),
+  sheet: bleedFor(shadows.sheet),
 } as const;
 
 export const layout = {
   maxContentWidth: 1120,
-  screenPadding: space.xl,
+  /**
+   * The page's side gutter.
+   *
+   * Never narrower than a tile's shadow reaches, so a tile laid out against
+   * this gutter always has room to cast one.
+   */
+  screenPadding: Math.max(space.xl, shadowBleed.tile.horizontal),
   tilePadding: space.lg,
   nestedInset: space.sm,
 } as const;
@@ -206,6 +301,8 @@ export const skateDesign = {
   colors,
   space,
   radius,
+  controlSize,
+  shadowBleed,
   borderWidth,
   typography,
   shadows,

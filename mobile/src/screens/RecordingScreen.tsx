@@ -1,15 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Dimensions,
-  ScrollView,
-} from "react-native";
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { LineChart } from "react-native-chart-kit";
-import { useNavigation } from "@react-navigation/native";
 import {
   formatDistance,
   formatDuration,
@@ -17,8 +8,17 @@ import {
   usableSpeed,
   type LocationFixRejection,
 } from "@skate-route-mapper/shared/rideTracking";
-import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
-import { useMeasurementStore } from "../store/measurementStore";
+import {
+  colors,
+  radius,
+  shadows,
+  space,
+} from "@skate-route-mapper/shared/design";
+import { Page } from "../components/Page";
+import {
+  recordedSeconds,
+  useMeasurementStore,
+} from "../store/measurementStore";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const VIBRATION_WINDOW = 40;
@@ -40,21 +40,31 @@ const rejectionLabels: Record<LocationFixRejection, string> = {
   "out-of-order": "Ignored a fix that arrived late",
 };
 
+/**
+ * The live detail behind a ride.
+ *
+ * The ride screen answers "how far, how fast, is it running". This answers
+ * "should I trust it": fix accuracy, how many fixes were kept, why the last
+ * one was dropped, and what the board is reading. It is a read-only view on
+ * purpose — the ride is started and finished in exactly one place, and a
+ * second stop button in a diagnostics screen is how a rider ends up with two
+ * half-rides.
+ */
 export default function RecordingScreen() {
-  const navigation = useNavigation();
-
   const status = useMeasurementStore((state) => state.status);
   const sensorSource = useMeasurementStore((state) => state.sensorSource);
   const recording = useMeasurementStore((state) => state.recording);
-  const permissionMessage = useMeasurementStore((state) => state.permissionMessage);
+  const permissionMessage = useMeasurementStore(
+    (state) => state.permissionMessage
+  );
   const latestExternalImuSample = useMeasurementStore(
     (state) => state.latestExternalImuSample
   );
-  const stopRecording = useMeasurementStore((state) => state.stopRecording);
+  const pausedAt = useMeasurementStore((state) => state.pausedAt);
+  const pausedMs = useMeasurementStore((state) => state.pausedMs);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [vibrationWindow, setVibrationWindow] = useState<number[]>([0]);
-  const [stopping, setStopping] = useState(false);
 
   // The elapsed clock has to keep moving between fixes, which arrive every
   // couple of seconds at best.
@@ -75,11 +85,16 @@ export default function RecordingScreen() {
       latestExternalImuSample.az
     );
 
-    setVibrationWindow((values) => [...values, magnitude].slice(-VIBRATION_WINDOW));
+    setVibrationWindow((values) =>
+      [...values, magnitude].slice(-VIBRATION_WINDOW)
+    );
   }, [latestExternalImuSample]);
 
   const metrics = recording?.metrics ?? null;
-  const elapsedSeconds = recording ? Math.max(0, (nowMs - recording.startedAt) / 1000) : 0;
+  const elapsedSeconds = recordedSeconds(
+    { recording, pausedAt, pausedMs },
+    nowMs
+  );
   const currentSpeed = usableSpeed(recording?.lastFix?.speed ?? null);
   const accuracy = recording?.lastFix?.accuracy ?? null;
   const fixAgeSeconds =
@@ -115,196 +130,142 @@ export default function RecordingScreen() {
     return readings.reduce((sum, value) => sum + value, 0) / readings.length;
   }, [vibrationWindow]);
 
-  const handleStop = async () => {
-    if (stopping) {
-      return;
-    }
-
-    setStopping(true);
-    await stopRecording();
-    navigation.goBack();
-  };
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Text style={styles.appName}>Skate Route Mapper</Text>
-          <Text style={styles.title}>Recording route</Text>
-          <Text style={styles.subtitle}>
-            {sensorSource === "external"
-              ? "Route from this phone, pavement vibration from the XIAO board."
-              : "Recording your route, distance and speed."}{" "}
-            Recording continues with the screen locked.
+    <Page
+      back
+      subtitle={
+        sensorSource === "external"
+          ? "Route from this phone, pavement vibration from the XIAO board. Recording continues with the screen locked."
+          : "Route, distance and speed from this phone. Recording continues with the screen locked."
+      }
+      title="Live detail"
+    >
+      {permissionMessage ? (
+        <View style={styles.noticeCard}>
+          <Text style={styles.noticeText}>{permissionMessage}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.heroCard}>
+        <Text style={styles.heroLabel}>Elapsed</Text>
+        <Text style={styles.heroValue}>{formatDuration(elapsedSeconds)}</Text>
+        <Text style={styles.heroMeta}>
+          {formatDuration(metrics?.movingSeconds ?? 0)} moving · status {status}
+        </Text>
+      </View>
+
+      <View style={styles.metricGrid}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Distance</Text>
+          <Text style={styles.metricValue}>
+            {formatDistance(metrics?.distanceMeters ?? 0)}
           </Text>
         </View>
 
-        {permissionMessage ? (
-          <View style={styles.noticeCard}>
-            <Text style={styles.noticeText}>{permissionMessage}</Text>
-          </View>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Speed</Text>
+          <Text style={styles.metricValue}>{formatSpeedKmh(currentSpeed)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.metricGrid}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Average</Text>
+          <Text style={styles.metricValue}>
+            {formatSpeedKmh(metrics?.avgSpeedMps ?? 0)}
+          </Text>
+        </View>
+
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Max</Text>
+          <Text style={styles.metricValue}>
+            {formatSpeedKmh(metrics?.maxSpeedMps ?? 0)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>GPS</Text>
+
+        <View style={styles.axisRow}>
+          <Text style={styles.axisLabel}>Accuracy</Text>
+          <Text style={styles.axisValue}>{gpsState.label}</Text>
+        </View>
+
+        <View style={styles.axisRow}>
+          <Text style={styles.axisLabel}>Fixes</Text>
+          <Text style={styles.axisValue}>{gpsState.detail}</Text>
+        </View>
+
+        {recording?.lastRejection ? (
+          <Text style={styles.hintText}>
+            {rejectionLabels[recording.lastRejection]}
+          </Text>
         ) : null}
+      </View>
 
-        <View style={styles.heroCard}>
-          <Text style={styles.heroLabel}>Elapsed</Text>
-          <Text style={styles.heroValue}>{formatDuration(elapsedSeconds)}</Text>
-          <Text style={styles.heroMeta}>
-            {formatDuration(metrics?.movingSeconds ?? 0)} moving · status {status}
-          </Text>
-        </View>
-
-        <View style={styles.metricGrid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Distance</Text>
-            <Text style={styles.metricValue}>
-              {formatDistance(metrics?.distanceMeters ?? 0)}
-            </Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Speed</Text>
-            <Text style={styles.metricValue}>{formatSpeedKmh(currentSpeed)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.metricGrid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Average</Text>
-            <Text style={styles.metricValue}>
-              {formatSpeedKmh(metrics?.avgSpeedMps ?? 0)}
-            </Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Max</Text>
-            <Text style={styles.metricValue}>
-              {formatSpeedKmh(metrics?.maxSpeedMps ?? 0)}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>GPS</Text>
-
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>Accuracy</Text>
-            <Text style={styles.axisValue}>{gpsState.label}</Text>
-          </View>
-
-          <View style={styles.axisRow}>
-            <Text style={styles.axisLabel}>Fixes</Text>
-            <Text style={styles.axisValue}>{gpsState.detail}</Text>
-          </View>
-
-          {recording?.lastRejection ? (
-            <Text style={styles.hintText}>
-              {rejectionLabels[recording.lastRejection]}
-            </Text>
-          ) : null}
-        </View>
-
-        {sensorSource === "external" ? (
-          <>
-            <View style={styles.metricGrid}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Vibration</Text>
-                <Text style={styles.metricValue}>
-                  {(vibrationWindow[vibrationWindow.length - 1] ?? 0).toFixed(3)}
-                </Text>
-              </View>
-
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Avg vibration</Text>
-                <Text style={styles.metricValue}>{averageVibration.toFixed(3)}</Text>
-              </View>
+      {sensorSource === "external" ? (
+        <>
+          <View style={styles.metricGrid}>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Vibration</Text>
+              <Text style={styles.metricValue}>
+                {(vibrationWindow[vibrationWindow.length - 1] ?? 0).toFixed(3)}
+              </Text>
             </View>
 
-            <View style={styles.chartCard}>
-              <Text style={styles.sectionTitle}>Live vibration graph</Text>
-
-              <LineChart
-                data={{
-                  labels: [],
-                  datasets: [{ data: vibrationWindow }],
-                }}
-                width={SCREEN_WIDTH - 56}
-                height={220}
-                withDots={false}
-                withInnerLines
-                withOuterLines={false}
-                withVerticalLabels={false}
-                withHorizontalLabels
-                chartConfig={{
-                  backgroundGradientFrom: colors.surfaceMuted,
-                  backgroundGradientTo: colors.surfaceMuted,
-                  decimalPlaces: 2,
-                  color: () => colors.accent,
-                  labelColor: () => colors.textMuted,
-                  propsForBackgroundLines: {
-                    stroke: "#c8def5",
-                  },
-                }}
-                bezier
-                style={styles.chart}
-              />
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Avg vibration</Text>
+              <Text style={styles.metricValue}>
+                {averageVibration.toFixed(3)}
+              </Text>
             </View>
-          </>
-        ) : null}
+          </View>
 
-        <Pressable
-          disabled={stopping}
-          onPress={handleStop}
-          style={[styles.stopButton, stopping && styles.stopButtonDisabled]}
-        >
-          <Text style={styles.stopButtonText}>
-            {stopping ? "Saving ride..." : "Stop recording"}
+          <View style={styles.chartCard}>
+            <Text style={styles.sectionTitle}>Live vibration graph</Text>
+
+            <LineChart
+              data={{
+                labels: [],
+                datasets: [{ data: vibrationWindow }],
+              }}
+              width={SCREEN_WIDTH - 56}
+              height={220}
+              withDots={false}
+              withInnerLines
+              withOuterLines={false}
+              withVerticalLabels={false}
+              withHorizontalLabels
+              chartConfig={{
+                backgroundGradientFrom: colors.surfaceMuted,
+                backgroundGradientTo: colors.surfaceMuted,
+                decimalPlaces: 2,
+                color: () => colors.accent,
+                labelColor: () => colors.textMuted,
+                propsForBackgroundLines: {
+                  stroke: "#c8def5",
+                },
+              }}
+              bezier
+              style={styles.chart}
+            />
+          </View>
+        </>
+      ) : null}
+
+      {recording ? null : (
+        <View style={styles.noticeCard}>
+          <Text style={styles.noticeText}>
+            No ride is being recorded. Start one from the ride screen.
           </Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+        </View>
+      )}
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.page,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 48,
-    gap: 18,
-  },
-  header: {
-    marginTop: 16,
-  },
-  appName: {
-    color: colors.textOnOrange,
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 12,
-    opacity: 0.82,
-  },
-  title: {
-    color: colors.textOnOrange,
-    fontSize: 34,
-    fontWeight: "800",
-    lineHeight: 39,
-    marginBottom: 10,
-  },
-  subtitle: {
-    color: colors.textOnOrange,
-    fontSize: 16,
-    lineHeight: 23,
-    opacity: 0.82,
-  },
   noticeCard: {
     backgroundColor: colors.surfaceWarm,
     borderRadius: radius.lg,
@@ -407,19 +368,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     marginTop: 10,
-  },
-  stopButton: {
-    backgroundColor: colors.danger,
-    paddingVertical: 17,
-    borderRadius: radius.lg,
-    alignItems: "center",
-  },
-  stopButtonDisabled: {
-    opacity: 0.6,
-  },
-  stopButtonText: {
-    color: "#ffffff",
-    fontSize: 17,
-    fontWeight: "800",
   },
 });

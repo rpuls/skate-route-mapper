@@ -1,9 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,12 +15,11 @@ import {
   space,
   stateStyles,
 } from "@skate-route-mapper/shared/design";
-import {
-  loginMobileUser,
-  signupMobileUser,
-} from "../api/mobileAuth";
+import { loginMobileUser, signupMobileUser } from "../api/mobileAuth";
 import { useMobileAuth } from "../auth/MobileAuthContext";
-import { ScreenHeader } from "../components/AppMenu";
+import { Card } from "../components/Card";
+import { Icon } from "../components/Icon";
+import { Page } from "../components/Page";
 
 type AuthMode = "signup" | "login";
 
@@ -46,13 +43,28 @@ function getFriendlySubmitError(error: unknown) {
 }
 
 export default function AuthScreen() {
-  const { isRestoring, setSession, signOut, user } = useMobileAuth();
-  const [authMode, setAuthMode] = useState<AuthMode>("signup");
+  const { hasKnownAccount, isRestoring, setSession, signOut, user } =
+    useMobileAuth();
+  // Signing up is only the right default the first time. Afterwards the person
+  // in front of this form already has an account, and offering them "Create
+  // account" first makes their normal case the one that needs a correction.
+  const [authMode, setAuthMode] = useState<AuthMode>(
+    hasKnownAccount ? "login" : "signup"
+  );
+  const [modeChosen, setModeChosen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Whether an account exists is read from storage, so it can arrive after the
+  // first paint. Until someone picks a tab themselves, follow the answer.
+  useEffect(() => {
+    if (!modeChosen && hasKnownAccount) {
+      setAuthMode("login");
+    }
+  }, [hasKnownAccount, modeChosen]);
 
   const actionLabel = authMode === "signup" ? "Create account" : "Sign in";
   const isSignup = authMode === "signup";
@@ -110,10 +122,9 @@ export default function AuthScreen() {
         appVersion: "1.0.0",
         deviceModel: Platform.OS === "web" ? "Web browser" : undefined,
       };
-      const session =
-        isSignup
-          ? await signupMobileUser(payload)
-          : await loginMobileUser(payload);
+      const session = isSignup
+        ? await signupMobileUser(payload)
+        : await loginMobileUser(payload);
 
       await setSession(session);
       setPassword("");
@@ -132,146 +143,135 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        style={styles.scroll}
-      >
-        <ScreenHeader
-          title="Account"
-          subtitle="Sign in when you want future recovery and sync. Skating stays local-first."
-        />
+    <Page
+      subtitle="Sign in when you want future recovery and sync. Skating stays local-first."
+      title="Account"
+    >
+      <Card>
+        {!user && !isRestoring && (
+          <View style={styles.modeTabs}>
+            {(hasKnownAccount
+              ? (["login", "signup"] as const)
+              : (["signup", "login"] as const)
+            ).map((mode) => {
+              const selected = authMode === mode;
 
-        <View style={styles.card}>
-          {!user && !isRestoring && (
-            <View style={styles.modeTabs}>
-              {(["signup", "login"] as const).map((mode) => {
-                const selected = authMode === mode;
-
-                return (
-                  <Pressable
-                    key={mode}
-                    disabled={submitting}
-                    onPress={() => setAuthMode(mode)}
-                    style={[styles.modeButton, selected && styles.modeButtonSelected]}
+              return (
+                <Pressable
+                  key={mode}
+                  disabled={submitting}
+                  onPress={() => {
+                    setModeChosen(true);
+                    setAuthMode(mode);
+                  }}
+                  style={[
+                    styles.modeButton,
+                    selected && styles.modeButtonSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modeButtonText,
+                      selected && styles.modeButtonTextSelected,
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.modeButtonText,
-                        selected && styles.modeButtonTextSelected,
-                      ]}
-                    >
-                      {mode === "signup" ? "Sign up" : "Log in"}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+                    {mode === "signup" ? "Sign up" : "Log in"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
-          {isRestoring ? (
-            <View style={styles.statusPanel}>
-              <Text style={styles.statusCopy}>Restoring your session...</Text>
-            </View>
-          ) : user ? (
-            <View style={styles.statusPanel}>
-              <Text style={styles.statusTitle}>{user.email}</Text>
-              <Text style={styles.statusCopy}>
-                Your session is active. Start and saved rides are still available
-                from the menu.
-              </Text>
-              <Pressable onPress={handleSignOut} style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>Sign out</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.form}>
-              <TextInput
-                accessibilityLabel="Email"
-                autoCapitalize="none"
-                autoComplete="email"
-                inputMode="email"
-                onChangeText={setEmail}
-                placeholder="Email"
-                placeholderTextColor={colors.textMuted}
-                style={styles.input}
-                value={email}
-              />
+        {isRestoring ? (
+          <View style={styles.statusPanel}>
+            <Text style={styles.statusCopy}>Restoring your session...</Text>
+          </View>
+        ) : user ? (
+          <View style={styles.statusPanel}>
+            <Text style={styles.statusTitle}>{user.email}</Text>
+            <Text style={styles.statusCopy}>
+              Your session is active. Start and saved rides are still available
+              from the menu.
+            </Text>
+            <Pressable onPress={handleSignOut} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Sign out</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.form}>
+            <TextInput
+              accessibilityLabel="Email"
+              autoCapitalize="none"
+              autoComplete="email"
+              inputMode="email"
+              onChangeText={setEmail}
+              placeholder="Email"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              value={email}
+            />
 
-              <TextInput
-                accessibilityLabel="Password"
-                autoCapitalize="none"
-                onChangeText={setPassword}
-                placeholder="Password"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                style={styles.input}
-                value={password}
-              />
+            <TextInput
+              accessibilityLabel="Password"
+              autoCapitalize="none"
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              style={styles.input}
+              value={password}
+            />
 
-              {isSignup && (
-                <>
-                  <TextInput
-                    accessibilityLabel="Confirm password"
-                    autoCapitalize="none"
-                    onChangeText={setConfirmPassword}
-                    placeholder="Confirm password"
-                    placeholderTextColor={colors.textMuted}
-                    secureTextEntry
-                    style={styles.input}
-                    value={confirmPassword}
-                  />
+            {isSignup && (
+              <>
+                <TextInput
+                  accessibilityLabel="Confirm password"
+                  autoCapitalize="none"
+                  onChangeText={setConfirmPassword}
+                  placeholder="Confirm password"
+                  placeholderTextColor={colors.textMuted}
+                  secureTextEntry
+                  style={styles.input}
+                  value={confirmPassword}
+                />
 
-                  <Text style={styles.passwordHelper}>Minimum 8 characters</Text>
-                </>
-              )}
+                <Text style={styles.passwordHelper}>Minimum 8 characters</Text>
+              </>
+            )}
 
-              <Pressable
-                disabled={!canSubmit}
-                onPress={handleAuthSubmit}
-                style={[styles.primaryButton, !canSubmit && styles.buttonDisabled]}
-              >
-                <Text style={styles.primaryButtonText}>{actionLabel}</Text>
-              </Pressable>
-            </View>
-          )}
+            <Pressable
+              disabled={!canSubmit}
+              onPress={handleAuthSubmit}
+              style={[
+                styles.primaryButton,
+                !canSubmit && styles.buttonDisabled,
+              ]}
+            >
+              <Text style={styles.primaryButtonText}>{actionLabel}</Text>
+            </Pressable>
+          </View>
+        )}
 
-          {message ? <Text style={styles.message}>{message}</Text> : null}
-        </View>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
+      </Card>
 
-        <View style={styles.infoBand}>
+      <View style={styles.infoBand}>
+        <View style={styles.infoHeading}>
+          <Icon color={colors.accentStrong} name="info" size={20} />
           <Text style={styles.infoTitle}>Your privacy matters</Text>
-          <Text style={styles.infoCopy}>
-            You can use Skate Route Mapper without creating an account. If you
-            prefer to stay anonymous, you can still record rides, but account
-            features like backup, sync, and recovery will not be available.
-          </Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        <Text style={styles.infoCopy}>
+          You can use Skate Route Mapper without creating an account. If you
+          prefer to stay anonymous, you can still record rides, but account
+          features like backup, sync, and recovery will not be available.
+        </Text>
+      </View>
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.page,
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    gap: 18,
-    padding: 20,
-    paddingBottom: 48,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: space.lg,
-    ...shadows.tile,
-  },
   modeTabs: {
     flexDirection: "row",
     gap: 10,
@@ -354,6 +354,8 @@ const styles = StyleSheet.create({
   secondaryButton: {
     alignItems: "center",
     alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: space.sm,
     borderColor: buttonVariants.primary.contained.borderColor,
     borderRadius: radius.pill,
     borderWidth: 2,
@@ -377,11 +379,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: space.lg,
   },
+  infoHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: space.sm,
+    marginBottom: 8,
+  },
   infoTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: "900",
-    marginBottom: 8,
   },
   infoCopy: {
     color: colors.textMuted,

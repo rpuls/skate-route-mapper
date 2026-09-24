@@ -389,6 +389,85 @@ Two fixes came along with it, because they were in the same code:
 - `POST /v1/mobile/sync` used Fastify's 1 MB default body limit, which batched
   samples would have exceeded.
 
+### Mobile UI refactor — built
+
+A pass over the whole mobile interface, after a screenshot showed the menu
+button clipped off the right edge of the research screen because a 34px title
+shared a row with it and had nothing to shrink.
+
+- **A page framework.** `mobile/src/components/Page.tsx` owns the header,
+  safe-area insets and the body layout for every screen. The title and the
+  drawer button share the top line; the title flexes and wraps, the button
+  never shrinks, so no title length can push it off-screen. The drawer moves
+  between places, and a place listed in it has no back button; a page drilled
+  into, such as live detail or one saved ride, opts in with `back`. See "Page
+  Framework" in `docs/design-guide.md`.
+- **The start screen rebuilt** to the Claude Design layout: one screen for the
+  whole ride, with a live map, ride type and sensor as sheets, and the timer,
+  distance, speed and finish controls in the same place the start button was.
+  `RecordingScreen` became read-only live detail behind it.
+- **Pause and resume.** `rideRecorder.breakSegment()` ends the route segment so
+  a paused stretch is neither drawn nor counted, and the ride clock excludes
+  paused time. A pause does not survive the app being killed; relaunching
+  resumes recording, which is the safer of the two wrong answers.
+- **The research lab entry moved to the drawer.** It was the first tile on the
+  start screen, ahead of the button most people open the app for.
+- **The research screen laid out around what is live.** Connection collapses to
+  a pill once made, the experiment description and the saved library fold to
+  summary lines, and the capture card — countdown, transfer percentage —
+  stays on screen. Previously both ran below the fold.
+- **One shared XIAO connection** (`mobile/src/native/xiaoConnection.ts`) instead
+  of one per screen. A board paired on the ride screen is still paired in the
+  lab, which is what lets the lab show a pill rather than a connect box.
+- **The auth screen opens on log in** once an account has been used on the
+  phone, tracked by a preference that signing out does not clear.
+
+Two things worth flagging:
+
+- **A schema bug was fixed on the way.** `samples` declared its motion columns
+  `NOT NULL`, but a GPS fix is written as a sample with null motion — so on a
+  database created under that schema, every route insert failed its constraint
+  and took the flush with it. `initDatabase` now rebuilds the table. This
+  predates the refactor and would have prevented any route from being stored on
+  a fresh install.
+- **The live "Surface" tile shows the raw vibration magnitude in g, not a
+  Smooth/Okay/Rough word.** The design asks for the word, but
+  `docs/vibration-roughness-plan.md` is explicit that broadband acceleration is
+  not road roughness and that the bands are still an open research question.
+  The tile is wired and placed; the classification goes in when section 4
+  produces one.
+
+### Design system drift — found and partly corrected
+
+The visual system is published to Claude Design (project
+`1b289219-57b8-4ced-8011-9bca7af6ad4b`, the same project the Start Ride
+template came from), built from `.design-sync/foundations.tsx`. `AGENTS.md`
+named `docs/design-guide.md` as the "design system guide" and mentioned neither
+Claude Design nor `.design-sync/`, which is gitignored — so the UI refactor
+above wrote every new visual rule into the repo markdown file and none of it
+reached the published system.
+
+Values never drifted: the specimens read `shared/src/design.ts` at render time,
+so the tokens added during the refactor show up in both. Prose did. The
+`ElevationAndShadow` specimen asserted "there is exactly one shadow in this
+system" while the tokens had grown to three.
+
+Corrected: the elevation specimen now documents all three shadows and the
+shadow-bleed rule, and `AGENTS.md` names Claude Design as canonical with a
+three-layer split — tokens in `shared/src/design.ts`, brand rules in the
+specimens, app framework in `docs/design-guide.md`.
+
+**Still open, for the user to rule on:**
+
+- The specimen edit is not published. It needs a full design-sync rebuild,
+  which uploads, so it was not run unasked.
+- `.design-sync/` is gitignored at the user's request, so the design system's
+  source is absent from a fresh clone and a second developer cannot re-sync.
+- `.design-sync/NOTES.md` records four measured WCAG failures in the core
+  palette (white on `page` is 2.87:1) that no repo doc mentions. The remedies
+  are already in the palette — `text` on `page` is 6.52, `accentStrong` on
+  `surface` is 4.65 — but they change the brand's look, so nothing was changed.
+
 ### What still needs a device
 
 Everything above type-checks and is unit tested where it is pure, but none of it

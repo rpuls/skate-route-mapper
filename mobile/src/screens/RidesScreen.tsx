@@ -1,12 +1,5 @@
 import React, { useCallback, useState } from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  FlatList,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import dayjs from "dayjs";
 import {
@@ -28,7 +21,7 @@ import {
   space,
   stateStyles,
 } from "@skate-route-mapper/shared/design";
-import { ScreenHeader } from "../components/AppMenu";
+import { Page, pageGutter, scrollContentInsets } from "../components/Page";
 import { useMobileAuth } from "../auth/MobileAuthContext";
 import { syncPendingChanges } from "../sync/syncService";
 
@@ -76,7 +69,9 @@ export default function RidesScreen() {
     const result = await syncPendingChanges({
       token,
       onProgress: ({ sentOperations, totalOperations }) => {
-        setSyncMessage(`Uploaded ${sentOperations} of ${totalOperations} changes...`);
+        setSyncMessage(
+          `Uploaded ${sentOperations} of ${totalOperations} changes...`
+        );
       },
     });
 
@@ -106,13 +101,15 @@ export default function RidesScreen() {
       : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <ScreenHeader
-          title="Saved Rides"
-          subtitle="Local rides stored on this device."
-        />
-
+    <Page
+      layout="fill"
+      // The list below brings its own scroll view, which must span the full
+      // width or it clips every card's shadow flat against the card edge.
+      padded={false}
+      subtitle="Local rides stored on this device."
+      title="Saved rides"
+    >
+      <View style={styles.gutter}>
         <View style={styles.syncPanel}>
           <View>
             <Text style={styles.syncCount}>{summary.pending}</Text>
@@ -134,90 +131,100 @@ export default function RidesScreen() {
           </Pressable>
         </View>
 
-        {syncMessage ? <Text style={styles.syncMessage}>{syncMessage}</Text> : null}
+        {syncMessage ? (
+          <Text style={styles.syncMessage}>{syncMessage}</Text>
+        ) : null}
         {waitingMessage ? (
           <Text style={styles.syncMessage}>{waitingMessage}</Text>
         ) : null}
+      </View>
 
-        <FlatList
-          data={rides}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No rides yet</Text>
-              <Text style={styles.emptyText}>
-                Start a route scan to save your first skating ride.
+      <FlatList
+        data={rides}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        style={styles.list}
+        ListEmptyComponent={
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No rides yet</Text>
+            <Text style={styles.emptyText}>
+              Start a ride to save your first route.
+            </Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            style={styles.rideCard}
+            onPress={() =>
+              navigation.navigate("RideDetail", {
+                rideId: item.id,
+              })
+            }
+          >
+            <View style={styles.rideHeader}>
+              <View>
+                <Text style={styles.rideTitle}>
+                  {dayjs(item.startedAt).format("DD MMM YYYY - HH:mm")}
+                </Text>
+                <Text style={styles.rideMeta}>
+                  {item.vehicleType} - {item.sensorSource}
+                </Text>
+              </View>
+
+              <View style={styles.rideStats}>
+                <Text style={styles.sampleCount}>
+                  {formatDistance(item.distanceMeters)}
+                </Text>
+                <Text style={styles.sampleLabel}>
+                  {formatDuration(item.movingSeconds)} moving
+                </Text>
+              </View>
+            </View>
+
+            {pendingRideIds.has(item.id) ? (
+              <Text style={styles.pendingTag}>Waiting to upload</Text>
+            ) : null}
+
+            <View style={styles.rideFooter}>
+              <Text style={styles.footerMetric}>
+                Avg{" "}
+                {formatSpeedKmh(
+                  item.movingSeconds > 0
+                    ? item.distanceMeters / item.movingSeconds
+                    : 0
+                )}
+              </Text>
+              <Text style={styles.footerMetric}>
+                Max {formatSpeedKmh(item.maxSpeedMps)}
+              </Text>
+              <Text style={styles.footerMetric}>
+                {item.sampleCount} samples
               </Text>
             </View>
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.rideCard}
-              onPress={() =>
-                navigation.navigate("RideDetail", {
-                  rideId: item.id,
-                })
-              }
-            >
-              <View style={styles.rideHeader}>
-                <View>
-                  <Text style={styles.rideTitle}>
-                    {dayjs(item.startedAt).format("DD MMM YYYY - HH:mm")}
-                  </Text>
-                  <Text style={styles.rideMeta}>
-                    {item.vehicleType} - {item.sensorSource}
-                  </Text>
-                </View>
-
-                <View style={styles.rideStats}>
-                  <Text style={styles.sampleCount}>
-                    {formatDistance(item.distanceMeters)}
-                  </Text>
-                  <Text style={styles.sampleLabel}>
-                    {formatDuration(item.movingSeconds)} moving
-                  </Text>
-                </View>
-              </View>
-
-              {pendingRideIds.has(item.id) ? (
-                <Text style={styles.pendingTag}>Waiting to upload</Text>
-              ) : null}
-
-              <View style={styles.rideFooter}>
-                <Text style={styles.footerMetric}>
-                  Avg{" "}
-                  {formatSpeedKmh(
-                    item.movingSeconds > 0
-                      ? item.distanceMeters / item.movingSeconds
-                      : 0
-                  )}
-                </Text>
-                <Text style={styles.footerMetric}>
-                  Max {formatSpeedKmh(item.maxSpeedMps)}
-                </Text>
-                <Text style={styles.footerMetric}>{item.sampleCount} samples</Text>
-              </View>
-            </Pressable>
-          )}
-        />
-      </View>
-    </SafeAreaView>
+          </Pressable>
+        )}
+      />
+    </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.page,
+  // The page runs edge to edge here, so everything outside the list carries
+  // the gutter itself.
+  gutter: {
+    paddingHorizontal: pageGutter,
   },
-  container: {
+  list: {
     flex: 1,
-    padding: 20,
+    minHeight: 0,
   },
   listContent: {
     gap: 12,
-    paddingBottom: 48,
+    // On the content, not the scroll view: a viewport inset by this amount
+    // would clip each card's shadow flat against the card's own edge. The
+    // insets reserve the room the shadow actually needs on every side.
+    ...scrollContentInsets,
+    paddingBottom: scrollContentInsets.paddingBottom + space.xl,
   },
   syncPanel: {
     alignItems: "center",

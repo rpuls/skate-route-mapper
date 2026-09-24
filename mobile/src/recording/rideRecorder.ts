@@ -80,6 +80,8 @@ export type RideRecorder = {
   begin: (recording: ActiveRecording) => void;
   recordLocationFixes: (fixes: readonly LocationFix[]) => RecordingSnapshot | null;
   recordExternalSample: (reading: ImuReading, recordedAt?: number) => void;
+  /** End the current route segment without ending the ride. See below. */
+  breakSegment: () => RecordingSnapshot | null;
   flush: () => number;
   getSnapshot: () => RecordingSnapshot | null;
   end: (endedAt?: number) => FinishedRecording | null;
@@ -213,6 +215,47 @@ export function createRideRecorder(
       bufferFor(active.rideId).add([
         sampleFromImuReading(reading, lastFix, recordedAt),
       ]);
+    },
+
+    /**
+     * End the current segment, keeping the ride open.
+     *
+     * Pausing stops location updates, so the next fix after a resume can be
+     * anywhere — a rider who paused to take a train has not skated the line
+     * between the two points. Clearing the last fix and the anchor makes that
+     * fix start a fresh segment, so neither the distance nor the moving clock
+     * is credited for a stretch that was never recorded.
+     *
+     * The totals banked so far are untouched: this ends a segment, not a ride.
+     */
+    breakSegment() {
+      const active = store.getActiveRecording();
+
+      if (!active) {
+        return null;
+      }
+
+      // Waiting samples belong to the stretch that just ended, so they are
+      // written before the seam rather than carried across it.
+      flush();
+
+      const progress = store.getRideProgress(active.rideId);
+      const broken = {
+        ...progress,
+        lastFix: null,
+        anchorFix: null,
+        pendingSeconds: 0,
+      };
+
+      store.saveRideProgress(active.rideId, broken);
+      lastFix = null;
+      lastRejection = null;
+
+      const snapshot = snapshotFor(active, broken);
+
+      publish(snapshot);
+
+      return snapshot;
     },
 
     /** Write anything the buffer is still holding. */

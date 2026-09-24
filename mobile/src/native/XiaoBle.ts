@@ -1,5 +1,10 @@
 import { NativeModules, PermissionsAndroid, Platform } from "react-native";
-import { BleManager, type Device, type Subscription } from "react-native-ble-plx";
+import {
+  BleManager,
+  State,
+  type Device,
+  type Subscription,
+} from "react-native-ble-plx";
 import {
   XIAO_BLE_CONFIG_CHARACTERISTIC_UUID,
   XIAO_BLE_DEVICE_NAME,
@@ -98,6 +103,75 @@ export async function requestXiaoBlePermissions() {
   return result === PermissionsAndroid.RESULTS.GRANTED;
 }
 
+/**
+ * What a radio state that is not `PoweredOn` should tell the rider.
+ *
+ * These are the states that will not fix themselves, so each one ends the
+ * attempt with something actionable rather than leaving it to time out.
+ * `Unknown` and `Resetting` are deliberately absent: both are transient, so
+ * they are waited out rather than reported. See `waitForPoweredOnAdapter`.
+ */
+const adapterStateMessages: Partial<Record<State, string>> = {
+  [State.PoweredOff]: "Bluetooth is off. Turn it on and try again.",
+  [State.Unauthorized]:
+    "Skate Route Mapper is not allowed to use Bluetooth. Enable it in Settings.",
+  [State.Unsupported]: "This device has no Bluetooth LE radio.",
+};
+
+/**
+ * Wait for the radio before scanning.
+ *
+ * `new BleManager()` returns before the native adapter has reported anything,
+ * so its state starts as `Unknown` and a scan started in that window is
+ * rejected outright with "BluetoothLE is in unknown state". That is why the
+ * first tap on Connect used to fail and the second one worked: by then the
+ * adapter had powered on by itself.
+ *
+ * `Unknown` is a not-yet, not a no, so it is waited out rather than reported.
+ * On iOS it is also the state while the system Bluetooth permission dialog is
+ * open, which is why the wait is generous — the rider may be reading it.
+ */
+async function waitForPoweredOnAdapter(manager: BleManager, timeoutMs = 10000) {
+  if ((await manager.state()) === State.PoweredOn) {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    let subscription: Subscription | null = null;
+    let settled = false;
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      subscription?.remove();
+      if (error) reject(error);
+      else resolve();
+    };
+
+    const timer = setTimeout(
+      () => finish(new Error("Bluetooth did not become ready. Try again.")),
+      timeoutMs
+    );
+
+    // `true` re-emits the current state, closing the gap between the check
+    // above and this subscription: a radio that powered on in between would
+    // otherwise be waited on for a change that had already happened.
+    subscription = manager.onStateChange((next) => {
+      if (next === State.PoweredOn) {
+        finish();
+        return;
+      }
+
+      const message = adapterStateMessages[next];
+
+      if (message) {
+        finish(new Error(message));
+      }
+    }, true);
+  });
+}
+
 export async function connectToXiao(
   options: ConnectOptions = {}
 ): Promise<XiaoBleConnection> {
@@ -108,6 +182,9 @@ export async function connectToXiao(
   }
 
   const bleManager = getManager();
+
+  await waitForPoweredOnAdapter(bleManager);
+
   const timeoutMs = options.timeoutMs ?? 15000;
 
   return new Promise((resolve, reject) => {

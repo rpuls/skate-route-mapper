@@ -212,8 +212,36 @@ export function getRides(): Ride[] {
   return [...snapshot.rides].sort((left, right) => right.startedAt - left.startedAt);
 }
 
+/** Mirrors the native query. See `db.ts`. */
+export function getLastFinishedRide(): Ride | null {
+  return (
+    snapshot.rides
+      .filter((ride) => ride.endedAt !== null)
+      .sort((left, right) => (right.endedAt ?? 0) - (left.endedAt ?? 0))[0] ?? null
+  );
+}
+
 export function getRide(rideId: string): Ride | null {
   return snapshot.rides.find((ride) => ride.id === rideId) ?? null;
+}
+
+/** Mirrors the native route query. See `db.ts`. */
+export function getRideRouteCoordinates(
+  rideId: string
+): { latitude: number; longitude: number }[] {
+  return snapshot.samples
+    .filter(
+      (sample) =>
+        sample.rideId === rideId &&
+        sample.ax === null &&
+        sample.latitude !== null &&
+        sample.longitude !== null
+    )
+    .sort((left, right) => left.timestamp - right.timestamp)
+    .map((sample) => ({
+      latitude: sample.latitude as number,
+      longitude: sample.longitude as number,
+    }));
 }
 
 export function getSamplesForRide(rideId: string): MeasurementSample[] {

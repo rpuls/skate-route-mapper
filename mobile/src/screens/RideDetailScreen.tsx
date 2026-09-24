@@ -1,14 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Dimensions,
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-} from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRoute } from "@react-navigation/native";
 import { LineChart } from "react-native-chart-kit";
 import dayjs from "dayjs";
 
@@ -20,7 +12,13 @@ import {
 } from "@skate-route-mapper/shared/rideTracking";
 import { getRide, getSamplesForRide } from "../database/db";
 import RideRouteMap from "../components/RideRouteMap";
-import { colors, radius, shadows, space } from "@skate-route-mapper/shared/design";
+import { Page } from "../components/Page";
+import {
+  colors,
+  radius,
+  shadows,
+  space,
+} from "@skate-route-mapper/shared/design";
 import type { MeasurementSample } from "../types/measurement";
 
 type RouteParams = {
@@ -41,7 +39,6 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
 
 export default function RideDetailScreen() {
-  const navigation = useNavigation<any>();
   const route = useRoute();
   const { rideId } = route.params as RouteParams;
 
@@ -54,10 +51,7 @@ export default function RideDetailScreen() {
   const samples = useMemo(() => getSamplesForRide(rideId), [rideId]);
 
   const trustedGeoSamples = useMemo(
-    () =>
-      samples.filter(
-        (sample) => isTrustedGeoSample(sample)
-      ),
+    () => samples.filter((sample) => isTrustedGeoSample(sample)),
     [samples]
   );
 
@@ -169,7 +163,8 @@ export default function RideDetailScreen() {
           return samples.length - 1;
         }
 
-        const targetTimestamp = current.timestamp + PLAYBACK_TICK_MS * playbackSpeed;
+        const targetTimestamp =
+          current.timestamp + PLAYBACK_TICK_MS * playbackSpeed;
         const nextIndex = samples.findIndex(
           (sample, sampleIndex) =>
             sampleIndex > currentIndex && sample.timestamp >= targetTimestamp
@@ -209,233 +204,224 @@ export default function RideDetailScreen() {
 
   if (!ride) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-          <Text style={styles.title}>Ride not found</Text>
-        </View>
-      </SafeAreaView>
+      <Page
+        back
+        subtitle="It may have been deleted from this phone."
+        title="Ride not found"
+      >
+        <View />
+      </Page>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-
-          <Text style={styles.title}>Ride details</Text>
-          <Text style={styles.subtitle}>
-            {dayjs(ride.startedAt).format("DD MMM YYYY - HH:mm")}
+    <Page
+      back
+      subtitle={dayjs(ride.startedAt).format("DD MMM YYYY - HH:mm")}
+      title="Ride details"
+    >
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryPrimary}>
+          <Text style={styles.summaryLabel}>Distance</Text>
+          <Text style={styles.summaryValue}>
+            {formatDistance(ride.distanceMeters)}
           </Text>
         </View>
 
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryPrimary}>
-            <Text style={styles.summaryLabel}>Distance</Text>
-            <Text style={styles.summaryValue}>
-              {formatDistance(ride.distanceMeters)}
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Moving</Text>
+            <Text style={styles.summaryItemValue}>
+              {formatDuration(ride.movingSeconds)}
             </Text>
           </View>
 
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Moving</Text>
-              <Text style={styles.summaryItemValue}>
-                {formatDuration(ride.movingSeconds)}
-              </Text>
-            </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Average</Text>
+            <Text style={styles.summaryItemValue}>
+              {formatSpeedKmh(
+                ride.movingSeconds > 0
+                  ? ride.distanceMeters / ride.movingSeconds
+                  : 0
+              )}
+            </Text>
+          </View>
 
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Average</Text>
-              <Text style={styles.summaryItemValue}>
-                {formatSpeedKmh(
-                  ride.movingSeconds > 0 ? ride.distanceMeters / ride.movingSeconds : 0
-                )}
-              </Text>
-            </View>
-
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Max</Text>
-              <Text style={styles.summaryItemValue}>
-                {formatSpeedKmh(ride.maxSpeedMps)}
-              </Text>
-            </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Max</Text>
+            <Text style={styles.summaryItemValue}>
+              {formatSpeedKmh(ride.maxSpeedMps)}
+            </Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.mapCard}>
-          <RideRouteMap
-            currentCoordinate={currentCoordinate}
-            currentMarkerDescription={`Vibration: ${
-              currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"
-            }`}
-            currentMarkerTitle={formatDuration(elapsedMs / 1000)}
-            initialRegion={initialRegion}
-            startCoordinate={coordinates[0]}
-            visibleCoordinates={visibleCoordinates}
-          />
+      <View style={styles.mapCard}>
+        <RideRouteMap
+          currentCoordinate={currentCoordinate}
+          currentMarkerDescription={`Vibration: ${
+            currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"
+          }`}
+          currentMarkerTitle={formatDuration(elapsedMs / 1000)}
+          initialRegion={initialRegion}
+          startCoordinate={coordinates[0]}
+          visibleCoordinates={visibleCoordinates}
+        />
 
-          <View style={styles.replayPanel}>
-            <View style={styles.replayHeader}>
-              <Text style={styles.replayTitle}>Route replay</Text>
-              <Text style={styles.replayTime}>
-                {formatDuration(elapsedMs / 1000)} / {formatDuration(totalDurationMs / 1000)}
+        <View style={styles.replayPanel}>
+          <View style={styles.replayHeader}>
+            <Text style={styles.replayTitle}>Route replay</Text>
+            <Text style={styles.replayTime}>
+              {formatDuration(elapsedMs / 1000)} /{" "}
+              {formatDuration(totalDurationMs / 1000)}
+            </Text>
+          </View>
+
+          <View style={styles.timelineTrack}>
+            <View
+              style={[
+                styles.timelineFill,
+                {
+                  width: `${timelineProgress}%` as `${number}%`,
+                },
+              ]}
+            />
+          </View>
+
+          <View style={styles.playbackControls}>
+            <Pressable
+              onPress={handleTogglePlayback}
+              style={[
+                styles.controlButton,
+                samples.length === 0 && styles.disabledButton,
+              ]}
+              disabled={samples.length === 0}
+            >
+              <Text style={styles.primaryControlText}>
+                {isPlaying ? "Pause" : "Play"}
               </Text>
-            </View>
+            </Pressable>
 
-            <View style={styles.timelineTrack}>
-              <View
-                style={[
-                  styles.timelineFill,
-                  {
-                    width: `${timelineProgress}%` as `${number}%`,
-                  },
-                ]}
-              />
-            </View>
+            <Pressable
+              onPress={handleResetPlayback}
+              style={styles.controlButtonSecondary}
+            >
+              <Text style={styles.secondaryControlText}>Reset</Text>
+            </Pressable>
 
-            <View style={styles.playbackControls}>
-              <Pressable
-                onPress={handleTogglePlayback}
-                style={[
-                  styles.controlButton,
-                  samples.length === 0 && styles.disabledButton,
-                ]}
-                disabled={samples.length === 0}
-              >
-                <Text style={styles.primaryControlText}>
-                  {isPlaying ? "Pause" : "Play"}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleResetPlayback}
-                style={styles.controlButtonSecondary}
-              >
-                <Text style={styles.secondaryControlText}>Reset</Text>
-              </Pressable>
-
-              <View style={styles.speedControls}>
-                {PLAYBACK_SPEEDS.map((speed) => (
-                  <Pressable
-                    key={speed}
-                    onPress={() => setPlaybackSpeed(speed)}
+            <View style={styles.speedControls}>
+              {PLAYBACK_SPEEDS.map((speed) => (
+                <Pressable
+                  key={speed}
+                  onPress={() => setPlaybackSpeed(speed)}
+                  style={[
+                    styles.speedButton,
+                    playbackSpeed === speed && styles.speedButtonSelected,
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.speedButton,
-                      playbackSpeed === speed && styles.speedButtonSelected,
+                      styles.speedButtonText,
+                      playbackSpeed === speed && styles.speedButtonTextSelected,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.speedButtonText,
-                        playbackSpeed === speed && styles.speedButtonTextSelected,
-                      ]}
-                    >
-                      {speed}x
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.replayStats}>
-              <Text style={styles.replayText}>
-                Vibration:{" "}
-                <Text style={styles.replayValue}>
-                  {currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"}
-                </Text>
-              </Text>
-
-              <Text style={styles.replayText}>
-                Speed:{" "}
-                <Text style={styles.replayValue}>
-                  {currentSample?.speed != null
-                    ? `${currentSample.speed.toFixed(1)} m/s`
-                    : "-"}
-                </Text>
-              </Text>
+                    {speed}x
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
-        </View>
 
-        <View style={styles.chartCard}>
-          <Text style={styles.sectionTitle}>Vibration replay</Text>
+          <View style={styles.replayStats}>
+            <Text style={styles.replayText}>
+              Vibration:{" "}
+              <Text style={styles.replayValue}>
+                {currentSample?.vibrationMagnitude?.toFixed(3) ?? "-"}
+              </Text>
+            </Text>
 
-          <LineChart
-            data={{
-              labels: [],
-              datasets: [{ data: chartData }],
-            }}
-            width={SCREEN_WIDTH - 56}
-            height={220}
-            withDots={false}
-            withInnerLines
-            withOuterLines={false}
-            withVerticalLabels={false}
-            withHorizontalLabels
-            chartConfig={{
-              backgroundGradientFrom: colors.surfaceMuted,
-              backgroundGradientTo: colors.surfaceMuted,
-              decimalPlaces: 2,
-              color: () => colors.accent,
-              labelColor: () => colors.textMuted,
-              propsForBackgroundLines: {
-                stroke: colors.border,
-              },
-            }}
-            bezier
-            style={styles.chart}
-          />
-        </View>
-
-        <View style={styles.metricGrid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Samples</Text>
-            <Text style={styles.metricValue}>{samples.length}</Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Trusted GPS</Text>
-            <Text style={styles.metricValue}>{coordinates.length}</Text>
+            <Text style={styles.replayText}>
+              Speed:{" "}
+              <Text style={styles.replayValue}>
+                {currentSample?.speed != null
+                  ? `${currentSample.speed.toFixed(1)} m/s`
+                  : "-"}
+              </Text>
+            </Text>
           </View>
         </View>
+      </View>
 
-        <View style={styles.metricGrid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Avg vibration</Text>
-            <Text style={styles.metricValue}>{averageVibration.toFixed(3)}</Text>
-          </View>
+      <View style={styles.chartCard}>
+        <Text style={styles.sectionTitle}>Vibration replay</Text>
 
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Max vibration</Text>
-            <Text style={styles.metricValue}>{maxVibration.toFixed(3)}</Text>
-          </View>
+        <LineChart
+          data={{
+            labels: [],
+            datasets: [{ data: chartData }],
+          }}
+          width={SCREEN_WIDTH - 56}
+          height={220}
+          withDots={false}
+          withInnerLines
+          withOuterLines={false}
+          withVerticalLabels={false}
+          withHorizontalLabels
+          chartConfig={{
+            backgroundGradientFrom: colors.surfaceMuted,
+            backgroundGradientTo: colors.surfaceMuted,
+            decimalPlaces: 2,
+            color: () => colors.accent,
+            labelColor: () => colors.textMuted,
+            propsForBackgroundLines: {
+              stroke: colors.border,
+            },
+          }}
+          bezier
+          style={styles.chart}
+        />
+      </View>
+
+      <View style={styles.metricGrid}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Samples</Text>
+          <Text style={styles.metricValue}>{samples.length}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Ride info</Text>
-
-          <Text style={styles.infoText}>Vehicle: {ride.vehicleType}</Text>
-          <Text style={styles.infoText}>Sensor: {ride.sensorSource}</Text>
-          <Text style={styles.infoText}>
-            Started: {dayjs(ride.startedAt).format("HH:mm:ss")}
-          </Text>
-          <Text style={styles.infoText}>
-            Ended:{" "}
-            {ride.endedAt ? dayjs(ride.endedAt).format("HH:mm:ss") : "Not finished"}
-          </Text>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Trusted GPS</Text>
+          <Text style={styles.metricValue}>{coordinates.length}</Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      <View style={styles.metricGrid}>
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Avg vibration</Text>
+          <Text style={styles.metricValue}>{averageVibration.toFixed(3)}</Text>
+        </View>
+
+        <View style={styles.metricCard}>
+          <Text style={styles.metricLabel}>Max vibration</Text>
+          <Text style={styles.metricValue}>{maxVibration.toFixed(3)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Ride info</Text>
+
+        <Text style={styles.infoText}>Vehicle: {ride.vehicleType}</Text>
+        <Text style={styles.infoText}>Sensor: {ride.sensorSource}</Text>
+        <Text style={styles.infoText}>
+          Started: {dayjs(ride.startedAt).format("HH:mm:ss")}
+        </Text>
+        <Text style={styles.infoText}>
+          Ended:{" "}
+          {ride.endedAt
+            ? dayjs(ride.endedAt).format("HH:mm:ss")
+            : "Not finished"}
+        </Text>
+      </View>
+    </Page>
   );
 }
 
@@ -451,10 +437,6 @@ function isTrustedGeoSample(sample: MeasurementSample) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.page,
-  },
   summaryCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -490,38 +472,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 17,
     fontWeight: "900",
-  },
-  scroll: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 48,
-    gap: 18,
-  },
-  header: {
-    marginTop: 16,
-  },
-  backText: {
-    color: colors.textOnOrange,
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 18,
-  },
-  title: {
-    color: colors.textOnOrange,
-    fontSize: 34,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: colors.textOnOrange,
-    fontSize: 16,
-    opacity: 0.82,
   },
   mapCard: {
     backgroundColor: colors.surface,

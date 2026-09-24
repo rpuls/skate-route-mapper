@@ -53,17 +53,20 @@ export function initDatabase() {
       sampleCount INTEGER NOT NULL DEFAULT 0
     );
 
+    -- Motion columns are nullable on purpose. A GPS fix is a sample with no
+    -- motion in it, and a zero there would be a measurement claim rather than
+    -- an absence: it would read as "the road was perfectly smooth here".
     CREATE TABLE IF NOT EXISTS samples (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       rideId TEXT NOT NULL,
       timestamp INTEGER NOT NULL,
-      ax REAL NOT NULL,
-      ay REAL NOT NULL,
-      az REAL NOT NULL,
-      gx REAL NOT NULL,
-      gy REAL NOT NULL,
-      gz REAL NOT NULL,
-      vibrationMagnitude REAL NOT NULL,
+      ax REAL,
+      ay REAL,
+      az REAL,
+      gx REAL,
+      gy REAL,
+      gz REAL,
+      vibrationMagnitude REAL,
       latitude REAL,
       longitude REAL,
       speed REAL,
@@ -104,6 +107,8 @@ export function initDatabase() {
       startedAt INTEGER NOT NULL
     );
   `);
+
+  relaxSampleMotionColumns();
 
   ensureColumn("samples", "locationTimestamp", "INTEGER");
   ensureColumn("samples", "locationAccuracy", "REAL");
@@ -327,9 +332,48 @@ export function getRides(): Ride[] {
   );
 }
 
+/**
+ * The most recently finished ride.
+ *
+ * The ride screen shows what you last covered, and that has to survive the app
+ * being closed — it is a fact about the phone, not about this session. An open
+ * ride is excluded: it has not covered anything yet.
+ */
+export function getLastFinishedRide(): Ride | null {
+  return (
+    db.getFirstSync<Ride>(
+      `SELECT ${rideColumns} FROM rides
+       WHERE endedAt IS NOT NULL
+       ORDER BY endedAt DESC
+       LIMIT 1;`
+    ) ?? null
+  );
+}
+
 export function getRide(rideId: string): Ride | null {
   return db.getFirstSync<Ride>(
     `SELECT ${rideColumns} FROM rides WHERE id = ?;`,
+    rideId
+  );
+}
+
+/**
+ * Just the route line for a ride.
+ *
+ * The live map redraws every few seconds while recording, and a ride with the
+ * board connected holds tens of thousands of vibration samples — each stamped
+ * with the last known position, so selecting every row with a latitude would
+ * return the same point hundreds of times over. `ax IS NULL` is what marks a
+ * row as a GPS fix rather than a board reading.
+ */
+export function getRideRouteCoordinates(
+  rideId: string
+): { latitude: number; longitude: number }[] {
+  return db.getAllSync<{ latitude: number; longitude: number }>(
+    `SELECT latitude, longitude
+     FROM samples
+     WHERE rideId = ? AND ax IS NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
+     ORDER BY timestamp ASC;`,
     rideId
   );
 }
@@ -343,6 +387,75 @@ export function getSamplesForRide(rideId: string): MeasurementSample[] {
      ORDER BY timestamp ASC;`,
     rideId
   );
+}
+
+/**
+ * Drop the NOT NULL constraint the motion columns were created with.
+ *
+ * Samples used to always carry phone accelerometer readings, so every column
+ * was required. Route recording now writes a GPS fix as a sample whose motion
+ * fields are null — vibration is the board's job — and on a database created
+ * under the old schema every one of those inserts fails the constraint, which
+ * takes the whole flush with it and loses the route.
+ *
+ * SQLite cannot relax a constraint in place, so the table is rebuilt. Existing
+ * rows are carried over unchanged.
+ */
+function relaxSampleMotionColumns() {
+  const columns = db.getAllSync<{ name: string; notnull: number }>(
+    `PRAGMA table_info(samples);`
+  );
+
+  const stillRequired = columns.some(
+    (column) => column.name === "ax" && column.notnull === 1
+  );
+
+  if (!stillRequired) {
+    return;
+  }
+
+  const carried = columns.map((column) => column.name).filter((name) => name !== "id");
+
+  db.execSync("PRAGMA foreign_keys = OFF;");
+
+  try {
+    db.withTransactionSync(() => {
+      db.execSync(`
+        CREATE TABLE samples_rebuilt (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rideId TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          ax REAL,
+          ay REAL,
+          az REAL,
+          gx REAL,
+          gy REAL,
+          gz REAL,
+          vibrationMagnitude REAL,
+          latitude REAL,
+          longitude REAL,
+          speed REAL,
+          locationTimestamp INTEGER,
+          locationAccuracy REAL,
+          locationAgeMs INTEGER,
+          FOREIGN KEY (rideId) REFERENCES rides(id) ON DELETE CASCADE
+        );
+      `);
+
+      db.execSync(
+        `INSERT INTO samples_rebuilt (${carried.join(", ")})
+         SELECT ${carried.join(", ")} FROM samples;`
+      );
+
+      db.execSync("DROP TABLE samples;");
+      db.execSync("ALTER TABLE samples_rebuilt RENAME TO samples;");
+      db.execSync(
+        "CREATE INDEX IF NOT EXISTS idx_samples_rideId ON samples(rideId);"
+      );
+    });
+  } finally {
+    db.execSync("PRAGMA foreign_keys = ON;");
+  }
 }
 
 function ensureColumn(table: string, name: string, definition: string) {

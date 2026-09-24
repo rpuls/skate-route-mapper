@@ -3,6 +3,61 @@
 The Expo React Native app records ordinary rides and controls labelled XIAO
 high-rate research captures. Ride and research data are stored locally first.
 
+## Screens and navigation
+
+Every screen is rendered by `src/components/Page.tsx`. The only standard chrome
+is the page title and the drawer button, sharing the top line: the title flexes
+and wraps, the button never shrinks. Everything else on a screen is its own
+content. See "Page Framework" in `../docs/design-guide.md` for the rules this
+enforces and why.
+
+A screen that brings its own scroll view passes `padded={false}` and spreads
+`scrollContentInsets` into that view's content container — an inset scroll view
+clips the drop shadow off every card it holds. See "Shadows are never clipped"
+in the design guide.
+
+**The drawer is how you move between places.** A screen listed in it has no
+back button, so every place is reached and left the same way. A screen you
+drill into — live detail, one saved ride — is not in the drawer, so it passes
+`back` to `Page` and shows a back arrow. The swipe gesture works there as well,
+but not everyone knows it exists.
+
+| Route | Screen | What it is |
+| --- | --- | --- |
+| `StartRide` | `StartRideScreen.tsx` | The app's home. One screen for the whole ride: map, ride type, sensor, start, then timer, live figures, pause and finish. |
+| `Recording` | `RecordingScreen.tsx` | Read-only live detail behind a ride: GPS accuracy, kept and dropped fixes, the vibration graph. Drilled into, so it has a back arrow. |
+| `Rides` | `RidesScreen.tsx` | Saved rides and the upload queue. |
+| `RideDetail` | `RideDetailScreen.tsx` | One finished ride, with route replay. Drilled into, so it has a back arrow. |
+| `Research` | `ResearchScreen.tsx` | The XIAO research lab. |
+| `Auth` | `AuthScreen.tsx` | Account. |
+
+The research lab needs a board, a labelled experiment and a file transfer, so
+it is not something a rider should meet on the way to starting a ride. The
+drawer lists it alongside the ride screen, saved rides and the account.
+
+A ride is started and finished in exactly one place, the ride screen. The live
+detail screen deliberately has no stop button.
+
+## The XIAO connection
+
+`src/native/xiaoConnection.ts` holds one BLE connection for the whole app, at
+module scope. A link is a property of the phone, not of a React tree: pairing a
+board on the ride screen and then opening the research lab must not drop it.
+Screens read `useXiaoConnection()` for status and call `connect` / `disconnect`;
+`getXiaoConnection()` hands the live object to code that speaks the board's own
+research protocol.
+
+`connectToXiao` waits for the radio to report `PoweredOn` before it scans.
+`new BleManager()` returns before the native adapter has reported anything, and
+a scan started in that window is rejected with "BluetoothLE is in unknown
+state" — which is why the first Connect used to fail and the second one worked.
+`Unknown` and `Resetting` are waited out; `PoweredOff`, `Unauthorized` and
+`Unsupported` end the attempt with something the rider can act on.
+
+Auto-connect on launch is opt-outable and only runs once a board has actually
+been paired on this phone — scanning asks for Bluetooth permission, and a first
+launch should not open with a dialog about hardware the person may not own.
+
 ## Route recording
 
 A ride keeps recording with the screen locked, on both platforms, through one
@@ -169,8 +224,11 @@ platforms.
 - `src/native/XiaoBle.ts`: XIAO live and research BLE protocols
 - `src/research/researchFiles.ts`: durable recording/photo/metadata files
 - `src/database/db.ts`: ride and research-collection indexes
-- `src/screens/HomeScreen.tsx`: normal ride setup and research entry point
-- `src/screens/RecordingScreen.tsx`: live ride figures and GPS state
+- `src/screens/StartRideScreen.tsx`: the whole ride, from ready to finished
+- `src/screens/RecordingScreen.tsx`: read-only live detail and GPS state
+- `src/components/Page.tsx`: the page frame every screen is built in
+- `src/native/xiaoConnection.ts`: the app's single shared XIAO BLE connection
+- `src/storage/preferences.ts`: remembered ride type, auto-connect, account-seen
 - `src/recording/backgroundLocation.ts`: background location task and permissions
 - `src/recording/rideRecorder.ts`: active ride, running totals, sample buffer
 - `src/recording/recorder.ts`: the app's single recorder, wired to the database

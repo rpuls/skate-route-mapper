@@ -14,6 +14,11 @@ import {
   getCurrentMobileUser,
   InvalidMobileSessionError,
 } from "../api/mobileAuth";
+import {
+  preferenceKeys,
+  readBooleanPreference,
+  writeBooleanPreference,
+} from "../storage/preferences";
 import { startAutoSync, stopAutoSync } from "../sync/autoSync";
 import {
   clearStoredMobileSession,
@@ -25,6 +30,14 @@ type MobileAuthContextValue = {
   token: string | null;
   user: CurrentMobileUser | null;
   isRestoring: boolean;
+  /**
+   * Whether an account has ever been used on this phone.
+   *
+   * Signing out does not clear it. A returning user who signed out still has
+   * an account, and the auth screen should open on the form they need rather
+   * than on the one that tells them their email is already taken.
+   */
+  hasKnownAccount: boolean;
   setSession: (session: MobileAuthResponse) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -35,6 +48,7 @@ export function MobileAuthProvider({ children }: { children: React.ReactNode }) 
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<CurrentMobileUser | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
+  const [hasKnownAccount, setHasKnownAccount] = useState(false);
   // Auto sync reads the token when it runs rather than capturing it, so a
   // sign-in or sign-out does not have to restart the scheduler.
   const tokenRef = useRef<string | null>(null);
@@ -54,6 +68,12 @@ export function MobileAuthProvider({ children }: { children: React.ReactNode }) 
 
     async function restoreSession() {
       try {
+        const known = await readBooleanPreference(preferenceKeys.accountKnown, false);
+
+        if (active && known) {
+          setHasKnownAccount(true);
+        }
+
         const session = await loadStoredMobileSession();
         const expiresAt = session ? new Date(session.expiresAt).getTime() : Number.NaN;
         if (!session || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
@@ -64,7 +84,12 @@ export function MobileAuthProvider({ children }: { children: React.ReactNode }) 
         if (active) {
           setToken(session.token);
           setUser(session.user);
+          setHasKnownAccount(true);
         }
+
+        // A stored session proves an account exists even if the flag predates
+        // this build or was never written.
+        void writeBooleanPreference(preferenceKeys.accountKnown, true);
 
         try {
           const currentUser = await getCurrentMobileUser(session.token);
@@ -100,10 +125,13 @@ export function MobileAuthProvider({ children }: { children: React.ReactNode }) 
       token,
       user,
       isRestoring,
+      hasKnownAccount,
       setSession: async (session) => {
         await saveStoredMobileSession(session);
+        await writeBooleanPreference(preferenceKeys.accountKnown, true);
         setToken(session.token);
         setUser(session.user);
+        setHasKnownAccount(true);
       },
       signOut: async () => {
         await clearStoredMobileSession();
@@ -111,7 +139,7 @@ export function MobileAuthProvider({ children }: { children: React.ReactNode }) 
         setUser(null);
       },
     }),
-    [isRestoring, token, user]
+    [hasKnownAccount, isRestoring, token, user]
   );
 
   return (
