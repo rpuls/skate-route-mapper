@@ -36,7 +36,11 @@ stores the experimental context:
   isolated bump, or other
 - a specific human label and free-form note
 - a context photograph
-- phone GPS fixes at capture start and retrieval
+- a phone GPS track covering exactly the board's recording window: a fix about
+  every second with the platform's reported ground speed, and a summary carrying
+  average/median/peak reported speed alongside a distance-based cross-check from
+  the shared ride filter
+- a context fix taken before the capture, and one taken at retrieval
 - phone request time, board capture ID, rate, duration and sample count
 - original `.skateresearch` file and validation report
 - optional signed-in upload to the production `ResearchCapture` table, with
@@ -57,9 +61,11 @@ fixed. Record at least two repeat runs for each condition:
 6. one isolated seam or bump
 
 Use the same wheels, tire pressure where applicable, mounting, short path and
-similar speed. Notes should include surface, run number, approximate speed,
-wheel setup, mounting changes and unusual events. Repeatability within one
-condition matters as much as separation between conditions.
+similar speed. Speed is measured rather than estimated now, and the live read-out
+on the capture card is there to hold a run near a target speed, so notes need not
+guess at it. Notes should include surface, run number, wheel setup, mounting
+changes and unusual events. Repeatability within one condition matters as much as
+separation between conditions.
 
 Start with 10-second captures to validate the full field workflow, then use 30
 seconds for contact-state experiments. Use 60 seconds only when the extra data
@@ -100,7 +106,10 @@ is useful because current BLE retrieval is much slower than recording.
 
 - What feature-window duration is stable while still locating changes along a
   route: 100, 200, 500 ms, or another value?
-- How should device elapsed time align to phone time despite separate clocks?
+- How should device elapsed time align to phone time despite separate clocks? A
+  capture stores the phone clock at both ends of its GPS window and the board
+  reports `elapsedUs`, so the two windows can be lined up end to end — but
+  nothing yet ties an individual raw sample to a fix.
 - How should GPS uncertainty and speed affect the length and confidence of a
   coloured route segment?
 
@@ -169,10 +178,16 @@ deduplicate retransmissions.
 8. Evaluate multiple devices, mounting positions, wheel setups and riders before
    interpreting the levels as general road quality.
 
-The current collection metadata contains start/end context fixes, not a full GPS
-trace aligned to every raw sample. Once the feature windows are stable, normal
-ride collection must record continuous phone GPS and explicit phone/device clock
-alignment.
+A collection now carries a phone GPS track over the capture window, so every run
+has a measured speed to normalise against. It is about one fix a second, which
+characterises a 10 to 60 second run but does not align an individual raw sample to
+a position. Once the feature windows are stable, normal ride collection must
+record continuous phone GPS and explicit phone/device clock alignment.
+
+Two things are still absent from a capture and worth knowing before the data is
+trusted too far: the board records accelerometer only, so gyro energy is not
+available as carving/pushing context, and wheel setup and mounting position are
+free text in the note rather than structured fields.
 
 ## Canonical implementation references
 
@@ -180,5 +195,6 @@ alignment.
 - Research protocol: `hardware/research.md`
 - Firmware: `firmware/xiao-lsm6dsox/`
 - Mobile field workflow: `mobile/src/screens/ResearchScreen.tsx`
+- Phone GPS and speed for a capture: `mobile/src/research/captureTrack.ts`
 - Mobile BLE client: `mobile/src/native/XiaoBle.ts`
 - Shared validation and file codec: `shared/src/xiaoResearch.mjs`

@@ -20,6 +20,18 @@ export const preferenceKeys = {
    */
   xiaoEverConnected: "pref.xiao-ever-connected.v1",
   /**
+   * The last XIAO this phone was linked to.
+   *
+   * A board that has been met before is reached by id instead of scanned for,
+   * which is the difference between a link that returns in about a second and
+   * one that waits out a fifteen-second scan. Remembering it across launches
+   * is what makes opening the app with the sensor already clipped on feel like
+   * it never disconnected.
+   */
+  xiaoDeviceId: "pref.xiao-device-id.v1",
+  /** That board's advertised name, so the app can say what it is reconnecting to. */
+  xiaoDeviceName: "pref.xiao-device-name.v1",
+  /**
    * Whether an account has ever existed on this phone.
    *
    * Set on a successful sign-up or sign-in, and never cleared by signing out:

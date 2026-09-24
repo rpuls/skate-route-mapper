@@ -102,9 +102,22 @@ missing, and never conclude from `git ls-files` that there is no design system.
   module scope and shared by every screen. Do not open a connection from a
   screen or tear one down on blur: a rider who pairs a board on the ride screen
   must still have it in the research lab.
+- That module is also the only thing that decides whether the link is up.
+  `XiaoBle.ts` is transport (scan, GATT, the board's protocols) and holds no
+  retry policy; screens report `useXiaoConnection()` and never keep their own
+  idea of connectedness. Anything a rider pressed goes through
+  `requireXiaoConnection()`, which verifies with the radio first — holding a
+  `XiaoBleConnection` object is not evidence the board is still there.
+  Reconnection, backoff and the remembered board all live in the module; do not
+  add a retry loop to a screen. See "The XIAO connection" in `mobile/README.md`.
 - Small remembered choices go through `mobile/src/storage/preferences.ts`
   (web fallback `preferences.web.ts`, keys in `preferenceKeys.ts`). Rides and
   captures belong in SQLite.
+- A research capture's phone-side GPS log lives in
+  `mobile/src/research/captureTrack.ts`, at module scope for the same reason the
+  BLE link is: a rider who leaves the lab mid-capture must not lose it. It is
+  bounded to the board's recording window, and a track is only ever saved against
+  the board capture id it was started for.
 - Route recording lives in `mobile/src/recording/`. `backgroundLocation.ts` owns
   the `expo-location` task and permissions; `rideRecorder.ts` owns the active
   ride and its running totals; both read state from SQLite rather than React,

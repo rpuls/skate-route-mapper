@@ -5,7 +5,14 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from "react-native";
 import * as Location from "expo-location";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import {
@@ -211,7 +218,8 @@ export default function StartRideScreen() {
     rideOptions.find((option) => option.value === vehicleType) ??
     rideOptions[0];
   const sensorConnected = xiao.status === "connected";
-  const sensorConnecting = xiao.status === "connecting";
+  const sensorConnecting =
+    xiao.status === "connecting" || xiao.status === "reconnecting";
 
   const sensorDotColor = sensorConnected
     ? colors.success
@@ -219,13 +227,18 @@ export default function StartRideScreen() {
       ? colors.pageSoft
       : colors.neutral;
 
+  // "Reconnecting" is its own word rather than a second kind of "connecting":
+  // it is the difference between the app looking for a board the rider just
+  // asked for and the app quietly getting back one that slipped away.
   const sensorLabel = sensorConnected
     ? "Connected"
-    : sensorConnecting
+    : xiao.status === "connecting"
       ? "Connecting..."
-      : xiao.status === "unsupported"
-        ? "Unavailable"
-        : "Off";
+      : xiao.status === "reconnecting"
+        ? "Reconnecting..."
+        : xiao.status === "unsupported"
+          ? "Unavailable"
+          : "Off";
 
   const start = async () => {
     if (busy) {
@@ -593,7 +606,8 @@ function SensorSheet({
   const xiao = useXiaoConnection();
 
   const connected = xiao.status === "connected";
-  const connecting = xiao.status === "connecting";
+  const connecting =
+    xiao.status === "connecting" || xiao.status === "reconnecting";
   const supported = xiao.status !== "unsupported";
 
   return (
@@ -629,33 +643,71 @@ function SensorSheet({
                 ]}
               />
               <Text style={styles.sensorStatusText}>
-                {xiao.error ?? xiao.detail}
+                {connecting
+                  ? xiao.detail
+                  : xiao.radioMessage ?? xiao.error ?? xiao.detail}
               </Text>
             </View>
           </View>
         </View>
 
         {connected ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void xiao.disconnect()}
-            style={styles.disconnectButton}
-          >
-            <Text style={styles.disconnectText}>Disconnect</Text>
-          </Pressable>
+          <View style={styles.sensorActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={xiao.checking}
+              onPress={() => void xiao.check()}
+              style={({ pressed }) => [
+                styles.checkButton,
+                pressed && styles.pressed,
+                xiao.checking && stateStyles.disabled,
+              ]}
+            >
+              {xiao.checking ? (
+                <ActivityIndicator color={colors.accent} size="small" />
+              ) : (
+                <Icon color={colors.accent} name="refresh" size={20} />
+              )}
+              <Text style={styles.checkText}>
+                {xiao.checking ? "Checking..." : "Check"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void xiao.disconnect()}
+              style={({ pressed }) => [
+                styles.disconnectButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.disconnectText}>Disconnect</Text>
+            </Pressable>
+          </View>
         ) : (
           <Pressable
             accessibilityRole="button"
-            disabled={connecting || !supported}
+            disabled={xiao.attempting || !supported}
             onPress={() => void xiao.connect()}
-            style={[
+            style={({ pressed }) => [
               styles.connectButton,
-              (connecting || !supported) && stateStyles.disabled,
+              pressed && styles.pressed,
+              (xiao.attempting || !supported) && stateStyles.disabled,
             ]}
           >
-            <Icon color={colors.textOnOrange} name="bluetooth" size={22} />
+            {xiao.attempting ? (
+              <ActivityIndicator color={colors.textOnOrange} size="small" />
+            ) : (
+              <Icon color={colors.textOnOrange} name="bluetooth" size={22} />
+            )}
             <Text style={styles.connectText}>
-              {connecting ? "Connecting..." : "Connect"}
+              {xiao.attempting
+                ? xiao.status === "reconnecting"
+                  ? "Reconnecting..."
+                  : "Connecting..."
+                : xiao.status === "reconnecting"
+                  ? "Try now"
+                  : "Connect"}
             </Text>
           </Pressable>
         )}
@@ -663,9 +715,10 @@ function SensorSheet({
 
       <View style={styles.toggleRow}>
         <View style={styles.sensorCopy}>
-          <Text style={styles.toggleTitle}>Auto-connect on launch</Text>
+          <Text style={styles.toggleTitle}>Reconnect automatically</Text>
           <Text style={styles.toggleDetail}>
-            Connects in the background when the sensor is nearby.
+            Picks the sensor up on launch, and gets it back on its own if the
+            link drops mid-ride.
           </Text>
         </View>
 
@@ -1040,11 +1093,33 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
   },
+  sensorActions: {
+    flexDirection: "row",
+    gap: space.sm,
+  },
+  checkButton: {
+    alignItems: "center",
+    backgroundColor: buttonVariants.primary.contained.backgroundColor,
+    borderColor: buttonVariants.primary.contained.borderColor,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    flexDirection: "row",
+    gap: space.sm,
+    height: controlSize.md,
+    justifyContent: "center",
+    paddingHorizontal: space.lg,
+  },
+  checkText: {
+    color: buttonVariants.primary.contained.color,
+    fontSize: 16,
+    fontWeight: "900",
+  },
   disconnectButton: {
     alignItems: "center",
     borderColor: buttonVariants.danger.contained.borderColor,
     borderRadius: radius.pill,
     borderWidth: 2,
+    flex: 1,
     height: controlSize.md,
     justifyContent: "center",
   },

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -20,6 +21,10 @@ import {
   type ResearchStatus,
 } from "@skate-route-mapper/shared/xiaoResearch";
 import {
+  formatSpeedKmh,
+  usableSpeed,
+} from "@skate-route-mapper/shared/rideTracking";
+import {
   buttonVariants,
   colors,
   controlSize,
@@ -36,7 +41,19 @@ import { uploadResearchCapture } from "../api/researchCaptures";
 import { getResearchCollections, saveResearchCollection } from "../database/db";
 import * as XiaoBle from "../native/XiaoBle";
 import type { ResearchTransfer } from "../native/XiaoBle";
-import { getXiaoConnection, useXiaoConnection } from "../native/xiaoConnection";
+import {
+  getXiaoConnection,
+  requireXiaoConnection,
+  useXiaoConnection,
+} from "../native/xiaoConnection";
+import {
+  describeTrackSpeed,
+  noteCaptureId,
+  startCaptureTrack,
+  stopCaptureTrack,
+  takeCaptureTrack,
+  useCaptureTrack,
+} from "../research/captureTrack";
 import { saveResearchFiles } from "../research/researchFiles";
 import {
   researchCategories,
@@ -76,6 +93,7 @@ export default function ResearchScreen() {
   const insets = useSafeAreaInsets();
   const { token, user } = useMobileAuth();
   const xiao = useXiaoConnection();
+  const track = useCaptureTrack();
 
   const transfer = useRef<ResearchTransfer | null>(null);
   const camera = useRef<CameraView | null>(null);
@@ -110,11 +128,18 @@ export default function ResearchScreen() {
 
   // The board keeps its own state across app screens now, so arriving here
   // means asking what it is already doing rather than assuming it is idle.
-  const readBoard = useCallback(async () => {
-    const connection = getXiaoConnection();
+  //
+  // It goes through `requireXiaoConnection` because the link may have died
+  // while this screen was not looking. Asking a board that is no longer there
+  // used to fail with a raw BLE error under a pill that still said
+  // "connected"; now the check is what discovers the loss, and the connection
+  // module puts the screen into reconnecting by itself.
+  const readBoard = useCallback(async (announceIdle = false) => {
+    const connection = await requireXiaoConnection();
 
     if (!connection) {
-      return;
+      setMessage("The sensor is not reachable. Reconnect it and try again.");
+      return false;
     }
 
     try {
@@ -132,21 +157,76 @@ export default function ResearchScreen() {
       } else if (status.state === 1) {
         setPhase("recording");
         setMessage("The board is already recording.");
+      } else if (announceIdle) {
+        // An idle board is the common answer and used to produce no visible
+        // change at all, which made the check look like a dead button. It is
+        // only announced when someone asked: a screen that opens by saying
+        // "idle and ready" has answered a question nobody put.
+        setPhase("idle");
+        setMessage("The board answered. It is idle and ready to record.");
       }
+
+      return true;
     } catch {
       setMessage("Connected, but the board did not answer a status request.");
+      return false;
     }
   }, []);
+
+  // What the pill's check does: confirm the radio still has the board, then
+  // ask the board what it is doing. Both halves report, and the button stays
+  // busy until they have.
+  const [checkingBoard, setCheckingBoard] = useState(false);
+
+  const checkBoard = useCallback(async () => {
+    if (checkingBoard) {
+      return;
+    }
+
+    setCheckingBoard(true);
+    setMessage("Checking the board...");
+
+    try {
+      await readBoard(true);
+    } finally {
+      setCheckingBoard(false);
+    }
+  }, [checkingBoard, readBoard]);
 
   useFocusEffect(
     useCallback(() => {
       refreshCollections();
-      void readBoard();
+
+      // Only worth asking when there is supposed to be a board. Arriving with
+      // nothing paired is the ordinary case, not a failure to report.
+      if (useXiaoConnection.getState().status === "connected") {
+        void readBoard();
+      }
       // The connection is owned by `xiaoConnection`, not by this screen, so
       // leaving the lab no longer drops the board. That is the point: coming
       // back, or arriving from a ride, finds it still in hand.
     }, [readBoard, refreshCollections])
   );
+
+  // The board's recording and the phone's GPS log have to end together. The
+  // transfer that follows can run for minutes with the rider standing still,
+  // and fixes from it would flatten every speed figure the capture is judged
+  // by.
+  //
+  // Only the end states close it, never "idle". This screen can remount with
+  // its phase reset while a capture is still running on the board — walking to
+  // the ride screen and back does exactly that — and the log outlives that on
+  // purpose. Its own timer closes the window if nothing here ever does.
+  useEffect(() => {
+    if (
+      phase === "complete" ||
+      phase === "transferring" ||
+      phase === "saved" ||
+      phase === "error"
+    ) {
+      stopCaptureTrack();
+    }
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "recording" && phase !== "transferring") {
@@ -167,7 +247,17 @@ export default function ResearchScreen() {
     const timer = setInterval(async () => {
       const connection = getXiaoConnection();
 
-      if (checking || !connection) {
+      if (checking) {
+        return;
+      }
+
+      // A capture outlives the link: the board keeps recording to its own
+      // flash whether or not the phone is listening. Saying so is the point —
+      // the rider should keep riding rather than stop to fix Bluetooth.
+      if (!connection) {
+        setMessage(
+          "The sensor dropped off, but the board is still recording. It reconnects by itself; retrieve the capture when it is back."
+        );
         return;
       }
 
@@ -245,10 +335,15 @@ export default function ResearchScreen() {
   };
 
   const startCapture = async () => {
-    const connection = getXiaoConnection();
+    // Verified, not assumed. A capture started against a link that has quietly
+    // gone is the failure this screen was reported for: the pill said
+    // connected and Start answered with a BLE error.
+    const connection = await requireXiaoConnection();
 
     if (!connection) {
-      setMessage("Connect the XIAO before starting a capture.");
+      setMessage(
+        "The sensor is not reachable. Reconnect it from the pill above, then start."
+      );
       return;
     }
 
@@ -266,8 +361,14 @@ export default function ResearchScreen() {
       setStartLocation(location);
       transfer.current = null;
 
+      // Before the board is told to start, so the first fix is already in hand
+      // when sampling begins. A capture with no track is still worth having, so
+      // a refusal here is reported by the log rather than thrown.
+      await startCaptureTrack(durationSeconds);
+
       const status = await connection.startResearchCapture(durationSeconds, rateHz);
 
+      noteCaptureId(status.captureId);
       setBoardStatus(status);
       setStartedAt(Date.now());
       setNow(Date.now());
@@ -277,16 +378,17 @@ export default function ResearchScreen() {
       setSetupOpen(false);
       setLibraryOpen(false);
       setMessage(
-        `Recording ${durationSeconds} s at ${rateHz} Hz on the board. You may ride now.`
+        `Recording ${durationSeconds} s at ${rateHz} Hz on the board. Ride now — keep the phone with you and the screen on this page, it is logging your speed.`
       );
     } catch (error) {
+      stopCaptureTrack();
       setPhase("error");
       setMessage(error instanceof Error ? error.message : "Could not start the capture.");
     }
   };
 
   const retrieve = async () => {
-    const connection = getXiaoConnection();
+    const connection = await requireXiaoConnection();
 
     if (!connection || !boardStatus || ![2, 3].includes(boardStatus.state)) {
       setMessage("Reconnect and confirm the completed capture before retrieving it.");
@@ -316,6 +418,12 @@ export default function ResearchScreen() {
         (received, total) => setProgress(total ? received / total : 0)
       );
 
+      // Closed already by the phase change, but a retrieval can also be reached
+      // from a board that was found finished on arrival, so it is closed here
+      // too rather than assumed.
+      stopCaptureTrack();
+
+      const captureTrack = takeCaptureTrack(boardStatus.captureId);
       const recoveredStartLocation = startLocation ?? (await readLocation());
       const endLocation = await readLocation().catch(() => null);
       const report = analyzeCapture(boardStatus, completed.raw, completed.summaries);
@@ -333,6 +441,7 @@ export default function ResearchScreen() {
         transferMs: completed.transferMs,
         startLocation: recoveredStartLocation,
         endLocation,
+        track: captureTrack,
         photoFilename: photoUri ? "surface.jpg" : null,
       };
       const recording = encodeRecording(
@@ -361,6 +470,7 @@ export default function ResearchScreen() {
         photoUri: files.photoUri,
         startLocation: recoveredStartLocation,
         endLocation,
+        track: captureTrack,
         transferMs: completed.transferMs,
         report,
         uploadedAt: null,
@@ -374,7 +484,9 @@ export default function ResearchScreen() {
       setProgress(1);
       setLibraryOpen(true);
       setMessage(
-        "Capture verified and saved on this phone. The original high-rate data is ready to share for analysis."
+        `Capture verified and saved on this phone. ${describeTrackSpeed(
+          captureTrack?.speed
+        )}. The original high-rate data is ready to share for analysis.`
       );
     } catch (error) {
       setPhase("complete");
@@ -421,6 +533,8 @@ export default function ResearchScreen() {
     }
   };
 
+  const busyConnecting =
+    xiao.status === "connecting" || xiao.status === "reconnecting";
   const elapsed = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
   const remaining = Math.max(0, durationSeconds - elapsed);
   const categoryLabel =
@@ -436,34 +550,52 @@ export default function ResearchScreen() {
     >
       {connected ? (
         <ConnectedPill
+          checking={checkingBoard || xiao.checking}
           deviceName={xiao.deviceName}
-          onCheck={() => void readBoard()}
+          onCheck={() => void checkBoard()}
           onDisconnect={() => void xiao.disconnect()}
           onToggle={() => setConnectionOpen((open) => !open)}
           open={connectionOpen}
         />
       ) : (
         <Card>
-          <Text style={styles.title}>Connect the board</Text>
+          <Text style={styles.title}>
+            {busyConnecting ? "Getting the board back" : "Connect the board"}
+          </Text>
           <Text style={styles.body}>
             {xiao.status === "unsupported"
               ? "Research capture needs the native development build; it is unavailable in Expo Go and on web."
-              : xiao.error ??
-                "Pair the XIAO first. Everything below needs the board in hand."}
+              : busyConnecting
+                ? xiao.detail
+                : xiao.radioMessage ??
+                  xiao.error ??
+                  "Pair the XIAO first. Everything below needs the board in hand."}
           </Text>
 
           <Pressable
             accessibilityRole="button"
-            disabled={xiao.status !== "disconnected"}
+            disabled={xiao.attempting || xiao.status === "unsupported"}
             onPress={() => void xiao.connect()}
-            style={[
+            style={({ pressed }) => [
               styles.primaryButton,
-              xiao.status !== "disconnected" && stateStyles.disabled,
+              pressed && styles.pressed,
+              (xiao.attempting || xiao.status === "unsupported") &&
+                stateStyles.disabled,
             ]}
           >
-            <Icon color={colors.textOnOrange} name="bluetooth" size={20} />
+            {xiao.attempting ? (
+              <ActivityIndicator color={colors.textOnOrange} size="small" />
+            ) : (
+              <Icon color={colors.textOnOrange} name="bluetooth" size={20} />
+            )}
             <Text style={styles.primaryText}>
-              {xiao.status === "connecting" ? "Connecting..." : "Connect XIAO"}
+              {xiao.attempting
+                ? xiao.status === "reconnecting"
+                  ? "Reconnecting..."
+                  : "Connecting..."
+                : xiao.status === "reconnecting"
+                  ? "Try now"
+                  : "Connect XIAO"}
             </Text>
           </Pressable>
         </Card>
@@ -566,6 +698,33 @@ export default function ResearchScreen() {
           </>
         ) : null}
 
+        {/*
+          Speed follows the GPS log rather than the phase, because the two can
+          disagree: a capture whose board stopped answering leaves the screen
+          saying "recording" long after the window closed, and a stale live
+          read-out there would be read as a live one.
+        */}
+        {track.logging ? (
+          <View style={styles.speedRow}>
+            <Icon color={colors.accent} name="myLocation" size={18} />
+            <Text style={styles.speedValue}>
+              {formatSpeedKmh(usableSpeed(track.latestSpeedMps))}
+            </Text>
+            <Text style={styles.detail}>
+              {track.fixCount} GPS fix{track.fixCount === 1 ? "" : "es"}
+              {track.latestAccuracyMeters === null
+                ? ""
+                : ` · ${Math.round(track.latestAccuracyMeters)} m`}
+            </Text>
+          </View>
+        ) : track.summary ? (
+          <Text style={styles.detail}>
+            Over the capture: {describeTrackSpeed(track.summary)}
+          </Text>
+        ) : null}
+
+        {track.error ? <Text style={styles.uploadError}>{track.error}</Text> : null}
+
         {phase === "transferring" ? (
           <>
             <Text style={styles.metric}>{Math.round(progress * 100)}%</Text>
@@ -644,6 +803,7 @@ export default function ResearchScreen() {
                   {new Date(item.createdAt).toLocaleString()} ·{" "}
                   {item.sampleCount.toLocaleString()} samples at {item.rateHz} Hz
                 </Text>
+                <Text style={styles.detail}>{describeTrackSpeed(item.track?.speed)}</Text>
 
                 <Pressable
                   accessibilityRole="button"
@@ -718,12 +878,14 @@ export default function ResearchScreen() {
  * are rare enough to be one tap away.
  */
 function ConnectedPill({
+  checking,
   deviceName,
   onCheck,
   onDisconnect,
   onToggle,
   open,
 }: {
+  checking: boolean;
   deviceName: string | null;
   onCheck: () => void;
   onDisconnect: () => void;
@@ -753,17 +915,28 @@ function ConnectedPill({
         <View style={styles.pillActions}>
           <Pressable
             accessibilityRole="button"
+            disabled={checking}
             onPress={onCheck}
-            style={styles.pillAction}
+            style={({ pressed }) => [
+              styles.pillAction,
+              pressed && styles.pressed,
+              checking && stateStyles.disabled,
+            ]}
           >
-            <Icon color={colors.accent} name="refresh" size={18} />
-            <Text style={styles.pillActionText}>Check board</Text>
+            {checking ? (
+              <ActivityIndicator color={colors.accent} size="small" />
+            ) : (
+              <Icon color={colors.accent} name="refresh" size={18} />
+            )}
+            <Text style={styles.pillActionText}>
+              {checking ? "Checking..." : "Check board"}
+            </Text>
           </Pressable>
 
           <Pressable
             accessibilityRole="button"
             onPress={onDisconnect}
-            style={styles.pillAction}
+            style={({ pressed }) => [styles.pillAction, pressed && styles.pressed]}
           >
             <Icon color={colors.danger} name="close" size={18} />
             <Text style={[styles.pillActionText, { color: colors.danger }]}>
@@ -920,6 +1093,16 @@ const styles = StyleSheet.create({
   liveText: {
     color: colors.accentStrong,
     fontSize: 12,
+    fontWeight: "900",
+  },
+  speedRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: space.sm,
+  },
+  speedValue: {
+    color: colors.text,
+    fontSize: 17,
     fontWeight: "900",
   },
   progressTrack: {

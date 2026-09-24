@@ -16,6 +16,7 @@ import {
   setActiveRecording,
 } from "../database/db";
 import {
+  clearXiaoSampleInterval,
   setXiaoSampleInterval,
   subscribeToXiaoSamples,
   useXiaoConnection,
@@ -163,6 +164,11 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
 
   stopRecording: async () => {
     await stopBackgroundLocationUpdates();
+
+    // The ride's stream rate was a ride's request. Releasing it lets the board
+    // go back to its own default, and stops it being re-applied to links made
+    // long after the ride ended.
+    clearXiaoSampleInterval();
 
     const finished = rideRecorder.end();
 

@@ -36,6 +36,16 @@ export type ResearchTransfer = {
 export type XiaoBleConnection = {
   deviceId: string;
   deviceName: string;
+  /**
+   * Ask the radio whether this link is still up.
+   *
+   * A `XiaoBleConnection` is a JavaScript object and stays perfectly usable
+   * after the board it refers to has gone: turning the sensor off does not
+   * reach in and delete it. Anything that is about to talk to the board should
+   * ask first, because the alternative is a screen that says "connected" while
+   * every request fails.
+   */
+  isAlive: () => Promise<boolean>;
   disconnect: () => Promise<void>;
   setSampleInterval: (intervalMs: number) => Promise<void>;
   getResearchStatus: () => Promise<ResearchStatus>;
@@ -49,7 +59,19 @@ export type XiaoBleConnection = {
 
 type ConnectOptions = {
   timeoutMs?: number;
+  /**
+   * A board this phone has linked to before, connected to by id rather than
+   * found by scanning. Falls back to a scan when the id is stale or the board
+   * is not where it was left.
+   */
+  deviceId?: string | null;
   onSample?: (sample: XiaoImuPacket) => void;
+  /**
+   * The link went down on its own: out of range, board switched off, radio
+   * turned off, GATT dropped by the OS. Called at most once, and never for a
+   * `disconnect()` the app asked for.
+   */
+  onDisconnect?: (reason: string | null) => void;
 };
 
 let manager: BleManager | null = null;
@@ -172,178 +194,74 @@ async function waitForPoweredOnAdapter(manager: BleManager, timeoutMs = 10000) {
   });
 }
 
-export async function connectToXiao(
-  options: ConnectOptions = {}
-): Promise<XiaoBleConnection> {
-  const canScan = await requestXiaoBlePermissions();
+/**
+ * Watch the radio itself, not a particular link.
+ *
+ * The adapter has opinions that outlive any one connection: Bluetooth being
+ * switched off takes every link with it, and no amount of retrying helps until
+ * it comes back. A caller that knows the radio state can say "Bluetooth is
+ * off" instead of "could not find the sensor", and can retry at the one moment
+ * worth retrying at.
+ *
+ * `Unknown` and `Resetting` report as not-ready with no message: they are a
+ * not-yet rather than a no, and putting them on screen would flash a scary
+ * sentence during normal start-up.
+ */
+export type XiaoRadioState = {
+  ready: boolean;
+  message: string | null;
+};
 
-  if (!canScan) {
-    throw new Error("Bluetooth permission was not granted.");
+export function subscribeToRadioState(
+  listener: (state: XiaoRadioState) => void
+): () => void {
+  if (!isXiaoBleSupported()) {
+    listener({ ready: false, message: null });
+    return () => undefined;
   }
 
-  const bleManager = getManager();
+  // `true` re-emits the current state, so a caller never has to ask separately
+  // where the radio is right now.
+  const subscription = getManager().onStateChange((next) => {
+    listener({
+      ready: next === State.PoweredOn,
+      message: adapterStateMessages[next] ?? null,
+    });
+  }, true);
 
-  await waitForPoweredOnAdapter(bleManager);
+  return () => subscription.remove();
+}
 
-  const timeoutMs = options.timeoutMs ?? 15000;
-
+/**
+ * Find the board by listening for its advertisement.
+ *
+ * Only used when the id is unknown or stale. A scan is the slow path: it costs
+ * up to `timeoutMs` and keeps the radio busy for the whole of it.
+ */
+function scanForXiao(bleManager: BleManager, timeoutMs: number): Promise<Device> {
   return new Promise((resolve, reject) => {
     let settled = false;
-    let sampleSubscription: Subscription | null = null;
 
-    const finishWithError = (error: Error) => {
-      if (settled) return;
-      settled = true;
-      bleManager.stopDeviceScan();
-      reject(error);
-    };
-
-    const timeout = setTimeout(() => {
-      finishWithError(new Error(`Could not find ${XIAO_BLE_DEVICE_NAME}.`));
-    }, timeoutMs);
-
-    const finishWithDevice = async (device: Device) => {
+    const finish = (error: Error | null, device?: Device) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
       bleManager.stopDeviceScan();
-
-      try {
-        const connectedDevice = await device.connect({ autoConnect: false });
-        let readyDevice = await connectedDevice.discoverAllServicesAndCharacteristics();
-        if (Platform.OS === "android") {
-          try {
-            readyDevice = await readyDevice.requestMTU(517);
-          } catch {
-            // The protocol also works with a smaller negotiated MTU, using more pages.
-          }
-        }
-
-        let requestId = Math.floor(Math.random() * 0xffff);
-        const researchRequest = async (op: number, captureId = 0, arg = 0) => {
-          requestId = (requestId + 1) & 0xffff;
-          let lastError: Error | null = null;
-          for (let attempt = 0; attempt < (op === OP.START ? 1 : 3); attempt++) {
-            try {
-              await readyDevice.writeCharacteristicWithResponseForService(
-                XIAO_BLE_SERVICE_UUID,
-                RESEARCH_CONTROL_UUID,
-                bytesToBase64(command(op, requestId, captureId, arg))
-              );
-              const deadline = Date.now() + 5000;
-              while (Date.now() < deadline) {
-                const characteristic = await readyDevice.readCharacteristicForService(
-                  XIAO_BLE_SERVICE_UUID,
-                  RESEARCH_RESPONSE_UUID
-                );
-                if (characteristic.value) {
-                  const bytes = base64ToBytes(characteristic.value);
-                  if (bytes.length >= 24) {
-                    const response = parseResponse(bytes);
-                    if (response.request === requestId && response.op === op) {
-                      if (response.flags) throw new Error(`Board rejected request (${response.flags}).`);
-                      if ((op === OP.RAW || op === OP.SUMMARIES) &&
-                          (response.captureId !== captureId || response.offset !== arg)) {
-                        throw new Error("Research page identity mismatch");
-                      }
-                      return response;
-                    }
-                  }
-                }
-                await sleep(30);
-              }
-              throw new Error("Research response timed out");
-            } catch (error) {
-              lastError = error instanceof Error ? error : new Error(String(error));
-              await sleep(150);
-            }
-          }
-          throw lastError ?? new Error("Research request failed");
-        };
-
-        sampleSubscription = readyDevice.monitorCharacteristicForService(
-          XIAO_BLE_SERVICE_UUID,
-          XIAO_BLE_IMU_CHARACTERISTIC_UUID,
-          (error, characteristic) => {
-            if (error) {
-              console.log("XIAO BLE sample monitor error", error);
-              return;
-            }
-
-            if (!characteristic?.value || !options.onSample) {
-              return;
-            }
-
-            options.onSample(parseXiaoImuPacket(base64ToBytes(characteristic.value)));
-          }
-        );
-
-        resolve({
-          deviceId: readyDevice.id,
-          deviceName: readyDevice.name ?? readyDevice.localName ?? XIAO_BLE_DEVICE_NAME,
-          disconnect: async () => {
-            sampleSubscription?.remove();
-            await bleManager.cancelDeviceConnection(readyDevice.id);
-          },
-          setSampleInterval: async (intervalMs: number) => {
-            await readyDevice.writeCharacteristicWithResponseForService(
-              XIAO_BLE_SERVICE_UUID,
-              XIAO_BLE_CONFIG_CHARACTERISTIC_UUID,
-              uint16ToBase64(intervalMs)
-            );
-          },
-          getResearchStatus: async () => parseStatus(await researchRequest(OP.STATUS)),
-          startResearchCapture: async (seconds, rateHz) =>
-            parseStatus(await researchRequest(OP.START, 0, startArgument(seconds, rateHz))),
-          retrieveResearchCapture: async (status, transfer, onProgress) => {
-            if (transfer.captureId !== status.captureId) {
-              throw new Error("The partial transfer belongs to another capture.");
-            }
-            const total = status.count * status.rawStride + status.windows * 24;
-            const notify = () => onProgress?.(
-              transfer.rawReceived * status.rawStride + transfer.summariesReceived * 24,
-              total
-            );
-
-            const attemptStartedAt = Date.now();
-            try {
-              while (transfer.rawReceived < status.count) {
-                const response = await researchRequest(OP.RAW, status.captureId, transfer.rawReceived);
-                if (!response.count || response.payload.length !== response.count * status.rawStride ||
-                    transfer.rawReceived + response.count > status.count) {
-                  throw new Error("Invalid raw research page");
-                }
-                transfer.raw.set(response.payload, transfer.rawReceived * status.rawStride);
-                transfer.rawReceived += response.count;
-                notify();
-              }
-              while (transfer.summariesReceived < status.windows) {
-                const response = await researchRequest(OP.SUMMARIES, status.captureId, transfer.summariesReceived);
-                if (!response.count || response.payload.length !== response.count * 24 ||
-                    transfer.summariesReceived + response.count > status.windows) {
-                  throw new Error("Invalid summary research page");
-                }
-                transfer.summaries.set(response.payload, transfer.summariesReceived * 24);
-                transfer.summariesReceived += response.count;
-                notify();
-              }
-              return transfer;
-            } finally {
-              transfer.transferMs += Date.now() - attemptStartedAt;
-            }
-          },
-        });
-      } catch (error) {
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
+      if (error) reject(error);
+      else resolve(device as Device);
     };
+
+    const timeout = setTimeout(
+      () => finish(new Error(`Could not find ${XIAO_BLE_DEVICE_NAME}.`)),
+      timeoutMs
+    );
 
     bleManager.startDeviceScan(
       [XIAO_BLE_SERVICE_UUID],
       { allowDuplicates: false },
       (error, device) => {
         if (error) {
-          finishWithError(error);
+          finish(error);
           return;
         }
 
@@ -361,11 +279,212 @@ export async function connectToXiao(
           );
 
         if (isXiao) {
-          finishWithDevice(device);
+          finish(null, device);
         }
       }
     );
   });
+}
+
+/**
+ * Turn a connected device into the board's protocol.
+ *
+ * Both routes in — the id that was remembered and the scan it falls back to —
+ * end here, so service discovery, the MTU bump, the sample stream and the
+ * disconnect watch are set up once rather than once per route.
+ */
+async function attachToDevice(
+  bleManager: BleManager,
+  connectedDevice: Device,
+  options: ConnectOptions
+): Promise<XiaoBleConnection> {
+  let readyDevice = await connectedDevice.discoverAllServicesAndCharacteristics();
+
+  if (Platform.OS === "android") {
+    try {
+      readyDevice = await readyDevice.requestMTU(517);
+    } catch {
+      // The protocol also works with a smaller negotiated MTU, using more pages.
+    }
+  }
+
+  let requestId = Math.floor(Math.random() * 0xffff);
+  const researchRequest = async (op: number, captureId = 0, arg = 0) => {
+    requestId = (requestId + 1) & 0xffff;
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < (op === OP.START ? 1 : 3); attempt++) {
+      try {
+        await readyDevice.writeCharacteristicWithResponseForService(
+          XIAO_BLE_SERVICE_UUID,
+          RESEARCH_CONTROL_UUID,
+          bytesToBase64(command(op, requestId, captureId, arg))
+        );
+        const deadline = Date.now() + 5000;
+        while (Date.now() < deadline) {
+          const characteristic = await readyDevice.readCharacteristicForService(
+            XIAO_BLE_SERVICE_UUID,
+            RESEARCH_RESPONSE_UUID
+          );
+          if (characteristic.value) {
+            const bytes = base64ToBytes(characteristic.value);
+            if (bytes.length >= 24) {
+              const response = parseResponse(bytes);
+              if (response.request === requestId && response.op === op) {
+                if (response.flags) throw new Error(`Board rejected request (${response.flags}).`);
+                if ((op === OP.RAW || op === OP.SUMMARIES) &&
+                    (response.captureId !== captureId || response.offset !== arg)) {
+                  throw new Error("Research page identity mismatch");
+                }
+                return response;
+              }
+            }
+          }
+          await sleep(30);
+        }
+        throw new Error("Research response timed out");
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        await sleep(150);
+      }
+    }
+    throw lastError ?? new Error("Research request failed");
+  };
+
+  const sampleSubscription = readyDevice.monitorCharacteristicForService(
+    XIAO_BLE_SERVICE_UUID,
+    XIAO_BLE_IMU_CHARACTERISTIC_UUID,
+    (error, characteristic) => {
+      if (error) {
+        console.log("XIAO BLE sample monitor error", error);
+        return;
+      }
+
+      if (!characteristic?.value || !options.onSample) {
+        return;
+      }
+
+      options.onSample(parseXiaoImuPacket(base64ToBytes(characteristic.value)));
+    }
+  );
+
+  // `closed` is what tells a deliberate disconnect apart from a board that
+  // vanished. Both arrive as the same native callback, and only one of them
+  // should send the app looking for the sensor again.
+  let closed = false;
+  let disconnectSubscription: Subscription | null = null;
+
+  const teardown = () => {
+    closed = true;
+    disconnectSubscription?.remove();
+    disconnectSubscription = null;
+    sampleSubscription.remove();
+  };
+
+  disconnectSubscription = readyDevice.onDisconnected((error) => {
+    if (closed) {
+      return;
+    }
+
+    teardown();
+    options.onDisconnect?.(error ? error.message : null);
+  });
+
+  return {
+    deviceId: readyDevice.id,
+    deviceName: readyDevice.name ?? readyDevice.localName ?? XIAO_BLE_DEVICE_NAME,
+    isAlive: () =>
+      bleManager.isDeviceConnected(readyDevice.id).catch(() => false),
+    disconnect: async () => {
+      teardown();
+      await bleManager.cancelDeviceConnection(readyDevice.id).catch(() => undefined);
+    },
+    setSampleInterval: async (intervalMs: number) => {
+      await readyDevice.writeCharacteristicWithResponseForService(
+        XIAO_BLE_SERVICE_UUID,
+        XIAO_BLE_CONFIG_CHARACTERISTIC_UUID,
+        uint16ToBase64(intervalMs)
+      );
+    },
+    getResearchStatus: async () => parseStatus(await researchRequest(OP.STATUS)),
+    startResearchCapture: async (seconds, rateHz) =>
+      parseStatus(await researchRequest(OP.START, 0, startArgument(seconds, rateHz))),
+    retrieveResearchCapture: async (status, transfer, onProgress) => {
+      if (transfer.captureId !== status.captureId) {
+        throw new Error("The partial transfer belongs to another capture.");
+      }
+      const total = status.count * status.rawStride + status.windows * 24;
+      const notify = () => onProgress?.(
+        transfer.rawReceived * status.rawStride + transfer.summariesReceived * 24,
+        total
+      );
+
+      const attemptStartedAt = Date.now();
+      try {
+        while (transfer.rawReceived < status.count) {
+          const response = await researchRequest(OP.RAW, status.captureId, transfer.rawReceived);
+          if (!response.count || response.payload.length !== response.count * status.rawStride ||
+              transfer.rawReceived + response.count > status.count) {
+            throw new Error("Invalid raw research page");
+          }
+          transfer.raw.set(response.payload, transfer.rawReceived * status.rawStride);
+          transfer.rawReceived += response.count;
+          notify();
+        }
+        while (transfer.summariesReceived < status.windows) {
+          const response = await researchRequest(OP.SUMMARIES, status.captureId, transfer.summariesReceived);
+          if (!response.count || response.payload.length !== response.count * 24 ||
+              transfer.summariesReceived + response.count > status.windows) {
+            throw new Error("Invalid summary research page");
+          }
+          transfer.summaries.set(response.payload, transfer.summariesReceived * 24);
+          transfer.summariesReceived += response.count;
+          notify();
+        }
+        return transfer;
+      } finally {
+        transfer.transferMs += Date.now() - attemptStartedAt;
+      }
+    },
+  };
+}
+
+export async function connectToXiao(
+  options: ConnectOptions = {}
+): Promise<XiaoBleConnection> {
+  const canScan = await requestXiaoBlePermissions();
+
+  if (!canScan) {
+    throw new Error("Bluetooth permission was not granted.");
+  }
+
+  const bleManager = getManager();
+
+  await waitForPoweredOnAdapter(bleManager);
+
+  const timeoutMs = options.timeoutMs ?? 15000;
+
+  // The board this phone last rode with is tried by id first. It is the
+  // overwhelmingly common case — the sensor stays clipped to the deck — and it
+  // comes back in about a second instead of waiting out a scan. A stale id (a
+  // reinstall renumbers every peripheral on iOS) or a board that is genuinely
+  // elsewhere falls through to the scan below.
+  if (options.deviceId) {
+    const known = await bleManager
+      .connectToDevice(options.deviceId, {
+        autoConnect: false,
+        timeout: Math.min(timeoutMs, 8000),
+      })
+      .catch(() => null);
+
+    if (known) {
+      return attachToDevice(bleManager, known, options);
+    }
+  }
+
+  const found = await scanForXiao(bleManager, timeoutMs);
+  const connected = await found.connect({ autoConnect: false });
+
+  return attachToDevice(bleManager, connected, options);
 }
 
 function sleep(ms: number) {

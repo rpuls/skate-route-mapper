@@ -40,23 +40,73 @@ detail screen deliberately has no stop button.
 
 ## The XIAO connection
 
-`src/native/xiaoConnection.ts` holds one BLE connection for the whole app, at
-module scope. A link is a property of the phone, not of a React tree: pairing a
-board on the ride screen and then opening the research lab must not drop it.
-Screens read `useXiaoConnection()` for status and call `connect` / `disconnect`;
-`getXiaoConnection()` hands the live object to code that speaks the board's own
-research protocol.
+`src/native/xiaoConnection.ts` holds one BLE link for the whole app, at module
+scope. A link is a property of the phone, not of a React tree: pairing a board
+on the ride screen and then opening the research lab must not drop it. It is
+also the only thing that decides whether the link is up — screens report what
+it says and never keep their own idea of connectedness.
+
+Screens read `useXiaoConnection()` and call `connect` / `disconnect` / `check`.
+`src/native/XiaoBle.ts` underneath is pure transport: scanning, GATT, the
+board's protocols, and no policy about when to retry.
+
+### Knowing when the link is gone
+
+A `XiaoBleConnection` is a JavaScript object. Turning the sensor off does not
+reach in and delete it, so "we have an object" was never evidence of anything,
+and a board that ran out of battery in a pocket left every screen reporting a
+sensor that was not there above buttons that answered with BLE errors.
+
+Four mechanisms now decide it, because no one of them sees everything:
+
+- **The disconnect callback.** `device.onDisconnected` fires the moment GATT
+  drops. The fast path, and it covers almost every real loss.
+- **The radio state.** `subscribeToRadioState` watches the adapter itself.
+  Bluetooth being switched off takes every link with it and makes retrying
+  pointless until it comes back; switching it on again is the single best
+  moment to retry.
+- **Coming back to the front.** A suspended process is delivered no callbacks,
+  so a link that died overnight is only discoverable by asking. Every
+  foreground asks the radio instead of trusting what was last written down.
+- **`requireXiaoConnection()` before anything a rider pressed.** It verifies,
+  then hands the link over. `getXiaoConnection()` stays for polls that run
+  every second and can simply fail.
+
+### Getting it back
+
+Recovery is automatic, bounded and visible: `reconnectDelaysMs` runs
+1s / 2s / 5s / 10s / 20s / 30s / 60s, the last repeating while the app is in
+front. Backgrounded, it parks; the app returning to the front and the radio
+being switched on both restart it at once, which is when the answer could
+differ. Only a board this phone has met before is chased — a first pairing that
+failed is reported and left to the rider rather than scanned for indefinitely.
+
+The board is remembered across launches (`xiaoDeviceId`, `xiaoDeviceName`), so
+a reconnect goes straight to it by id instead of waiting out a fifteen-second
+scan; a stale id falls back to the scan. The ride's stream rate is remembered
+too and re-applied to every new link, because a board that reconnects mid-ride
+comes up at its own default and would otherwise change what the rest of the
+route was measured at.
+
+The switch in the sensor sheet governs both halves: pick the board up on
+launch, and get it back on its own if the link drops. It only runs once a board
+has actually been paired on this phone — scanning asks for Bluetooth
+permission, and a first launch should not open with a dialog about hardware the
+person may not own.
+
+### Starting the radio
 
 `connectToXiao` waits for the radio to report `PoweredOn` before it scans.
 `new BleManager()` returns before the native adapter has reported anything, and
 a scan started in that window is rejected with "BluetoothLE is in unknown
 state" — which is why the first Connect used to fail and the second one worked.
 `Unknown` and `Resetting` are waited out; `PoweredOff`, `Unauthorized` and
-`Unsupported` end the attempt with something the rider can act on.
+`Unsupported` end the attempt with something the rider can act on, and reach
+the screens as `radioMessage`.
 
-Auto-connect on launch is opt-outable and only runs once a board has actually
-been paired on this phone — scanning asks for Bluetooth permission, and a first
-launch should not open with a dialog about hardware the person may not own.
+Nothing touches the BLE stack at import. `new BleManager()` starts the native
+radio, so the watches are started by the first connect or by the launch restore
+of an already-paired board, never by loading the module.
 
 ## Route recording
 
@@ -99,10 +149,28 @@ LSM6DSOX prototype. A collection stores:
 - a category and short label
 - free-form notes about the surface, wheels, speed, mounting, or weather
 - a context photo
-- start and end phone GPS fixes
+- a phone GPS track for the capture window, with speed per fix and a speed
+  summary (see below)
+- a context fix taken before the capture, and one taken at retrieval
 - the requested duration and measured board sample rate
 - the original verified `.skateresearch` recording
 - the board validation report and BLE transfer time
+
+**The phone logs its own GPS for exactly as long as the board records.** Speed is
+the first thing surface roughness has to be normalised for — the same asphalt
+reads rougher at 20 km/h than at 8 — so the capture carries a fix roughly every
+second, each with the platform's reported ground speed, plus a summary with
+average, median and peak speed and a distance-based cross-check computed with the
+same filter and maths a ride uses. The window is bounded to the recording: the
+transfer afterwards is a rider standing still, and those fixes would flatten
+every figure. `src/research/captureTrack.ts` owns the log at module scope, keeps
+the screen awake while it runs, and refuses to attach a track to a board capture
+it was not started for. The live speed shows on the capture card, so a run can be
+held at a target speed and repeated.
+
+Keep the phone with you and the research screen in front during a capture: the
+log is a foreground subscription, and a pocketed, locked phone is the one way to
+lose it.
 
 The XIAO records the 833 or 1,666 Hz samples into its own RAM for 10, 30, or 60
 seconds. Live BLE reliability does not affect the recording. After completion,
@@ -222,6 +290,7 @@ platforms.
 
 - `src/screens/ResearchScreen.tsx`: field capture, metadata, transfer and export
 - `src/native/XiaoBle.ts`: XIAO live and research BLE protocols
+- `src/research/captureTrack.ts`: the phone's GPS log and speed for a capture
 - `src/research/researchFiles.ts`: durable recording/photo/metadata files
 - `src/database/db.ts`: ride and research-collection indexes
 - `src/screens/StartRideScreen.tsx`: the whole ride, from ready to finished

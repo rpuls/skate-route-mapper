@@ -468,6 +468,38 @@ specimens, app framework in `docs/design-guide.md`.
   are already in the palette — `text` on `page` is 6.52, `accentStrong` on
   `surface` is 4.65 — but they change the brand's look, so nothing was changed.
 
+### BLE connectivity reworked — built
+
+The shared connection was shared, but nothing ever noticed it going away.
+`status` was set to "connected" by a successful connect and only left that
+state when a screen asked for a disconnect, so a board that ran out of battery,
+went out of range or was switched off while the app was backgrounded left every
+screen reporting a sensor that was not there — the research lab's Start then
+failed with a raw BLE error under a pill that still said "connected", and the
+only cure was to disconnect and reconnect by hand.
+
+- **`XiaoBle.ts` is now transport only** — scan, GATT, the board's protocols —
+  and `xiaoConnection.ts` holds all the policy. The two ways in, a remembered
+  device id and a scan, meet in one `attachToDevice`.
+- **Four ways of knowing the link is gone**: the native disconnect callback,
+  the radio's own state, a verification on every foreground, and
+  `requireXiaoConnection()` before anything a rider pressed.
+  `getXiaoConnection()` survives for the once-a-second poll that can simply
+  fail.
+- **Automatic recovery**, 1s to 60s with the tail repeating while the app is in
+  front, parked when it is not, restarted by a foreground or by Bluetooth being
+  switched on. Only a board this phone has met before is chased.
+- **The board is remembered across launches**, so a reconnect goes straight to
+  it by id rather than waiting out a fifteen-second scan.
+- **The ride's stream rate is re-applied to every new link**, so a mid-ride drop
+  no longer silently changes what the rest of the route was measured at.
+- **The controls answer the finger.** "Check board" was the clearest symptom:
+  no pressed state, no spinner, and an idle board produced no message at all,
+  so a working check was indistinguishable from a dead button. It now reports
+  in both cases, and Connect / Check / Disconnect all have press feedback and a
+  busy state. `radioMessage` puts "Bluetooth is off" on screen instead of
+  "could not find the sensor".
+
 ### What still needs a device
 
 Everything above type-checks and is unit tested where it is pure, but none of it
@@ -477,6 +509,11 @@ has met a real GPS signal. Before this is called done:
 - Check the distance against a known course. The thresholds in
   `rideTrackingDefaults` are reasoned, not measured.
 - Check a XIAO ride still pairs vibration with position.
+- Exercise the BLE recovery on hardware: switch the board off mid-ride and
+  confirm the tile drops to "Reconnecting" and comes back on its own; background
+  the app, switch the board off, return, and confirm the tile is honest;
+  toggle the phone's Bluetooth and confirm "Bluetooth is off" then an automatic
+  reconnect when it comes back.
 - Check Android's foreground service notification appears and that recording
   survives the app being backgrounded.
 

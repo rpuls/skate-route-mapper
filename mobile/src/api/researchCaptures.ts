@@ -24,6 +24,10 @@ export async function uploadResearchCapture(collection: ResearchCollection, toke
     metadata: {
       startLocation: collection.startLocation,
       endLocation: collection.endLocation,
+      // The phone's GPS log for the capture window, so a laptop analysing the
+      // uploaded recording can normalise roughness for speed without the
+      // original phone.
+      track: collection.track ?? null,
       transferMs: collection.transferMs,
       report: collection.report,
     },
