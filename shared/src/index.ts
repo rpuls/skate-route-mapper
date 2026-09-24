@@ -2,7 +2,7 @@ export type {
   AdminUserCreatePayload,
   AdminUserSummary,
   AdminUserUpdatePayload,
-} from "./contracts";
+} from "./contracts.js";
 
 export {
   brandColors,
@@ -16,6 +16,6 @@ export {
   skateDesign,
   space,
   typography,
-} from "./design";
+} from "./design.js";
 
-export type { AdminResource, AdminResourceField } from "./adminResources";
+export type { AdminResource, AdminResourceField } from "./adminResources.js";

@@ -84,6 +84,8 @@ playwright-report/
 *.tar
 *.gz
 backend/generated/
+# Shared compiled for production only; every other consumer reads shared/src.
+shared/dist/
 
 # Fastlane
 fastlane/report.xml

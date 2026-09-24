@@ -21,7 +21,7 @@
     "iphone:register": "npm run iphone:register --workspace @skate-route-mapper/mobile",
     "dev:web": "npm run web --workspace @skate-route-mapper/mobile",
     "check": "npm run db:generate && npm run contracts:test && npm run check --workspace @skate-route-mapper/api",
-    "build": "npm run db:generate && npm run build --workspace @skate-route-mapper/api && npm run build --workspace @skate-route-mapper/admin",
+    "build": "npm run db:generate && npm run build --workspace @skate-route-mapper/shared && npm run build --workspace @skate-route-mapper/api && npm run build --workspace @skate-route-mapper/admin",
     "contracts:test": "npm run contracts:test --workspace @skate-route-mapper/api && npm run contracts:test --workspace @skate-route-mapper/mobile",
     "e2e": "playwright install chromium && playwright test --config test/playwright.config.ts",
     "e2e:headed": "playwright install chromium && playwright test --config test/playwright.config.ts --headed",

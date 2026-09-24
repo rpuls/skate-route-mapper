@@ -12,6 +12,11 @@ COPY shared shared
 COPY db db
 
 RUN npm run prisma:generate --workspace @skate-route-mapper/api
+# The compiled backend imports shared at runtime, and Node cannot load the
+# TypeScript sources the package points at by default. Building shared gives the
+# production container real JavaScript to resolve through the `production`
+# export condition; see the start script.
+RUN npm run build --workspace @skate-route-mapper/shared
 RUN npm run build --workspace @skate-route-mapper/api
 
 FROM node:20-alpine AS runner
@@ -29,6 +34,7 @@ RUN npm ci --omit=dev --workspace @skate-route-mapper/api
 
 COPY --from=builder /app/backend/dist backend/dist
 COPY --from=builder /app/backend/generated backend/generated
+COPY --from=builder /app/shared/dist shared/dist
 
 EXPOSE 3001
 

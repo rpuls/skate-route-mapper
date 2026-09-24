@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "prisma migrate deploy --schema ../db/schema.prisma && node dist/server.js",
+    "start": "prisma migrate deploy --schema ../db/schema.prisma && node --conditions=production dist/server.js",
     "check": "tsc -p tsconfig.json --noEmit",
     "contracts:test": "tsc -p test/contracts/tsconfig.json --noEmit && tsx --test test/contracts/mobileRideContracts.contract.test.ts test/contracts/rideTracking.contract.test.ts test/contracts/rideMetrics.contract.test.ts",
     "prisma:generate": "prisma generate --schema ../db/schema.prisma",

@@ -295,6 +295,39 @@ npm run db:deploy
 Package-local API commands are still available for narrow work, for example
 `npm run check --workspace @skate-route-mapper/api`.
 
+#### How `shared` reaches the backend in production
+
+`shared` is a TypeScript-source package: its `exports` map points at `src/*.ts`,
+which Vite, Metro and `tsx` all compile on the fly. The deployed backend does
+not — it is compiled to `dist/` and runs on plain Node, which cannot load a
+`.ts` file at all. Any runtime (non-type) import of shared would crash the
+container at startup.
+
+So `shared` builds to `dist/` and its exports carry a `production` condition:
+
+```json
+"./rideTracking": {
+  "production": "./dist/rideTracking.js",
+  "default": "./src/rideTracking.ts"
+}
+```
+
+Node only selects `production` when asked, and the only thing that asks is the
+deployed start command, `node --conditions=production dist/server.js`. Everything
+else — `npm run dev`, the contract tests, the admin build, Metro — keeps reading
+`shared/src`, so editing a shared file during development still takes effect
+immediately with no rebuild.
+
+Two rules follow:
+
+- `backend/Dockerfile` must build `shared` and copy `shared/dist` into the
+  runner. `npm run build` at the repo root does the same, in the same order.
+- `shared/src/xiaoResearch` stays exempt. It already ships as real `.mjs` with a
+  hand-written `.d.ts`, so Node loads it under every condition.
+
+If the backend ever fails its Railway healthcheck with
+`ERR_UNKNOWN_FILE_EXTENSION ".ts"`, this is what broke.
+
 What happens on startup:
 
 - the API loads environment variables
@@ -372,9 +405,14 @@ It reads two values, from a real environment variable first and the repo's
 - `RESEARCH_API_BASE_URL`: which API to fetch from. Falls back to
   `VITE_API_BASE_URL`, then to `http://localhost:3001`. Point it at the deployed
   service to fetch production captures.
-- `ADMIN_API_KEY`: the key that API is running with. It is the existing
-  machine-to-machine admin key, so nothing new has to be added to Railway.
-  `RESEARCH_API_KEY` is read first if the export is ever given a key of its own.
+- `RESEARCH_API_KEY`: the admin key that API is running with, falling back to
+  `ADMIN_API_KEY`. Nothing new has to be added to Railway — the deployed
+  service's existing `ADMIN_API_KEY` is the value to copy.
+
+Keep them as two names rather than one. `ADMIN_API_KEY` in `.env` is what the
+local Docker stack runs with, so overwriting it with the deployed key to run one
+fetch would silently change what `npm run app` boots. Put the deployed key in
+`RESEARCH_API_KEY` and both keep working.
 
 The result lands in `research-data/`, which is gitignored because the recordings
 are large, already live in the database, and are one command away:
