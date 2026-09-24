@@ -15,6 +15,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Design system (canonical): https://claude.ai/design/p/1b289219-57b8-4ced-8011-9bca7af6ad4b
 - Design tokens (source of truth for values): `shared/src/design.ts`
 - Mobile page/navigation framework: `docs/design-guide.md`
+- Brand artwork and app icons: `brand/README.md`
 
 ## General Rules
 
@@ -31,6 +32,11 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
   `@skate-route-mapper/shared/xiaoResearch` over importing from the root package.
 - Do not re-export feature-specific or platform-specific modules from
   `shared/src/index.ts`; doing so makes unrelated builds type-check that code.
+- The logo lives in `brand/app-icon.png`, and every app icon, splash mark and
+  favicon in the repo is generated from it by `scripts/build-brand-assets.py`.
+  Do not hand-edit or hand-export a copy in `mobile/assets/` or `admin/public/`,
+  and do not add a second original. The current artwork is a draft; say so
+  wherever it is documented.
 - Do not commit secrets from `.env` files.
 - Do not edit generated Prisma client files under `backend/generated/` unless explicitly asked.
 - Keep docs updated when scripts, setup flows, API contracts, platform fallbacks, or design rules change.
@@ -111,6 +117,21 @@ missing, and never conclude from `git ls-files` that there is no design system.
   `XiaoBleConnection` object is not evidence the board is still there.
   Reconnection, backoff and the remembered board all live in the module; do not
   add a retry loop to a screen. See "The XIAO connection" in `mobile/README.md`.
+- App logging goes through `mobile/src/diagnostics/log.ts` (web fallback
+  `log.web.ts`, vocabulary in `logEvents.ts`): `logInfo` / `logWarn` /
+  `logDebug` with a source, or `logBle` for the typed BLE events. Do not add
+  `console.log` or `console.warn` to app code — a Metro console is not attached
+  when the thing being logged happens.
+- The log is bounded on purpose, by size and by age. Keep it that way, and keep
+  anything written in bulk at `debug` level.
+- Diagnostics UI is gated on `diagnosticsAvailable` (`__DEV__`), and so is RSSI
+  sampling. Logging itself runs in every build; exporting and active probing do
+  not. Do not surface the log to riders.
+- The BLE logging is observation only: do not add retry, reconnect or timing
+  changes to it, and keep RSSI sampling out of a research retrieval so transfer
+  times stay comparable with the captures already uploaded.
+- There is deliberately no log-analysis tooling in this repo; the export is
+  plain NDJSON. See "The app log" in `mobile/README.md`.
 - Small remembered choices go through `mobile/src/storage/preferences.ts`
   (web fallback `preferences.web.ts`, keys in `preferenceKeys.ts`). Rides and
   captures belong in SQLite.

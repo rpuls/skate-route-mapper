@@ -15,6 +15,7 @@ import {
   getLastFinishedRide,
   setActiveRecording,
 } from "../database/db";
+import { logBle } from "../diagnostics/log";
 import {
   clearXiaoSampleInterval,
   setXiaoSampleInterval,
@@ -338,6 +339,25 @@ rideRecorder.subscribe((snapshot) => {
 // keeps streaming while the ride screen is unmounted behind the research lab.
 let lastUiSampleAt = 0;
 
+/**
+ * A silence longer than this is a gap worth writing down.
+ *
+ * A ride streams at 50 ms, so a second with nothing is twenty missing packets
+ * — far past anything the radio does in normal operation, and short enough to
+ * catch a brief stall that never becomes a disconnect. Those stalls are what
+ * cost a ride its surface data without the rider ever being told.
+ */
+const streamGapMs = 1_000;
+
+/** How much stream goes into one loss figure. */
+const streamWindowMs = 30_000;
+
+let lastSampleAt = 0;
+let lastSequence: number | null = null;
+let windowStartedAt = 0;
+let windowPackets = 0;
+let windowFirstSequence: number | null = null;
+
 subscribeToXiaoSamples((sample) => {
   const state = useMeasurementStore.getState();
 
@@ -346,6 +366,44 @@ subscribeToXiaoSamples((sample) => {
   }
 
   const now = Date.now();
+
+  // The stream is the one BLE path that loses data silently: a dropped
+  // notification is simply a stretch of road with no roughness on it, and
+  // nothing in the app ever noticed. The board numbers its packets, so what
+  // arrived can be compared with what was sent.
+  if (lastSampleAt !== 0 && now - lastSampleAt >= streamGapMs) {
+    logBle({ kind: "gap", ms: now - lastSampleAt, lastSequence });
+  }
+
+  if (windowStartedAt === 0) {
+    windowStartedAt = now;
+    windowFirstSequence = sample.sequence;
+  }
+
+  windowPackets += 1;
+
+  if (now - windowStartedAt >= streamWindowMs) {
+    const advance =
+      windowFirstSequence === null ? 0 : sample.sequence - windowFirstSequence + 1;
+
+    logBle({
+      kind: "stream",
+      windowMs: now - windowStartedAt,
+      packets: windowPackets,
+      sequenceAdvance: advance,
+      lostPercent:
+        advance > 0
+          ? Math.round(((advance - windowPackets) / advance) * 1000) / 10
+          : 0,
+    });
+
+    windowStartedAt = now;
+    windowFirstSequence = sample.sequence;
+    windowPackets = 0;
+  }
+
+  lastSampleAt = now;
+  lastSequence = sample.sequence;
 
   if (now - lastUiSampleAt >= uiSampleIntervalMs) {
     lastUiSampleAt = now;

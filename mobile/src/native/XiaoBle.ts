@@ -23,6 +23,22 @@ import {
   startArgument,
   type ResearchStatus,
 } from "@skate-route-mapper/shared/xiaoResearch";
+import { describeBleError, logBle } from "../diagnostics/log";
+
+/**
+ * True while a research retrieval is running.
+ *
+ * Read by the RSSI sampler in `xiaoConnection`, which stands down for the
+ * duration. A retrieval is hundreds of request/response round trips and its
+ * wall-clock time is the number every capture so far has been scored by, so
+ * slipping an extra GATT operation into the middle of it would make the next
+ * ride's figures incomparable with the ones already uploaded.
+ */
+let transferBusy = false;
+
+export function isXiaoTransferBusy() {
+  return transferBusy;
+}
 
 export type ResearchTransfer = {
   captureId: number;
@@ -46,6 +62,18 @@ export type XiaoBleConnection = {
    * every request fails.
    */
   isAlive: () => Promise<boolean>;
+  /**
+   * The signal strength of the last packet the phone heard from this board.
+   *
+   * Local to the phone's controller rather than a round trip to the board, so
+   * it costs almost nothing, and it is the one measurement that separates a
+   * link starved of signal from one dropped for some other reason. A link that
+   * dies at -95 dBm was out of range; one that dies at -60 dBm was not, and
+   * the antenna is not what needs changing.
+   */
+  readRssi: () => Promise<number | null>;
+  /** What ATT_MTU the link settled on. On iOS this is negotiated for us. */
+  mtu: number;
   disconnect: () => Promise<void>;
   setSampleInterval: (intervalMs: number) => Promise<void>;
   getResearchStatus: () => Promise<ResearchStatus>;
@@ -65,6 +93,14 @@ type ConnectOptions = {
    * is not where it was left.
    */
   deviceId?: string | null;
+  /**
+   * Whether a rider asked for this link or recovery did.
+   *
+   * Carried only so the log can tell them apart. A run of automatic attempts
+   * reads as a link that keeps failing; the same count of manual ones reads as
+   * a rider who kept pressing the button, and those are different problems.
+   */
+  mode?: "manual" | "auto";
   onSample?: (sample: XiaoImuPacket) => void;
   /**
    * The link went down on its own: out of range, board switched off, radio
@@ -313,6 +349,14 @@ async function attachToDevice(
     requestId = (requestId + 1) & 0xffff;
     let lastError: Error | null = null;
     for (let attempt = 0; attempt < (op === OP.START ? 1 : 3); attempt++) {
+      // Every attempt is timed and counted, including the ones that fail. The
+      // retries here were previously invisible: a page that needed three tries
+      // and one that came back first time were indistinguishable afterwards,
+      // and both were folded into the single `transferMs` figure a capture
+      // carries. That is exactly the ambiguity the log exists to remove.
+      const attemptStarted = Date.now();
+      let polls = 0;
+
       try {
         await readyDevice.writeCharacteristicWithResponseForService(
           XIAO_BLE_SERVICE_UUID,
@@ -321,6 +365,7 @@ async function attachToDevice(
         );
         const deadline = Date.now() + 5000;
         while (Date.now() < deadline) {
+          polls += 1;
           const characteristic = await readyDevice.readCharacteristicForService(
             XIAO_BLE_SERVICE_UUID,
             RESEARCH_RESPONSE_UUID
@@ -335,6 +380,7 @@ async function attachToDevice(
                     (response.captureId !== captureId || response.offset !== arg)) {
                   throw new Error("Research page identity mismatch");
                 }
+                logResearchRequest(op, attempt, attemptStarted, polls, true);
                 return response;
               }
             }
@@ -344,6 +390,7 @@ async function attachToDevice(
         throw new Error("Research response timed out");
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+        logResearchRequest(op, attempt, attemptStarted, polls, false, error);
         await sleep(150);
       }
     }
@@ -355,7 +402,7 @@ async function attachToDevice(
     XIAO_BLE_IMU_CHARACTERISTIC_UUID,
     (error, characteristic) => {
       if (error) {
-        console.log("XIAO BLE sample monitor error", error);
+        logBle({ kind: "streamError", error: describeBleError(error) });
         return;
       }
 
@@ -372,6 +419,7 @@ async function attachToDevice(
   // should send the app looking for the sensor again.
   let closed = false;
   let disconnectSubscription: Subscription | null = null;
+  const linkOpenedAt = Date.now();
 
   const teardown = () => {
     closed = true;
@@ -386,12 +434,32 @@ async function attachToDevice(
     }
 
     teardown();
+
+    // The whole error, not the sentence it prints. `iosErrorCode` is what
+    // separates the supervision timer expiring — the phone stopped hearing the
+    // board — from the board ending the link itself, and the two point at
+    // completely different fixes.
+    logBle({
+      kind: "down",
+      upMs: Date.now() - linkOpenedAt,
+      error: error ? describeBleError(error) : null,
+    });
+
     options.onDisconnect?.(error ? error.message : null);
   });
 
   return {
     deviceId: readyDevice.id,
     deviceName: readyDevice.name ?? readyDevice.localName ?? XIAO_BLE_DEVICE_NAME,
+    mtu: readyDevice.mtu,
+    readRssi: async () => {
+      try {
+        return (await readyDevice.readRSSI()).rssi;
+      } catch (error) {
+        logBle({ kind: "rssiFail", error: describeBleError(error) });
+        return null;
+      }
+    },
     isAlive: () =>
       bleManager.isDeviceConnected(readyDevice.id).catch(() => false),
     disconnect: async () => {
@@ -419,6 +487,18 @@ async function attachToDevice(
       );
 
       const attemptStartedAt = Date.now();
+      const pagesRemaining =
+        Math.ceil((status.count - transfer.rawReceived) / 64) +
+        Math.ceil((status.windows - transfer.summariesReceived) / 16);
+
+      transferBusy = true;
+      logBle({
+        kind: "transfer",
+        phase: "start",
+        captureId: status.captureId,
+        pages: pagesRemaining,
+      });
+
       try {
         while (transfer.rawReceived < status.count) {
           const response = await researchRequest(OP.RAW, status.captureId, transfer.rawReceived);
@@ -440,8 +520,34 @@ async function attachToDevice(
           transfer.summariesReceived += response.count;
           notify();
         }
+        logBle({
+          kind: "transfer",
+          phase: "end",
+          captureId: status.captureId,
+          pages: pagesRemaining,
+          ms: Date.now() - attemptStartedAt,
+          ok: true,
+        });
         return transfer;
+      } catch (error) {
+        // A retrieval that gave up part way is the event worth having: it says
+        // how far it got before the link failed, which a completed transfer
+        // never can.
+        logBle({
+          kind: "transfer",
+          phase: "end",
+          captureId: status.captureId,
+          pages:
+            pagesRemaining -
+            Math.ceil((status.count - transfer.rawReceived) / 64) -
+            Math.ceil((status.windows - transfer.summariesReceived) / 16),
+          ms: Date.now() - attemptStartedAt,
+          ok: false,
+          error: describeBleError(error),
+        });
+        throw error;
       } finally {
+        transferBusy = false;
         transfer.transferMs += Date.now() - attemptStartedAt;
       }
     },
@@ -451,6 +557,7 @@ async function attachToDevice(
 export async function connectToXiao(
   options: ConnectOptions = {}
 ): Promise<XiaoBleConnection> {
+  const startedAt = Date.now();
   const canScan = await requestXiaoBlePermissions();
 
   if (!canScan) {
@@ -461,6 +568,18 @@ export async function connectToXiao(
 
   await waitForPoweredOnAdapter(bleManager);
 
+  // Timed from here rather than from the top of the call. Waiting for the
+  // adapter can legitimately take ten seconds on a cold start or while the
+  // rider reads a permission dialog, and folding that into the connect time
+  // would make every first attempt of a session look like a struggling link.
+  const attemptStartedAt = Date.now();
+  const sinceAttempt = () => Date.now() - attemptStartedAt;
+
+  logBle({
+    kind: "note",
+    text: `radio ready after ${attemptStartedAt - startedAt} ms`,
+  });
+
   const timeoutMs = options.timeoutMs ?? 15000;
 
   // The board this phone last rode with is tried by id first. It is the
@@ -469,26 +588,177 @@ export async function connectToXiao(
   // reinstall renumbers every peripheral on iOS) or a board that is genuinely
   // elsewhere falls through to the scan below.
   if (options.deviceId) {
+    // Which of the two routes a link came in by, and how long it took, is the
+    // difference between "the board was where we left it" and "we had to go
+    // looking". A run of scans where ids used to work is itself a symptom.
+    logBle({
+      kind: "connect",
+      phase: "start",
+      mode: options.mode ?? "manual",
+      path: "id",
+      deviceId: options.deviceId,
+    });
+
     const known = await bleManager
       .connectToDevice(options.deviceId, {
         autoConnect: false,
         timeout: Math.min(timeoutMs, 8000),
       })
-      .catch(() => null);
+      .catch((error: unknown) => {
+        logBle({
+          kind: "connect",
+          phase: "fail",
+          mode: options.mode ?? "manual",
+          path: "id",
+          ms: sinceAttempt(),
+          deviceId: options.deviceId,
+          error: describeBleError(error),
+        });
+
+        return null;
+      });
 
     if (known) {
-      return attachToDevice(bleManager, known, options);
+      try {
+        return logAttached(
+          await attachToDevice(bleManager, known, options),
+          options,
+          "id",
+          attemptStartedAt
+        );
+      } catch (error) {
+        // Connected, then failed to become usable: service discovery, the
+        // notification subscription. Logged so the id path never leaves a
+        // "start" line with nothing after it, and rethrown because that is
+        // what this function did before.
+        logBle({
+          kind: "connect",
+          phase: "fail",
+          mode: options.mode ?? "manual",
+          path: "id",
+          ms: sinceAttempt(),
+          deviceId: options.deviceId,
+          error: describeBleError(error),
+        });
+
+        throw error;
+      }
     }
   }
 
-  const found = await scanForXiao(bleManager, timeoutMs);
-  const connected = await found.connect({ autoConnect: false });
+  logBle({
+    kind: "connect",
+    phase: "start",
+    mode: options.mode ?? "manual",
+    path: "scan",
+    deviceId: options.deviceId ?? null,
+  });
 
-  return attachToDevice(bleManager, connected, options);
+  try {
+    const found = await scanForXiao(bleManager, timeoutMs);
+    const connected = await found.connect({ autoConnect: false });
+
+    return logAttached(
+      await attachToDevice(bleManager, connected, options),
+      options,
+      "scan",
+      attemptStartedAt
+    );
+  } catch (error) {
+    logBle({
+      kind: "connect",
+      phase: "fail",
+      mode: options.mode ?? "manual",
+      path: "scan",
+      ms: sinceAttempt(),
+      error: describeBleError(error),
+    });
+
+    throw error;
+  }
+}
+
+/**
+ * Note a link that came up, and what it came up as.
+ *
+ * `mtu` is the detail worth having on the first line of a session: iOS
+ * negotiates it without being asked, and a 408-byte research response needs
+ * more ATT round trips below 185 than above it. A slow retrieval with a small
+ * MTU is arithmetic; a slow retrieval with a large one is a link problem.
+ */
+function logAttached(
+  connection: XiaoBleConnection,
+  options: ConnectOptions,
+  path: "id" | "scan",
+  startedAt: number
+) {
+  logBle({
+    kind: "connect",
+    phase: "ok",
+    mode: options.mode ?? "manual",
+    path,
+    ms: Date.now() - startedAt,
+    deviceId: connection.deviceId,
+    deviceName: connection.deviceName,
+    mtu: connection.mtu,
+  });
+
+  return connection;
 }
 
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * A request that took longer than this is worth a line of its own.
+ *
+ * The fastest retrieval on record averaged about 190 ms a page, so this is a
+ * little over twice the good case: fast enough to catch a link that is
+ * struggling, slow enough not to call the normal case an anomaly.
+ */
+const slowRequestMs = 400;
+
+/** One in this many ordinary requests is kept, to establish what normal is. */
+const requestSampleEvery = 32;
+
+let researchRequestCount = 0;
+
+/**
+ * Record a research request, thinned so a retrieval does not drown the log.
+ *
+ * A 30-second capture is around 790 pages. Writing all of them would cost
+ * about 100 kB per capture and re-render anything watching the log four times
+ * a second for three minutes, and most of those lines would say the same
+ * thing. Every failure is kept, every slow request is kept, and one in
+ * `requestSampleEvery` of the rest is kept so the ordinary case still has a
+ * measured distribution rather than an assumed one.
+ */
+function logResearchRequest(
+  op: number,
+  attempt: number,
+  startedAt: number,
+  polls: number,
+  ok: boolean,
+  error?: unknown
+) {
+  const ms = Date.now() - startedAt;
+
+  researchRequestCount += 1;
+
+  if (ok && ms < slowRequestMs && researchRequestCount % requestSampleEvery !== 0) {
+    return;
+  }
+
+  logBle({
+    kind: "req",
+    op,
+    attempt,
+    ms,
+    polls,
+    ok,
+    ...(error === undefined ? {} : { error: describeBleError(error) }),
+  });
 }
 
 export function createResearchTransfer(status: ResearchStatus): ResearchTransfer {

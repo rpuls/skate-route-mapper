@@ -35,7 +35,9 @@ import {
 } from "@skate-route-mapper/shared/design";
 import { Card, CollapsibleCard } from "../components/Card";
 import { Icon } from "../components/Icon";
+import { DiagnosticsLog } from "../components/DiagnosticsLog";
 import { Page } from "../components/Page";
+import { logBle } from "../diagnostics/log";
 import { useMobileAuth } from "../auth/MobileAuthContext";
 import { uploadResearchCapture } from "../api/researchCaptures";
 import { getResearchCollections, saveResearchCollection } from "../database/db";
@@ -108,7 +110,28 @@ export default function ResearchScreen() {
   const [rateHz, setRateHz] = useState<833 | 1666>(1666);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [boardStatus, setBoardStatus] = useState<ResearchStatus | null>(null);
+  const [boardStatus, storeBoardStatus] = useState<ResearchStatus | null>(null);
+
+  /**
+   * Take a board status and write its counters down on the way past.
+   *
+   * The board already reports its own health — FIFO overruns, I2C bus errors,
+   * free heap — in every status it answers, and the app has always thrown
+   * those away after reading `state`. They cost nothing to keep and they are
+   * what separates a board that is struggling from a link that is.
+   */
+  const setBoardStatus = useCallback((status: ResearchStatus) => {
+    storeBoardStatus(status);
+    logBle({
+      kind: "board",
+      state: status.state,
+      count: status.count,
+      overruns: status.overruns,
+      busErrors: status.busErrors,
+      clipped: status.clipped,
+      freeHeap: status.freeHeap,
+    });
+  }, []);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [startLocation, setStartLocation] = useState<ResearchLocation | null>(null);
   const [progress, setProgress] = useState(0);
@@ -167,11 +190,12 @@ export default function ResearchScreen() {
       }
 
       return true;
-    } catch {
+    } catch (error) {
+      logBle({ kind: "note", text: `status read failed: ${String(error)}` });
       setMessage("Connected, but the board did not answer a status request.");
       return false;
     }
-  }, []);
+  }, [setBoardStatus]);
 
   // What the pill's check does: confirm the radio still has the board, then
   // ask the board what it is doing. Both halves report, and the button stays
@@ -279,7 +303,11 @@ export default function ResearchScreen() {
             `The board reported capture error ${status.error}. Its partial data can still be retrieved for diagnosis.`
           );
         }
-      } catch {
+      } catch (error) {
+        logBle({
+          kind: "note",
+          text: `status poll failed mid-capture: ${String(error)}`,
+        });
         setMessage(
           "BLE dropped. The board keeps recording. Reconnect after the capture duration, then retrieve it."
         );
@@ -289,7 +317,7 @@ export default function ResearchScreen() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [phase]);
+  }, [phase, setBoardStatus]);
 
   const takePhoto = async () => {
     if (!cameraPermission?.granted) {
@@ -369,6 +397,12 @@ export default function ResearchScreen() {
       const status = await connection.startResearchCapture(durationSeconds, rateHz);
 
       noteCaptureId(status.captureId);
+      // The one line that ties this log to an uploaded capture. Without it a
+      // reader has two timelines and no way to line them up.
+      logBle({
+        kind: "note",
+        text: `capture ${status.captureId} started — ${durationSeconds} s at ${rateHz} Hz, "${label.trim()}"`,
+      });
       setBoardStatus(status);
       setStartedAt(Date.now());
       setNow(Date.now());
@@ -913,36 +947,42 @@ function ConnectedPill({
 
       {open ? (
         <View style={styles.pillActions}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={checking}
-            onPress={onCheck}
-            style={({ pressed }) => [
-              styles.pillAction,
-              pressed && styles.pressed,
-              checking && stateStyles.disabled,
-            ]}
-          >
-            {checking ? (
-              <ActivityIndicator color={colors.accent} size="small" />
-            ) : (
-              <Icon color={colors.accent} name="refresh" size={18} />
-            )}
-            <Text style={styles.pillActionText}>
-              {checking ? "Checking..." : "Check board"}
-            </Text>
-          </Pressable>
+          <View style={styles.pillActionRow}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={checking}
+              onPress={onCheck}
+              style={({ pressed }) => [
+                styles.pillAction,
+                pressed && styles.pressed,
+                checking && stateStyles.disabled,
+              ]}
+            >
+              {checking ? (
+                <ActivityIndicator color={colors.accent} size="small" />
+              ) : (
+                <Icon color={colors.accent} name="refresh" size={18} />
+              )}
+              <Text style={styles.pillActionText}>
+                {checking ? "Checking..." : "Check board"}
+              </Text>
+            </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={onDisconnect}
-            style={({ pressed }) => [styles.pillAction, pressed && styles.pressed]}
-          >
-            <Icon color={colors.danger} name="close" size={18} />
-            <Text style={[styles.pillActionText, { color: colors.danger }]}>
-              Disconnect
-            </Text>
-          </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onDisconnect}
+              style={({ pressed }) => [styles.pillAction, pressed && styles.pressed]}
+            >
+              <Icon color={colors.danger} name="close" size={18} />
+              <Text style={[styles.pillActionText, { color: colors.danger }]}>
+                Disconnect
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Its own row under the actions, not a third item beside them: the
+              panel wants the full width and the two buttons size to content. */}
+          <DiagnosticsLog compact />
         </View>
       ) : null}
     </View>
@@ -1052,9 +1092,12 @@ const styles = StyleSheet.create({
   pillActions: {
     borderTopColor: colors.surfaceMuted,
     borderTopWidth: 1,
+    gap: space.sm,
+    paddingVertical: space.sm,
+  },
+  pillActionRow: {
     flexDirection: "row",
     gap: space.lg,
-    paddingVertical: space.sm,
   },
   pillAction: {
     alignItems: "center",

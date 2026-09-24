@@ -1,5 +1,6 @@
 import { AppState, type AppStateStatus } from "react-native";
 import { getPendingChangeSummary } from "../database/db";
+import { logWarn } from "../diagnostics/log";
 import { rideRecorder } from "../recording/recorder";
 import { syncPendingChanges, type SyncOutcome } from "./syncService";
 
@@ -58,7 +59,7 @@ export function requestSync(reason: string): Promise<SyncOutcome | null> {
   inFlight = syncPendingChanges({ token })
     .then((outcome) => {
       if (!outcome.ok) {
-        console.warn(`Auto sync (${reason}) failed: ${outcome.message}`);
+        logWarn("sync", "failed", { reason, message: outcome.message });
       }
 
       current.onResult?.(outcome);
@@ -66,10 +67,10 @@ export function requestSync(reason: string): Promise<SyncOutcome | null> {
       return outcome;
     })
     .catch((error: unknown) => {
-      console.warn(
-        `Auto sync (${reason}) threw`,
-        error instanceof Error ? error.message : error
-      );
+      logWarn("sync", "threw", {
+        reason,
+        message: error instanceof Error ? error.message : String(error),
+      });
 
       return null;
     })

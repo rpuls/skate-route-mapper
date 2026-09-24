@@ -2,6 +2,7 @@ import "react-native-gesture-handler";
 import { useEffect } from "react";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { initDatabase } from "./src/database/db";
+import { startAppLog } from "./src/diagnostics/log";
 // Imported for its side effect: the background location task must be defined
 // before the OS can deliver a fix, which can happen before anything renders.
 import "./src/recording/backgroundLocation";
@@ -15,6 +16,12 @@ import {
 // effects, so the auth provider's auto-sync would otherwise query the database
 // before `App` had created it.
 initDatabase();
+
+// Also at module scope, and before anything that might have something to say.
+// The log is general now, not a BLE diagnostic, so it cannot be started by the
+// BLE path: a launch that never pairs a board still has a sync to report, and
+// still needs its stale log files expired.
+startAppLog();
 
 export default function App() {
   useEffect(() => {

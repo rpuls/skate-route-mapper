@@ -30,6 +30,7 @@ built from data that device owners contribute.
 ```text
 backend/     Backend API service
 admin/       Admin dashboard app
+brand/       Logo artwork and the icons generated from it
 db/          Prisma schema and migrations
 docs/        API contract, data model, design and planning docs
 firmware/    XIAO BLE vibration-sensor firmware
@@ -51,6 +52,10 @@ What each part does:
 - `hardware` holds the hardware handoff, research protocol, and offline
   analysis tooling for `.skateresearch` captures.
 - `shared` holds the shared ride/sample contract and design tokens used by the apps.
+- `brand` holds the source logo artwork. Every app icon and favicon in the repo is
+  generated from it by `scripts/build-brand-assets.py`, so there is only ever one
+  original to replace. The current artwork is a draft; `brand/README.md` says what is
+  still missing from it.
 
 Project docs:
 
@@ -59,6 +64,7 @@ Project docs:
 - `docs/api.md` defines the backend contract.
 - `docs/data-model.md` explains the Prisma datamodel.
 - `docs/design-guide.md` defines the visual language, design tokens, and button variants.
+- `brand/README.md` covers the logo artwork, the icons generated from it, and how to regenerate them.
 - `docs/admin-frontend.md` defines admin app structure, MUI usage, and data-fetching conventions.
 - `docs/ride-tracking.md` explains how GPS fixes become a ride's distance,
   moving time and speed, and why each rule exists.
@@ -468,6 +474,7 @@ Source of truth:
 
 - `shared/src/design.ts` exports colors, spacing, radius, shadows, layout tokens, and button variants.
 - `docs/design-guide.md` documents how those tokens should be used.
+- `brand/app-icon.png` is the logo, and every icon file in the repo is generated from it.
 
 Current direction:
 

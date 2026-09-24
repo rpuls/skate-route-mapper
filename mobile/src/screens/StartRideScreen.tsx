@@ -32,6 +32,7 @@ import {
 } from "@skate-route-mapper/shared/rideTracking";
 import { Card } from "../components/Card";
 import { Icon, type IconName } from "../components/Icon";
+import { DiagnosticsLog } from "../components/DiagnosticsLog";
 import LiveRouteMap, { type Coordinate } from "../components/LiveRouteMap";
 import { Page, StatusPill } from "../components/Page";
 import { Sheet } from "../components/Sheet";
@@ -730,6 +731,10 @@ function SensorSheet({
           value={xiao.autoConnect}
         />
       </View>
+
+      {/* Developer-only: renders nothing outside a development build. Placed
+          next to the link because that is what most of it is about. */}
+      <DiagnosticsLog />
 
       <Pressable
         accessibilityRole="button"

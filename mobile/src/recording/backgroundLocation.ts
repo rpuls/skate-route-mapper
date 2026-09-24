@@ -1,5 +1,6 @@
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
+import { logWarn } from "../diagnostics/log";
 import type { LocationFix } from "@skate-route-mapper/shared/rideTracking";
 import { colors } from "@skate-route-mapper/shared/design";
 import { getActiveRecording, initDatabase } from "../database/db";
@@ -40,7 +41,7 @@ TaskManager.defineTask<LocationTaskPayload>(
   rideLocationTaskName,
   async ({ data, error }) => {
     if (error) {
-      console.warn("Ride location task error", error.message);
+      logWarn("ride", "locationTaskError", { message: error.message });
       return;
     }
 
@@ -166,10 +167,9 @@ export async function stopBackgroundLocationUpdates() {
       await Location.stopLocationUpdatesAsync(rideLocationTaskName);
     }
   } catch (error) {
-    console.warn(
-      "Unable to stop location updates",
-      error instanceof Error ? error.message : error
-    );
+    logWarn("ride", "stopLocationUpdatesFailed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

@@ -108,6 +108,74 @@ Nothing touches the BLE stack at import. `new BleManager()` starts the native
 radio, so the watches are started by the first connect or by the launch restore
 of an already-paired board, never by loading the module.
 
+### The app log
+
+`src/diagnostics/log.ts` writes what the app did to an NDJSON file under the
+document directory: one entry per line, flat rather than nested, each carrying
+a `level`, a `source` (`app`, `ble`, `ride`, `sync`, `research`) and a short
+stable `event` slug. It replaced scattered `console.warn` calls, which go to a
+Metro console that is not attached when any of this actually happens.
+
+It is bounded on two axes, because a log nobody can lose control of is one
+nobody has to think about:
+
+- **Size.** Two files of `maxFileBytes` each, rolled over rather than appended
+  to forever, so the ceiling on disk is fixed.
+- **Age.** Anything older than `maxAgeDays` is deleted on the next launch, for
+  the phone that goes a month between rides.
+
+**Writing happens in every build; exporting does not.** `DiagnosticsLog.tsx`
+renders nothing unless `diagnosticsAvailable` is true, which is `__DEV__` —
+true in the build `npm run iphone:build` produces, false in the `preview` and
+`production` EAS profiles. A rider never meets it. RSSI sampling is gated the
+same way, because it is an active radio probe rather than a record of something
+that happened, and a shipped app has no way to hand the log over anyway.
+
+`Sharing.shareAsync` presents a `UIActivityViewController` over a real file
+URL, so **Save to Files** is one of the destinations and a network share
+mounted in the iOS Files app can be written to directly — the file never passes
+through a mailbox or a sync client, and it keeps its name.
+
+There is deliberately no analysis tooling in this repo. The format is plain
+NDJSON so it can simply be read.
+
+#### What the BLE entries carry
+
+The BLE vocabulary in `logEvents.ts` is typed rather than free text, because
+its entries get counted and compared. It exists because a ride came back
+reporting an unstable link and there was nothing to look at, and because the
+phone is an iPhone, so there is no btsnoop to pull afterwards either.
+
+- **Disconnect reason codes.** `react-native-ble-plx` raises a `BleError`
+  carrying `iosErrorCode`, and the two values that matter are opposites.
+  `ConnectionTimeout` (6) is the supervision timer expiring — the phone stopped
+  hearing the board, so range, body-blocking or interference.
+  `PeripheralDisconnected` (7) is the board ending the link itself: a reset, a
+  brown-out, firmware. Both used to arrive as `error.message`, which
+  distinguishes neither.
+- **RSSI while the link is up.** A link that dies near the noise floor was
+  starved of signal; one that dies at -65 dBm was not, and the antenna is not
+  the thing to change. Sampling stands down entirely during a research
+  retrieval, so transfer times stay comparable with captures already uploaded.
+- **The negotiated ATT_MTU.** iOS sets it without being asked, and a 408-byte
+  research response needs more round trips below 185 bytes than above it. A
+  slow retrieval with a small MTU is arithmetic; a slow one with a large MTU is
+  a link problem.
+- **Per-request timings and retries.** `researchRequest` retries up to three
+  times per page and `transferMs` folds every attempt into one number, so a
+  page that needed three tries and one that returned immediately were otherwise
+  indistinguishable.
+- **Stream gaps and packet loss.** The board numbers every packet, so what
+  arrived can be compared with what was sent. A dropped notification is a
+  stretch of road with no roughness on it, and nothing else in the app notices.
+
+Signal samples, page timings and board counters are `debug`; a dropped link or
+a failed request is `warn`. Filtering on level is how a long file becomes a
+short one.
+
+The web fallback (`log.web.ts`) keeps entries in memory and refuses to export,
+because `npm run dev:web` has neither a document directory nor a share sheet.
+
 ## Route recording
 
 A ride keeps recording with the screen locked, on both platforms, through one
@@ -306,6 +374,10 @@ platforms.
 - `src/sync/backoff.ts`: how long a failed operation waits
 - `src/sync/autoSync.ts`: automatic upload triggers
 - `../shared/src/xiaoResearch.mjs`: recording validation and file codec
+- `assets/`: launcher, splash and favicon images. Generated — the logo lives in
+  `../brand/`, and `python scripts/build-brand-assets.py` rewrites this directory.
+  The Android adaptive icon's background colour is written out in `app.json`,
+  because a manifest cannot read a design token; it has to match the page orange.
 
 ## Validation
 

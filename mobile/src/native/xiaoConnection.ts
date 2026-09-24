@@ -11,6 +11,7 @@ import {
   writeBooleanPreference,
   writePreference,
 } from "../storage/preferences";
+import { diagnosticsAvailable, flushAppLog, logBle } from "../diagnostics/log";
 import * as XiaoBle from "./XiaoBle";
 import type { XiaoBleConnection } from "./XiaoBle";
 
@@ -134,6 +135,23 @@ let desiredSampleIntervalMs: number | null = null;
 let stopRadioWatch: (() => void) | null = null;
 let appStateSubscription: { remove: () => void } | null = null;
 let appActive = AppState.currentState === "active";
+let rssiTimer: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * How often the link's signal strength is written down.
+ *
+ * Two seconds is fine enough to see a rider skate out of range and back and
+ * coarse enough that an hour of riding costs a few tens of kilobytes. The read
+ * is answered by the phone's own controller rather than the board, so it does
+ * not compete with the sample stream — but it is still a GATT operation in
+ * `react-native-ble-plx`'s queue, which is why it stands down entirely while a
+ * research retrieval is running.
+ *
+ * Unlike the rest of the log this is an active probe rather than a record of
+ * something that happened, so it only runs in a development build. A shipped
+ * app has no way to hand the log over and no reason to spend the radio on it.
+ */
+const rssiIntervalMs = 2_000;
 
 const sampleListeners = new Set<XiaoSampleListener>();
 
@@ -163,9 +181,12 @@ export const useXiaoConnection = create<XiaoConnectionState>((set) => ({
   disconnect: async () => {
     wantConnection = false;
     resetReconnect();
+    stopRssiSampling();
 
     const current = connection;
     connection = null;
+
+    logBle({ kind: "note", text: "rider disconnected" });
 
     set({
       status: supported ? "disconnected" : "unsupported",
@@ -262,6 +283,8 @@ function scheduleReconnect() {
 
   reconnectAttempt += 1;
 
+  logBle({ kind: "retry", attempt: reconnectAttempt, delayMs: delay });
+
   const { deviceName } = useXiaoConnection.getState();
 
   useXiaoConnection.setState({
@@ -293,10 +316,17 @@ function handleLinkDown(detail: string | null) {
     connection !== null || useXiaoConnection.getState().status === "connected";
 
   connection = null;
+  stopRssiSampling();
 
   if (!wasUp) {
     return;
   }
+
+  // The radio callback logs its own `down` with the reason code. This covers
+  // the paths that discover a loss by asking — a failed liveness check, the
+  // radio being switched off — which have no error to report but are still the
+  // moment the link stopped being usable.
+  logBle({ kind: "note", text: `link down: ${detail ?? "no detail"}` });
 
   const { deviceName } = useXiaoConnection.getState();
 
@@ -309,8 +339,54 @@ function handleLinkDown(detail: string | null) {
   scheduleReconnect();
 }
 
+/**
+ * Sample the link's signal strength for as long as it is up.
+ *
+ * Started wherever the store is told the link is connected and stopped
+ * wherever it is told the link is gone, so the sampler cannot outlive the
+ * thing it measures. A reading is skipped rather than queued while a research
+ * retrieval is in flight: the retrieval's wall-clock time is the figure every
+ * capture so far has been scored by, and slowing it would make the next
+ * ride's numbers incomparable with the ones already uploaded.
+ */
+function startRssiSampling() {
+  if (rssiTimer !== null || !diagnosticsAvailable) {
+    return;
+  }
+
+  let reading = false;
+
+  rssiTimer = setInterval(async () => {
+    const current = connection;
+
+    if (!current || reading || XiaoBle.isXiaoTransferBusy()) {
+      return;
+    }
+
+    reading = true;
+
+    try {
+      const dbm = await current.readRssi();
+
+      if (dbm !== null) {
+        logBle({ kind: "rssi", dbm });
+      }
+    } finally {
+      reading = false;
+    }
+  }, rssiIntervalMs);
+}
+
+function stopRssiSampling() {
+  if (rssiTimer !== null) {
+    clearInterval(rssiTimer);
+    rssiTimer = null;
+  }
+}
+
 function markConnected(next: XiaoBleConnection) {
   reconnectAttempt = 0;
+  startRssiSampling();
 
   useXiaoConnection.setState({
     status: "connected",
@@ -387,18 +463,14 @@ async function openConnection(mode: "manual" | "auto"): Promise<boolean> {
     try {
       const next = await XiaoBle.connectToXiao({
         deviceId,
+        mode,
         onSample: fanOutSample,
-        onDisconnect: (reason) => {
-          if (reason) {
-            console.log("XIAO link dropped", reason);
-          }
-
-          handleLinkDown(null);
-        },
+        onDisconnect: () => handleLinkDown(null),
       });
 
       // The rider pressed Disconnect while this attempt was in the radio.
       if (!wantConnection) {
+        logBle({ kind: "connect", phase: "abandoned", mode, path: null });
         await next.disconnect().catch(() => undefined);
         return false;
       }
@@ -467,13 +539,16 @@ async function verifyLink(): Promise<boolean> {
   }
 
   const current = connection;
+  const startedAt = Date.now();
 
   if (current && (await current.isAlive())) {
+    logBle({ kind: "verify", alive: true, ms: Date.now() - startedAt });
     markConnected(current);
     return true;
   }
 
   if (current || useXiaoConnection.getState().status === "connected") {
+    logBle({ kind: "verify", alive: false, ms: Date.now() - startedAt });
     handleLinkDown("The sensor is not answering.");
   }
 
@@ -516,6 +591,15 @@ function ensureWatches() {
       (next: AppStateStatus) => {
         appActive = next === "active";
 
+        logBle({ kind: "app", state: next });
+
+        // A backgrounded app is where a log is most likely to be lost: iOS can
+        // reclaim the process without warning, and anything still queued in
+        // memory goes with it. This is the last reliable moment to write.
+        if (!appActive) {
+          flushAppLog();
+        }
+
         if (appActive) {
           handleForeground();
         }
@@ -527,6 +611,8 @@ function ensureWatches() {
     stopRadioWatch = XiaoBle.subscribeToRadioState((state) => {
       const wasReady = radioReady;
       radioReady = state.ready;
+
+      logBle({ kind: "radio", ready: state.ready, message: state.message });
 
       useXiaoConnection.setState({ radioMessage: state.message });
 
