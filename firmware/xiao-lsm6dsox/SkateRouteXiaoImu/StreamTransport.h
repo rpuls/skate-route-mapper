@@ -203,6 +203,12 @@ uint32_t append(uint32_t id, const uint8_t *record) {
   return s->nextSeq - 1;
 }
 
+/** Records a stream's window can hold, or zero if it has none. */
+uint32_t capacityOf(uint32_t id) {
+  const Stream *s = find(id);
+  return s ? s->capacity : 0;
+}
+
 /** True when a client has subscribed to framed notifications. */
 bool liveSubscribed() {
   if (!data) return false;

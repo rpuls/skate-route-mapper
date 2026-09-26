@@ -309,6 +309,9 @@ report. Raw samples remain local; reports contain derived values and plots.
 
 - Hardware dashboard and staged setup: `hardware/README.md`
 - Research protocol and desk procedure: `hardware/research.md`
+- Custom PCB concept study: `hardware/custom-pcb-concept.md`. Exploration
+  only — nothing in it has been built, ordered or drawn, and none of it
+  changes the bench hardware recorded above.
 - Firmware instructions: `firmware/xiao-lsm6dsox/README.md`
 - Firmware: `firmware/xiao-lsm6dsox/SkateRouteXiaoImu/`
 - Shared recording parser: `shared/src/xiaoResearch.mjs`

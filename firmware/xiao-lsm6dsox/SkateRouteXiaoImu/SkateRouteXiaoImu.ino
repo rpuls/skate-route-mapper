@@ -261,6 +261,19 @@ void setup() {
   stream::declareRing(stream::ID_RIDE_IMU, stream::KIND_IMU_PACKET,
                       IMU_RECORD_BYTES, RIDE_WINDOW_RECORDS);
 
+  // What the window actually got, not what it asked for. SPIRAM allocation
+  // halves until it fits, and a window an order of magnitude smaller than
+  // intended would otherwise look identical from out here right up until a
+  // ride lost data it should have kept.
+  const uint32_t rideRecords = stream::capacityOf(stream::ID_RIDE_IMU);
+  Serial.printf(
+    "stream ride window: %lu records, %lu bytes, %lu s at %u ms\r\n",
+    static_cast<unsigned long>(rideRecords),
+    static_cast<unsigned long>(rideRecords) * IMU_RECORD_BYTES,
+    static_cast<unsigned long>(rideRecords) * DEFAULT_SAMPLE_INTERVAL_MS / 1000,
+    DEFAULT_SAMPLE_INTERVAL_MS
+  );
+
   imuService->start();
 
   BLEAdvertising *advertising = BLEDevice::getAdvertising();
