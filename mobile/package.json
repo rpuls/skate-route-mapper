@@ -12,7 +12,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "contracts:test": "tsc -p test/contracts/tsconfig.json --noEmit && tsx --test test/contracts/mobilePersistence.contract.test.ts test/contracts/rideRecording.contract.test.ts test/contracts/rideRecorder.contract.test.ts test/contracts/syncLoop.contract.test.ts"
+    "contracts:test": "tsc -p test/contracts/tsconfig.json --noEmit && tsx --test test/contracts/mobilePersistence.contract.test.ts test/contracts/rideRecording.contract.test.ts test/contracts/rideRecorder.contract.test.ts test/contracts/syncLoop.contract.test.ts test/contracts/streamTransport.contract.test.ts"
   },
   "dependencies": {
     "@react-native-community/slider": "5.0.1",

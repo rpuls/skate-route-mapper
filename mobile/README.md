@@ -108,6 +108,22 @@ Nothing touches the BLE stack at import. `new BleManager()` starts the native
 radio, so the watches are started by the first connect or by the launch restore
 of an already-paired board, never by loading the module.
 
+### Getting data off the board
+
+Surface readings and research captures both come off the board through the
+stream transport, not through raw notifications. The board keeps records in a
+durable window; the phone notices which sequence numbers it never received and
+asks for exactly those. A ride now keeps its data through interference and
+through a link that drops entirely.
+
+A consumer calls `connection.readStream({ streamId, kind, onRecords })` and
+gets one ordered, gap-free sequence plus explicit notice of the stretches that
+will never arrive. Whether a record arrived live or was repaired afterwards is
+not visible to it.
+
+Adding a new sort of board data means a new `StreamKind` and a producer on the
+board. It does not mean a new protocol. See `docs/board-stream.md`.
+
 ### The app log
 
 `src/diagnostics/log.ts` writes what the app did to an NDJSON file under the

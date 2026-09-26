@@ -30,6 +30,10 @@ import {
   type LocationPermissionState,
 } from "../recording/backgroundLocation";
 import { rideRecorder } from "../recording/recorder";
+import {
+  isSurfaceStreamRecording,
+  setSurfaceCaptureEnabled,
+} from "../recording/surfaceStream";
 import type { RecordingSnapshot } from "../recording/rideRecorder";
 import {
   preferenceKeys,
@@ -136,6 +140,11 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
       // 20 readings a second is enough to characterise a stretch of road and
       // little enough that the board and the phone both survive a long ride.
       void setXiaoSampleInterval(50);
+
+      // From here the readings written into the ride come off the board's
+      // window rather than out of whatever notifications arrived, so a dropout
+      // costs the ride nothing it can get back.
+      setSurfaceCaptureEnabled(true);
     }
 
     try {
@@ -170,6 +179,7 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
     // go back to its own default, and stops it being re-applied to links made
     // long after the ride ended.
     clearXiaoSampleInterval();
+    setSurfaceCaptureEnabled(false);
 
     const finished = rideRecorder.end();
 
@@ -201,6 +211,9 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
 
     set({ pausedAt: Date.now() });
     await stopBackgroundLocationUpdates();
+    // A paused ride is not measuring road, so nothing should be pulled off the
+    // board for it. The board keeps producing; the window absorbs it.
+    setSurfaceCaptureEnabled(false);
     rideRecorder.breakSegment();
     set({ status: "paused", recording: rideRecorder.getSnapshot() });
   },
@@ -238,6 +251,10 @@ export const useMeasurementStore = create<MeasurementState>((set, get) => ({
     }
 
     rideRecorder.begin(active);
+
+    if (active.sensorSource === "external") {
+      setSurfaceCaptureEnabled(true);
+    }
 
     try {
       // Only start updates that are not already running: restarting a live
@@ -361,7 +378,20 @@ let windowFirstSequence: number | null = null;
 subscribeToXiaoSamples((sample) => {
   const state = useMeasurementStore.getState();
 
-  if (state.status === "recording" && state.sensorSource === "external") {
+  // A notification is the fastest way to show a rider what the board is doing
+  // and the worst way to record it: what arrives is whatever the radio
+  // managed. So the ride's copy normally comes from `surfaceStream`, which
+  // takes the same records off the board's window and can ask again for the
+  // ones that did not make it.
+  //
+  // This remains the fallback for a board running firmware older than the
+  // stream layer, which would otherwise record nothing at all. Exactly one of
+  // the two paths writes a sample, never both.
+  if (
+    state.status === "recording" &&
+    state.sensorSource === "external" &&
+    !isSurfaceStreamRecording()
+  ) {
     rideRecorder.recordExternalSample(sample);
   }
 

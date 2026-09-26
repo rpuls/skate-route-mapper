@@ -15,15 +15,29 @@ import {
 } from "@skate-route-mapper/shared/xiaoBle";
 import {
   OP,
-  RESEARCH_CONTROL_UUID,
-  RESEARCH_RESPONSE_UUID,
-  command,
-  parseResponse,
   parseStatus,
   startArgument,
   type ResearchStatus,
 } from "@skate-route-mapper/shared/xiaoResearch";
+import {
+  imuStreamKind,
+  parseStreamFrame,
+  STREAM_ID,
+  XIAO_STREAM_DATA_UUID,
+  type StreamResponse,
+} from "@skate-route-mapper/shared/xiaoStream";
 import { describeBleError, logBle } from "../diagnostics/log";
+import { base64ToBytes, bytesToBase64 } from "./stream/base64";
+import {
+  createCommandChannel,
+  type CommandAttemptEvent,
+  type CommandChannel,
+} from "./stream/commandChannel";
+import {
+  createStreamReader,
+  type StreamReader,
+  type StreamReaderOptions,
+} from "./stream/streamReader";
 
 /**
  * True while a research retrieval is running.
@@ -83,6 +97,17 @@ export type XiaoBleConnection = {
     transfer: ResearchTransfer,
     onProgress?: (received: number, total: number) => void
   ) => Promise<ResearchTransfer>;
+  /**
+   * Read one of the board's streams.
+   *
+   * The only way anything in the app should take continuous or bulk data off
+   * the board. The reader handles ordering, repair and loss reporting; the
+   * caller supplies a `StreamKind` saying what the records mean and a function
+   * that stores them. A new sort of board data needs nothing added here.
+   */
+  readStream: <TRecord>(
+    options: Omit<StreamReaderOptions<TRecord>, "channel">
+  ) => StreamReader;
 };
 
 type ConnectOptions = {
@@ -344,57 +369,38 @@ async function attachToDevice(
     }
   }
 
-  let requestId = Math.floor(Math.random() * 0xffff);
-  const researchRequest = async (op: number, captureId = 0, arg = 0) => {
-    requestId = (requestId + 1) & 0xffff;
-    let lastError: Error | null = null;
-    for (let attempt = 0; attempt < (op === OP.START ? 1 : 3); attempt++) {
-      // Every attempt is timed and counted, including the ones that fail. The
-      // retries here were previously invisible: a page that needed three tries
-      // and one that came back first time were indistinguishable afterwards,
-      // and both were folded into the single `transferMs` figure a capture
-      // carries. That is exactly the ambiguity the log exists to remove.
-      const attemptStarted = Date.now();
-      let polls = 0;
+  // One channel per connection. The board answers on a single characteristic,
+  // so a research transfer and a ride repair running at once would read each
+  // other's answers; the channel makes them take turns.
+  const channel: CommandChannel = createCommandChannel(readyDevice, {
+    onAttempt: logStreamRequest,
+  });
 
-      try {
-        await readyDevice.writeCharacteristicWithResponseForService(
-          XIAO_BLE_SERVICE_UUID,
-          RESEARCH_CONTROL_UUID,
-          bytesToBase64(command(op, requestId, captureId, arg))
-        );
-        const deadline = Date.now() + 5000;
-        while (Date.now() < deadline) {
-          polls += 1;
-          const characteristic = await readyDevice.readCharacteristicForService(
-            XIAO_BLE_SERVICE_UUID,
-            RESEARCH_RESPONSE_UUID
-          );
-          if (characteristic.value) {
-            const bytes = base64ToBytes(characteristic.value);
-            if (bytes.length >= 24) {
-              const response = parseResponse(bytes);
-              if (response.request === requestId && response.op === op) {
-                if (response.flags) throw new Error(`Board rejected request (${response.flags}).`);
-                if ((op === OP.RAW || op === OP.SUMMARIES) &&
-                    (response.captureId !== captureId || response.offset !== arg)) {
-                  throw new Error("Research page identity mismatch");
-                }
-                logResearchRequest(op, attempt, attemptStarted, polls, true);
-                return response;
-              }
-            }
-          }
-          await sleep(30);
-        }
-        throw new Error("Research response timed out");
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        logResearchRequest(op, attempt, attemptStarted, polls, false, error);
-        await sleep(150);
-      }
+  /**
+   * A research request, in the shape the capture code already expects.
+   *
+   * The retry loop, the response polling and the framing all moved to the
+   * channel, which every stream shares. What is left is the part specific to a
+   * capture: that a page must belong to the capture it was asked for.
+   */
+  const researchRequest = async (op: number, captureId = 0, arg = 0) => {
+    const response = await channel.request({
+      op,
+      streamId: captureId,
+      arg,
+      // START changes what the board is doing. A retry after a timeout could
+      // begin a second capture over the one already running.
+      attempts: op === OP.START ? 1 : 3,
+    });
+
+    if (
+      (op === OP.RAW || op === OP.SUMMARIES) &&
+      (response.streamId !== captureId || response.offset !== arg)
+    ) {
+      throw new Error("Research page identity mismatch");
     }
-    throw lastError ?? new Error("Research request failed");
+
+    return asResearchResponse(response);
   };
 
   const sampleSubscription = readyDevice.monitorCharacteristicForService(
@@ -414,6 +420,48 @@ async function attachToDevice(
     }
   );
 
+  const readers = new Set<StreamReader>();
+
+  /**
+   * Framed records from the board.
+   *
+   * Subscribing here is also what tells the board to use the stream path: it
+   * serves the original IMU characteristic while nobody is listening to this
+   * one, so a board running older firmware, and the admin hardware bench, are
+   * unaffected. If this characteristic does not exist the monitor reports an
+   * error once and the legacy subscription above carries on alone.
+   */
+  const frameSubscription = readyDevice.monitorCharacteristicForService(
+    XIAO_BLE_SERVICE_UUID,
+    XIAO_STREAM_DATA_UUID,
+    (error, characteristic) => {
+      if (error) {
+        logBle({ kind: "note", text: `stream frames unavailable: ${error.message}` });
+        return;
+      }
+
+      if (!characteristic?.value) {
+        return;
+      }
+
+      const frame = parseStreamFrame(base64ToBytes(characteristic.value));
+
+      if (!frame) {
+        return;
+      }
+
+      for (const reader of readers) {
+        reader.offerFrame(frame);
+      }
+
+      // The live preview reads the same records, so a screen showing the board
+      // works the same whichever path the firmware is using.
+      if (options.onSample && frame.streamId === STREAM_ID.RIDE_IMU) {
+        options.onSample(imuStreamKind.decode(frame.record, frame.seq));
+      }
+    }
+  );
+
   // `closed` is what tells a deliberate disconnect apart from a board that
   // vanished. Both arrive as the same native callback, and only one of them
   // should send the app looking for the sensor again.
@@ -426,6 +474,14 @@ async function attachToDevice(
     disconnectSubscription?.remove();
     disconnectSubscription = null;
     sampleSubscription.remove();
+    frameSubscription.remove();
+
+    // A reader left running would keep polling a device that has gone.
+    for (const reader of readers) {
+      reader.stop();
+    }
+
+    readers.clear();
   };
 
   disconnectSubscription = readyDevice.onDisconnected((error) => {
@@ -462,6 +518,20 @@ async function attachToDevice(
     },
     isAlive: () =>
       bleManager.isDeviceConnected(readyDevice.id).catch(() => false),
+    readStream: (readerOptions) => {
+      const reader = createStreamReader({ ...readerOptions, channel });
+      const stop = reader.stop;
+
+      readers.add(reader);
+
+      return {
+        ...reader,
+        stop: () => {
+          readers.delete(reader);
+          stop();
+        },
+      };
+    },
     disconnect: async () => {
       teardown();
       await bleManager.cancelDeviceConnection(readyDevice.id).catch(() => undefined);
@@ -706,10 +776,6 @@ function logAttached(
   return connection;
 }
 
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * A request that took longer than this is worth a line of its own.
  *
@@ -722,43 +788,60 @@ const slowRequestMs = 400;
 /** One in this many ordinary requests is kept, to establish what normal is. */
 const requestSampleEvery = 32;
 
-let researchRequestCount = 0;
+let streamRequestCount = 0;
 
 /**
- * Record a research request, thinned so a retrieval does not drown the log.
+ * Record a board request, thinned so a transfer does not drown the log.
  *
- * A 30-second capture is around 790 pages. Writing all of them would cost
- * about 100 kB per capture and re-render anything watching the log four times
- * a second for three minutes, and most of those lines would say the same
- * thing. Every failure is kept, every slow request is kept, and one in
- * `requestSampleEvery` of the rest is kept so the ordinary case still has a
- * measured distribution rather than an assumed one.
+ * A 30-second capture is around 790 pages, and a ride repairs holes for as
+ * long as the ride lasts. Writing every one would cost about 100 kB per
+ * capture and re-render anything watching the log several times a second, and
+ * most of those lines would say the same thing. Every failure is kept, every
+ * slow request is kept, and one in `requestSampleEvery` of the rest is kept so
+ * the ordinary case still has a measured distribution rather than an assumed
+ * one.
  */
-function logResearchRequest(
-  op: number,
-  attempt: number,
-  startedAt: number,
-  polls: number,
-  ok: boolean,
-  error?: unknown
-) {
-  const ms = Date.now() - startedAt;
+function logStreamRequest(event: CommandAttemptEvent) {
+  streamRequestCount += 1;
 
-  researchRequestCount += 1;
-
-  if (ok && ms < slowRequestMs && researchRequestCount % requestSampleEvery !== 0) {
+  if (
+    event.ok &&
+    event.ms < slowRequestMs &&
+    streamRequestCount % requestSampleEvery !== 0
+  ) {
     return;
   }
 
   logBle({
     kind: "req",
-    op,
-    attempt,
-    ms,
-    polls,
-    ok,
-    ...(error === undefined ? {} : { error: describeBleError(error) }),
+    op: event.op,
+    attempt: event.attempt,
+    ms: event.ms,
+    polls: event.polls,
+    ok: event.ok,
+    ...(event.streamId === 0 ? {} : { streamId: event.streamId }),
+    ...(event.flags === undefined || event.flags === 0 ? {} : { flags: event.flags }),
+    ...(event.error === undefined ? {} : { error: describeBleError(event.error) }),
   });
+}
+
+/**
+ * The stream response in the shape the research capture code reads.
+ *
+ * The two differ only in what the fields are called: a capture id is a stream
+ * id, and a record count is a page count. Adapting here keeps one wire format
+ * without rewriting the capture and upload path around new names.
+ */
+function asResearchResponse(response: StreamResponse) {
+  return {
+    op: response.op,
+    request: response.request,
+    flags: response.flags,
+    captureId: response.streamId,
+    offset: response.offset,
+    count: response.records,
+    payload: response.payload,
+  };
 }
 
 export function createResearchTransfer(status: ResearchStatus): ResearchTransfer {
@@ -772,56 +855,9 @@ export function createResearchTransfer(status: ResearchStatus): ResearchTransfer
   };
 }
 
-function base64ToBytes(value: string) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  const clean = value.replace(/=+$/, "");
-  const bytes: number[] = [];
-  let buffer = 0;
-  let bits = 0;
-
-  for (const char of clean) {
-    const index = chars.indexOf(char);
-    if (index < 0) continue;
-
-    buffer = (buffer << 6) | index;
-    bits += 6;
-
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push((buffer >> bits) & 0xff);
-    }
-  }
-
-  return new Uint8Array(bytes);
-}
-
+/** The board's sample interval, as the two little-endian bytes it expects. */
 function uint16ToBase64(value: number) {
   const clamped = Math.max(10, Math.min(1000, Math.round(value)));
-  const bytes = [clamped & 0xff, (clamped >> 8) & 0xff];
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let output = "";
 
-  const triplet = bytes[0] << 16 | bytes[1] << 8;
-  output += chars[(triplet >> 18) & 0x3f];
-  output += chars[(triplet >> 12) & 0x3f];
-  output += chars[(triplet >> 6) & 0x3f];
-  output += "=";
-
-  return output;
-}
-
-function bytesToBase64(bytes: Uint8Array) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  let output = "";
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index];
-    const second = index + 1 < bytes.length ? bytes[index + 1] : 0;
-    const third = index + 2 < bytes.length ? bytes[index + 2] : 0;
-    const triplet = (first << 16) | (second << 8) | third;
-    output += chars[(triplet >> 18) & 0x3f];
-    output += chars[(triplet >> 12) & 0x3f];
-    output += index + 1 < bytes.length ? chars[(triplet >> 6) & 0x3f] : "=";
-    output += index + 2 < bytes.length ? chars[triplet & 0x3f] : "=";
-  }
-  return output;
+  return bytesToBase64(new Uint8Array([clamped & 0xff, (clamped >> 8) & 0xff]));
 }

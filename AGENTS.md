@@ -10,6 +10,7 @@ This file gives AI coding agents repo-specific operating instructions. Keep it s
 - Data model: `docs/data-model.md`
 - Admin frontend architecture: `docs/admin-frontend.md`
 - Ride tracking (GPS filtering, distance, speed): `docs/ride-tracking.md`
+- Board stream transport (BLE data transfer): `docs/board-stream.md`
 - Vibration roughness planning: `docs/vibration-roughness-plan.md`
 - Current development plan and known gaps: `docs/development-plan.md`
 - Design system (canonical): https://claude.ai/design/p/1b289219-57b8-4ced-8011-9bca7af6ad4b
@@ -117,6 +118,26 @@ missing, and never conclude from `git ls-files` that there is no design system.
   `XiaoBleConnection` object is not evidence the board is still there.
   Reconnection, backoff and the remembered board all live in the module; do not
   add a retry loop to a screen. See "The XIAO connection" in `mobile/README.md`.
+- Bulk and continuous data comes off the board through the stream transport,
+  never through raw notifications. A stream is fixed-width records in a durable
+  window on the board, read with a cursor that repairs what the radio lost;
+  `connection.readStream({ streamId, kind, onRecords })` is the only entry
+  point. A new sort of board data is a new `StreamKind` in
+  `shared/src/xiaoStream.ts` plus a producer in
+  `firmware/.../StreamTransport.h` — never a new protocol, characteristic or
+  retry loop. See `docs/board-stream.md`.
+- The board answers on one response characteristic, so every request goes
+  through the single `CommandChannel` per connection, which serialises them. Do
+  not add a second requester: two in flight and one reads the other's answer.
+- A record's own timestamp decides where it belongs, not when it arrived. A
+  repaired record can be minutes late, and joining it to the current GPS fix
+  would pile a stretch of road onto one point. Keep
+  `rideRecorder.recordExternalSample` joining by time.
+- Live notifications are the preview, not the record. `subscribeToXiaoSamples`
+  feeds the UI and the loss counters; the ride's copy comes from
+  `recording/surfaceStream.ts`. It stays the recording fallback for firmware
+  older than the stream layer, gated on `isSurfaceStreamRecording()` — exactly
+  one path writes a sample into a ride, never both.
 - App logging goes through `mobile/src/diagnostics/log.ts` (web fallback
   `log.web.ts`, vocabulary in `logEvents.ts`): `logInfo` / `logWarn` /
   `logDebug` with a source, or `logBle` for the typed BLE events. Do not add

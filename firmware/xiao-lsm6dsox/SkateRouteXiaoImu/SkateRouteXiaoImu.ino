@@ -4,6 +4,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <Wire.h>
+#include "StreamTransport.h"
 #include "ResearchCapture.h"
 
 namespace {
@@ -20,6 +21,18 @@ constexpr uint16_t DEFAULT_SAMPLE_INTERVAL_MS = 20;
 constexpr uint16_t MIN_SAMPLE_INTERVAL_MS = 10;
 constexpr uint16_t MAX_SAMPLE_INTERVAL_MS = 1000;
 constexpr uint32_t STATUS_INTERVAL_MS = 3000;
+
+// How much ride the board can hold while the phone is out of touch.
+//
+// At the 20 ms default that is a little under an hour, which covers losing the
+// link behind a building and getting it back, and covers a phone that stopped
+// reading because iOS suspended the app. Records are 20 bytes, so this asks
+// for 3.2 MB of the 8 MB SPIRAM; the research capture is allocated first and
+// this falls back to whatever is left.
+constexpr uint32_t RIDE_WINDOW_RECORDS = 160000;
+
+/** The live packet layout, shared by the notification and the window. */
+constexpr uint16_t IMU_RECORD_BYTES = 20;
 
 BLEServer *server = nullptr;
 BLECharacteristic *imuCharacteristic = nullptr;
@@ -112,7 +125,7 @@ void sendImuPacket() {
   sensors_event_t temp;
   imu.getEvent(&accel, &gyro, &temp);
 
-  uint8_t packet[20] = {0};
+  uint8_t packet[IMU_RECORD_BYTES] = {0};
   const uint32_t nowMs = millis();
 
   writeUint32Le(packet, 0, sequence++);
@@ -124,6 +137,24 @@ void sendImuPacket() {
   writeInt16Le(packet, 16, clampInt16((gyro.gyro.y * 180.0f / PI) * 1000.0f));
   writeInt16Le(packet, 18, clampInt16((gyro.gyro.z * 180.0f / PI) * 1000.0f));
 
+  // Stored before it is sent, never after: a record the radio drops can still
+  // be repaired, but only if it was already in the window when the attempt
+  // failed. This is the line that makes interference survivable.
+  const uint32_t seq = stream::append(stream::ID_RIDE_IMU, packet);
+
+  if (stream::liveSubscribed()) {
+    stream::notifyRecord(
+      stream::ID_RIDE_IMU,
+      seq == stream::NO_SEQ ? sequence - 1 : seq,
+      packet,
+      sizeof(packet)
+    );
+    return;
+  }
+
+  // Nobody is reading the stream, so serve the original characteristic that
+  // the admin hardware bench and older app builds subscribe to. Exactly one of
+  // the two is sent, so the wire cost is what it always was.
   imuCharacteristic->setValue(packet, sizeof(packet));
   imuCharacteristic->notify();
 }
@@ -222,7 +253,14 @@ void setup() {
   configCharacteristic->setCallbacks(new ConfigCallbacks());
   writeConfigValue();
 
-  research::setup(imuService);
+  // Research first: it needs a specific amount and falls back to internal RAM
+  // if it cannot get it, which would quietly halve what a capture can hold.
+  // The ride window takes what is left and reports what it actually got.
+  stream::setup(imuService, research::handleCommand);
+  research::setup();
+  stream::declareRing(stream::ID_RIDE_IMU, stream::KIND_IMU_PACKET,
+                      IMU_RECORD_BYTES, RIDE_WINDOW_RECORDS);
+
   imuService->start();
 
   BLEAdvertising *advertising = BLEDevice::getAdvertising();
@@ -236,8 +274,9 @@ void setup() {
 }
 
 void loop() {
+  research::imuAvailable = imuReady;
   research::captureTick();
-  research::commandTick(imuReady);
+  stream::commandTick();
   // Capture is independent of BLE, and the live preview must never hold up FIFO draining.
   if (research::recording()) {
     delay(0);

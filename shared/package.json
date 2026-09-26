@@ -63,6 +63,13 @@
     "./xiaoResearch": {
       "types": "./src/xiaoResearch.d.ts",
       "default": "./src/xiaoResearch.mjs"
+    },
+    "./xiaoStream": {
+      "node": {
+        "production": "./dist/xiaoStream.js",
+        "default": "./src/xiaoStream.ts"
+      },
+      "default": "./src/xiaoStream.ts"
     }
   },
   "scripts": {

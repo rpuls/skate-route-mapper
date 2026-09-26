@@ -8,6 +8,12 @@ export type XiaoBleConnection = {
   getResearchStatus: () => Promise<never>;
   startResearchCapture: () => Promise<never>;
   retrieveResearchCapture: () => Promise<never>;
+  /**
+   * Unreachable: nothing on web ever holds a connection to open a stream on,
+   * because `connectToXiao` throws. Declared so the two connection types stay
+   * the same shape.
+   */
+  readStream: () => never;
 };
 
 export type ResearchTransfer = never;

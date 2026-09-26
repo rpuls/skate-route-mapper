@@ -97,6 +97,48 @@ export function createRideRecorder(
   let lastFix: LocationFix | null = null;
   let lastRejection: LocationFixRejection | null = null;
 
+  /**
+   * Recent fixes, so a reading that arrives late lands where it was measured.
+   *
+   * Board readings used to be stamped with whatever fix was current when they
+   * arrived, which was right only because they arrived within milliseconds. A
+   * reading repaired after a dropout can be minutes old, and stamping it with
+   * the current position would pile a whole stretch of road onto the single
+   * point where the link came back.
+   *
+   * Bounded at roughly ten minutes of fixes at 1 Hz, comfortably more than the
+   * repair window the stream reader waits through.
+   */
+  const fixHistory: LocationFix[] = [];
+  const maxFixHistory = 600;
+
+  /** The fix nearest in time to `atMs`, or the newest one if there is none. */
+  function fixAt(atMs: number | null): LocationFix | null {
+    if (atMs === null || fixHistory.length === 0) {
+      return lastFix;
+    }
+
+    let best = fixHistory[fixHistory.length - 1];
+    let bestDistance = Math.abs(best.timestamp - atMs);
+
+    // Newest first: a live reading matches on the first comparison, and the
+    // walk only runs long for the late arrivals that need it.
+    for (let index = fixHistory.length - 2; index >= 0; index -= 1) {
+      const distance = Math.abs(fixHistory[index].timestamp - atMs);
+
+      if (distance >= bestDistance) {
+        // Fixes are in time order, so once the gap starts growing again
+        // nothing earlier can be nearer.
+        break;
+      }
+
+      best = fixHistory[index];
+      bestDistance = distance;
+    }
+
+    return best;
+  }
+
   function flush() {
     return activeBuffer?.buffer.flush() ?? 0;
   }
@@ -155,6 +197,7 @@ export function createRideRecorder(
 
       lastRejection = null;
       activeBuffer = null;
+      fixHistory.length = 0;
 
       const progress = store.getRideProgress(recording.rideId);
 
@@ -186,6 +229,14 @@ export function createRideRecorder(
       store.saveRideProgress(active.rideId, folded.progress);
       lastFix = folded.progress.lastFix;
 
+      for (const fix of fixes) {
+        fixHistory.push(fix);
+      }
+
+      if (fixHistory.length > maxFixHistory) {
+        fixHistory.splice(0, fixHistory.length - maxFixHistory);
+      }
+
       if (folded.samples.length > 0) {
         bufferFor(active.rideId).add(folded.samples);
       }
@@ -201,9 +252,13 @@ export function createRideRecorder(
      * Record a vibration reading from the XIAO board.
      *
      * The board measures far faster than GPS updates, so each reading is
-     * stamped with the last known fix. `locationAgeMs` says how stale that fix
-     * was, which is what later lets a reading be tied to a place with a known
-     * confidence.
+     * stamped with the fix nearest it in time. `locationAgeMs` says how far
+     * apart the two were, which is what later lets a reading be tied to a
+     * place with a known confidence.
+     *
+     * `recordedAt` is when the board measured it, which is not always when it
+     * arrived: a reading repaired after a dropout carries the board's own
+     * timestamp, and that is what decides where on the route it belongs.
      */
     recordExternalSample(reading, recordedAt = Date.now()) {
       const active = store.getActiveRecording();
@@ -213,7 +268,7 @@ export function createRideRecorder(
       }
 
       bufferFor(active.rideId).add([
-        sampleFromImuReading(reading, lastFix, recordedAt),
+        sampleFromImuReading(reading, fixAt(recordedAt), recordedAt),
       ]);
     },
 
@@ -303,6 +358,7 @@ export function createRideRecorder(
 
       activeBuffer = null;
       lastFix = null;
+      fixHistory.length = 0;
       lastRejection = null;
       publish(null);
 
